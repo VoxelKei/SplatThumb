@@ -24,6 +24,10 @@ else()
         add_link_options(-fsanitize=address,undefined)
         add_compile_definitions(_GLIBCXX_ASSERTIONS)
     endif()
+    if(SPLATTHUMB_BUILD_FUZZERS)
+        # Coverage instrumentation for everything the fuzzer links.
+        add_compile_options(-fsanitize=fuzzer-no-link)
+    endif()
 endif()
 
 add_library(splatthumb_warnings INTERFACE)

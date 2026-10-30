@@ -24,6 +24,12 @@ cmake --workflow --preset msvc-debug
 This configures, builds, and runs the tests. Use `msvc-release` for an optimized build.
 Building does not register anything with Windows.
 
+To check how SplatThumb classifies a file (read-only):
+
+```powershell
+build\msvc\bin\Debug\splatthumb-cli.exe info path\to\scene.ply
+```
+
 ## License
 
 [MIT](LICENSE)
