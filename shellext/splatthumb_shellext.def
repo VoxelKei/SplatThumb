@@ -1,0 +1,5 @@
+; Registration is done only by the installer, which records and restores the previous
+; state. DllRegisterServer/DllUnregisterServer are intentionally not exported.
+EXPORTS
+    DllGetClassObject   PRIVATE
+    DllCanUnloadNow     PRIVATE

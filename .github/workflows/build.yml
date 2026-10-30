@@ -1,0 +1,61 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: windows (${{ matrix.preset }})
+    runs-on: windows-2022
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - preset: msvc-debug
+            config: Debug
+            build_dir: build/msvc
+          - preset: msvc-release
+            config: Release
+            build_dir: build/msvc
+          - preset: msvc-asan
+            config: Debug
+            build_dir: build/msvc-asan
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Add MSVC tools to PATH
+        shell: pwsh
+        run: .github/scripts/Add-MsvcToolsToPath.ps1
+
+      - name: Configure, build, test
+        run: cmake --workflow --preset ${{ matrix.preset }}
+
+      - name: Check shell extension exports
+        shell: pwsh
+        run: .github/scripts/Test-ShellextExports.ps1 -Path ${{ matrix.build_dir }}/bin/${{ matrix.config }}/splatthumb_shellext.dll
+
+  linux-core:
+    # Builds core without Windows headers, which keeps it portable and lets us
+    # run UBSan, which MSVC does not provide.
+    name: linux core (clang ASan + UBSan)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Configure, build, test
+        run: cmake --workflow --preset linux-clang-sanitize
