@@ -1,0 +1,13 @@
+# Build output
+/build/
+/out/
+
+# IDE
+/.vs/
+/.vscode/
+*.user
+CMakeUserPresets.json
+
+# Never commit real-world scans; tests use small synthetic files only.
+*.ply
+!tests/data/**/*.ply
