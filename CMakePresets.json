@@ -1,0 +1,85 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "msvc",
+      "displayName": "MSVC x64",
+      "generator": "Visual Studio 17 2022",
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/build/msvc",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
+    },
+    {
+      "name": "msvc-asan",
+      "displayName": "MSVC x64 + AddressSanitizer",
+      "inherits": "msvc",
+      "binaryDir": "${sourceDir}/build/msvc-asan",
+      "cacheVariables": { "SPLATTHUMB_SANITIZE": "ON" }
+    },
+    {
+      "name": "linux-clang-sanitize",
+      "displayName": "Linux clang + ASan/UBSan (core and tests only)",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/linux-clang-sanitize",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "SPLATTHUMB_SANITIZE": "ON"
+      },
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "msvc-debug", "configurePreset": "msvc", "configuration": "Debug" },
+    { "name": "msvc-release", "configurePreset": "msvc", "configuration": "Release" },
+    { "name": "msvc-asan", "configurePreset": "msvc-asan", "configuration": "Debug" },
+    { "name": "linux-clang-sanitize", "configurePreset": "linux-clang-sanitize" }
+  ],
+  "testPresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
+    },
+    { "name": "msvc-debug", "inherits": "base", "configurePreset": "msvc", "configuration": "Debug" },
+    { "name": "msvc-release", "inherits": "base", "configurePreset": "msvc", "configuration": "Release" },
+    { "name": "msvc-asan", "inherits": "base", "configurePreset": "msvc-asan", "configuration": "Debug" },
+    { "name": "linux-clang-sanitize", "inherits": "base", "configurePreset": "linux-clang-sanitize" }
+  ],
+  "workflowPresets": [
+    {
+      "name": "msvc-debug",
+      "steps": [
+        { "type": "configure", "name": "msvc" },
+        { "type": "build", "name": "msvc-debug" },
+        { "type": "test", "name": "msvc-debug" }
+      ]
+    },
+    {
+      "name": "msvc-release",
+      "steps": [
+        { "type": "configure", "name": "msvc" },
+        { "type": "build", "name": "msvc-release" },
+        { "type": "test", "name": "msvc-release" }
+      ]
+    },
+    {
+      "name": "msvc-asan",
+      "steps": [
+        { "type": "configure", "name": "msvc-asan" },
+        { "type": "build", "name": "msvc-asan" },
+        { "type": "test", "name": "msvc-asan" }
+      ]
+    },
+    {
+      "name": "linux-clang-sanitize",
+      "steps": [
+        { "type": "configure", "name": "linux-clang-sanitize" },
+        { "type": "build", "name": "linux-clang-sanitize" },
+        { "type": "test", "name": "linux-clang-sanitize" }
+      ]
+    }
+  ]
+}

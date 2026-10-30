@@ -1,0 +1,8 @@
+# core must stay free of Windows headers and external dependencies.
+add_library(splatthumb_core STATIC
+    src/version.cpp)
+
+target_include_directories(splatthumb_core PUBLIC include)
+target_compile_definitions(splatthumb_core PRIVATE
+    SPLATTHUMB_VERSION_STRING="${PROJECT_VERSION}")
+target_link_libraries(splatthumb_core PRIVATE splatthumb_warnings)
