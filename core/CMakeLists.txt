@@ -1,5 +1,9 @@
 # core must stay free of Windows headers and external dependencies.
 add_library(splatthumb_core STATIC
+    src/byte_source.cpp
+    src/classify.cpp
+    src/ply_header.cpp
+    src/status.cpp
     src/version.cpp)
 
 target_include_directories(splatthumb_core PUBLIC include)
