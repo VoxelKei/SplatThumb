@@ -4,7 +4,7 @@
 
 Windows Explorer thumbnails for 3D Gaussian Splatting `.ply` files.
 
-> **Status: early development (v0.1).** Download the installer from the
+> **Status: early development (v0.2).** Download the installer from the
 > [Releases](../../releases) page, or build it from source (see below).
 
 SplatThumb only renders PLY files that are 3D Gaussian Splatting scenes, detected from the file
@@ -21,20 +21,21 @@ no network connections, and collects no telemetry.
 | Meshes, point clouds, ASCII or big-endian PLY | No, Windows shows its usual icon |
 | Other splat formats (`.spz`, `.splat`, `.sog`, ...) | No |
 
-Large files are sampled: at most 200,000 splats are drawn. If a thumbnail cannot be made within
-3 seconds, Windows shows its usual icon instead. The detection rules are in
+Large files are sampled: at most 200,000 splats are drawn (50,000 or 400,000 with the quality
+setting). If a thumbnail cannot be made within 3 seconds, Windows shows its usual icon instead. The detection rules are in
 [docs/detection.md](docs/detection.md).
 
 ## Safety
 
-- Files are opened read-only and never modified.
+- Files are opened read-only and never modified. Saved views and settings are kept in your user
+  profile, not in or next to the files.
 - Every size and count in a file is checked against fixed limits before it is used, so a broken
   or malicious file is rejected instead of crashing anything. The parser and renderer are
   fuzz-tested on every change.
 - The handler runs in Windows' separate thumbnail process, not inside Explorer itself.
 - No network access, no telemetry, no administrator rights.
-- Uninstalling removes everything the installer wrote and restores the previous `.ply` thumbnail
-  handler, if there was one.
+- Uninstalling removes everything the installer wrote, along with your saved views and settings,
+  and restores the previous `.ply` thumbnail handler, if there was one.
 
 Please report security problems privately; see [SECURITY.md](SECURITY.md).
 
@@ -48,13 +49,43 @@ administrator rights.
    "Run anyway", only if you got the file from this project.
 2. Open a folder with 3D Gaussian Splatting `.ply` files in Explorer and choose large icons.
 
+Installing a newer version over an older one keeps your saved views and settings.
+
 To uninstall, open Settings > Apps > Installed apps, and choose Uninstall next to SplatThumb.
-Uninstalling removes the files and the registry entries the installer wrote, and puts back the
-`.ply` thumbnail handler that was registered before, if any.
+Uninstalling removes the files and the registry entries the installer wrote, your saved views
+and settings, and puts back the `.ply` thumbnail handler that was registered before, if any.
 
 Windows keeps thumbnails it has already made in its thumbnail cache, so they can still show
 after uninstalling. To clear the cache, run Disk Cleanup, check only "Thumbnails", and choose
 OK.
+
+## Choosing the view
+
+Some files are stored on their side, or a scene is framed badly by the automatic view. To pick
+the view for one file, right-click it in Explorer and choose "Set view with SplatThumb" (on
+Windows 11, it is under "Show more options").
+
+- Drag to turn the subject, right-drag to move it, use the wheel to zoom, and Ctrl+drag to
+  tilt the picture. The 90° buttons fix files stored on their side.
+- "Training camera" shows the view from the first camera of a `cameras.json` written by the
+  original 3D Gaussian Splatting training code, when one is found next to the file or up to
+  three folders above it.
+- "Use this view" saves the view and updates the thumbnail. "Automatic" goes back to the
+  automatic view.
+
+The view is remembered by the file's contents, so it stays when you move or rename the file on
+the same PC. It does not travel with a copy to another PC, and it is dropped if the file's
+contents change. Details: [docs/views-and-settings.md](docs/views-and-settings.md).
+
+## Settings
+
+Open "SplatThumb" from the Start menu to:
+
+- turn SplatThumb's thumbnails off or on,
+- choose the background (dark gray, transparent, white or black) and the quality,
+- delete all saved views,
+- remake the thumbnails of a folder after changing a setting. Optionally, files without a saved
+  view can start from the training camera, as above.
 
 ## Troubleshooting
 
@@ -62,7 +93,8 @@ OK.
 icons, never thumbnails" is off. Use a view with large icons; "Details" and "List" show icons only.
 
 **A thumbnail is old, or missing after installing.** Windows reuses thumbnails from its cache.
-Clear it with Disk Cleanup ("Thumbnails" only).
+Use "Remake thumbnails in a folder" in the settings, or clear the cache with Disk Cleanup
+("Thumbnails" only).
 
 **Another app's thumbnail shows instead.** Only one thumbnail handler can be registered for
 `.ply` per user. If another app registered one before SplatThumb was installed, SplatThumb
