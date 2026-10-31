@@ -19,6 +19,9 @@ inline constexpr std::size_t kMaxNameLength = 64;
 inline constexpr std::size_t kMaxElements = 16;
 inline constexpr std::size_t kMaxPropertiesPerElement = 256;
 
+// Vertices per chunk in a PlayCanvas compressed PLY; each chunk holds their value ranges.
+inline constexpr std::uint64_t kCompressedChunkSize = 256;
+
 // Largest vertex count accepted for a splat file.
 inline constexpr std::uint64_t kMaxVertexCount = 50'000'000;
 

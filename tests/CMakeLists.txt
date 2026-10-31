@@ -13,6 +13,7 @@ add_executable(splatthumb_tests
     byte_source_test.cpp
     camera_test.cpp
     classify_test.cpp
+    compressed_test.cpp
     loader_test.cpp
     mutation_test.cpp
     ply_header_test.cpp

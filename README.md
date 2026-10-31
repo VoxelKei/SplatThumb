@@ -17,7 +17,7 @@ no network connections, and collects no telemetry.
 | --- | --- |
 | 3D Gaussian Splatting PLY in the standard (INRIA) layout, binary little-endian, as written by most training tools | Yes |
 | The same with extra properties such as normals or `f_rest_*` | Yes (only the base color is drawn) |
-| PlayCanvas / SuperSplat compressed PLY (`.compressed.ply`) | Not yet (planned) |
+| PlayCanvas / SuperSplat compressed PLY (`.compressed.ply`) | Yes (only the base color is drawn) |
 | Meshes, point clouds, ASCII or big-endian PLY | No, Windows shows its usual icon |
 | Other splat formats (`.spz`, `.splat`, `.sog`, ...) | No |
 

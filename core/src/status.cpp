@@ -30,6 +30,7 @@ std::string_view to_string(Status status) noexcept {
     case Status::TooManyVertices: return "too many vertices";
     case Status::SizeOverflow: return "declared data size overflows";
     case Status::FileTooSmall: return "file is smaller than the header declares";
+    case Status::ChunkCountMismatch: return "too few chunks for the vertex count";
     case Status::UnsupportedKind: return "this kind of splat file cannot be drawn yet";
     case Status::Timeout: return "time limit exceeded";
     case Status::NothingToDraw: return "no drawable splats";

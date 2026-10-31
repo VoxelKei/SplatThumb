@@ -16,7 +16,7 @@ SplatThumb はファイルのヘッダーを見て、3D Gaussian Splatting の�
 | --- | --- |
 | 標準(INRIA 形式)の 3D Gaussian Splatting の PLY。バイナリ、リトルエンディアン。多くの学習ツールが出力する形式 | 表示する |
 | 上と同じで、法線や `f_rest_*` などの追加の項目があるもの | 表示する(描くのは基本の色だけ) |
-| PlayCanvas / SuperSplat の圧縮 PLY(`.compressed.ply`) | まだ表示しない(対応予定) |
+| PlayCanvas / SuperSplat の圧縮 PLY(`.compressed.ply`) | 表示する(描くのは基本の色だけ) |
 | メッシュ、点群、ASCII やビッグエンディアンの PLY | 表示しない(Windows の通常のアイコン) |
 | ほかの形式(`.spz`、`.splat`、`.sog` など) | 表示しない |
 

@@ -92,16 +92,10 @@ TEST(Classify, TrailingBytesAreAllowed) {
 }
 
 TEST(Classify, Compressed) {
-    const std::string h = "ply\nformat binary_little_endian 1.0\n"
-                          "element chunk 1\n"
-                          "property float min_x\nproperty float max_x\n"
-                          "element vertex 256\n"
-                          "property uint packed_position\nproperty uint packed_rotation\n"
-                          "property uint packed_scale\nproperty uint packed_color\n"
-                          "end_header\n";
-    const Classification c = inspect_header(h, 8 + 256 * 16);
+    const std::string h = compressed_header(1, 256);
+    const Classification c = inspect_header(h, 72 + 256 * 16);
     EXPECT_EQ(c.kind, SplatKind::Compressed);
-    EXPECT_EQ(c.vertex_data_offset, h.size() + 8);
+    EXPECT_EQ(c.vertex_data_offset, h.size() + 72);
     EXPECT_EQ(c.vertex_stride, 16u);
 }
 

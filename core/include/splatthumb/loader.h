@@ -34,8 +34,9 @@ struct LoadResult {
     std::uint64_t read_calls = 0;
 };
 
-// Reads up to options.max_splats records of a Standard file. Never reads outside the
-// vertex data described by c, and stops with Timeout once the deadline passes.
+// Reads up to options.max_splats records of a Standard or Compressed file. Never reads
+// outside the vertex and chunk data described by c, and stops with Timeout once the
+// deadline passes.
 LoadResult load_splats(ByteSource& source, const Classification& c, const LoadOptions& options,
                        const Deadline& deadline) noexcept;
 

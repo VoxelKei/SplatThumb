@@ -39,6 +39,7 @@ enum class Status {
     TooManyVertices,
     SizeOverflow,
     FileTooSmall,
+    ChunkCountMismatch,
 
     // Rendering
     UnsupportedKind,
