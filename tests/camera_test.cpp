@@ -62,6 +62,13 @@ TEST(AutoCamera, LooksDownWithMinusYUp) {
     EXPECT_NEAR(dot(c.up, c.up), 1.0f, 1e-5f);
 }
 
+TEST(AutoCamera, LooksFromMinusZTowardPlusZ) {
+    const std::vector<Splat> splats = {at(-1, 0, -1), at(1, 0, 1)};
+    const auto c = splatthumb::auto_camera(splats).camera;
+    EXPECT_LT(c.eye[2], c.target[2]);
+    EXPECT_GT(c.forward[2], 0.0f);
+}
+
 TEST(AutoCamera, IgnoresFloaters) {
     std::vector<Splat> splats;
     for (int i = 0; i < 1000; ++i) {
@@ -70,6 +77,58 @@ TEST(AutoCamera, IgnoresFloaters) {
     splats.push_back(at(1e5f, 0, 0)); // a single far-away floater
     const auto r = splatthumb::auto_camera(splats);
     EXPECT_LT(r.camera.radius, 10.0f);
+}
+
+Splat solid(float x, float y, float z, float size = 0.01f) {
+    Splat s = at(x, y, z);
+    s.opacity = 0.9f;
+    s.scale = {size, size, size};
+    return s;
+}
+
+TEST(AutoCamera, FramesTheSolidCoreNotBigFaintSplats) {
+    std::vector<Splat> splats;
+    for (int i = 0; i < 1000; ++i) {
+        splats.push_back(solid(static_cast<float>(i % 10) * 0.1f, 0, 0));
+    }
+    // Many large, faint floaters off to one side (more than 1% of the splats).
+    for (int i = 0; i < 300; ++i) {
+        Splat f = at(50.0f + static_cast<float>(i), 0, 0);
+        f.opacity = 0.1f;
+        f.scale = {5, 5, 5};
+        splats.push_back(f);
+    }
+    const auto r = splatthumb::auto_camera(splats);
+    ASSERT_EQ(r.status, Status::Ok);
+    EXPECT_NEAR(r.camera.target[0], 0.45f, 0.11f);
+    EXPECT_LT(r.camera.radius, 1.0f);
+}
+
+TEST(AutoCamera, ThinSpreadAroundADenseMiddleIsCropped) {
+    std::vector<Splat> splats;
+    for (int i = 0; i < 9000; ++i) {
+        splats.push_back(solid(static_cast<float>(i % 21) * 0.1f - 1.0f, 0, 0));
+    }
+    // Solid but sparse surroundings reaching far out, as in a captured scene.
+    for (int i = 0; i < 1000; ++i) {
+        const float x = 2.0f + static_cast<float>(i) * 0.05f;
+        splats.push_back(solid(i % 2 == 0 ? x : -x, 0, 0));
+    }
+    const auto r = splatthumb::auto_camera(splats);
+    ASSERT_EQ(r.status, Status::Ok);
+    // The 1..99 box alone would give a radius near 50.
+    EXPECT_LT(r.camera.radius, 10.0f);
+    EXPECT_GT(r.camera.radius, 1.0f);
+}
+
+TEST(AutoCamera, NearClipKeepsTheFramedSphere) {
+    const std::vector<Splat> splats = {at(-1, 0, -1), at(1, 0, 1)};
+    const auto c = splatthumb::auto_camera(splats).camera;
+    const splatthumb::Vec3 d{c.target[0] - c.eye[0], c.target[1] - c.eye[1],
+                             c.target[2] - c.eye[2]};
+    const float distance = std::sqrt(dot(d, d));
+    EXPECT_GT(c.near_clip, 0.0f);
+    EXPECT_LT(c.near_clip, distance - c.radius);
 }
 
 TEST(AutoCamera, SinglePointHasMinimumRadius) {

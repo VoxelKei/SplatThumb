@@ -27,7 +27,7 @@ enum class Background {
 
 struct RenderOptions {
     int size = 256; // clamped to limits::kMinThumbnailSize..kMaxThumbnailSize
-    Background background = Background::Transparent;
+    Background background = Background::Gray;
 };
 
 struct RenderResult {

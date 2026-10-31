@@ -20,6 +20,9 @@ struct Camera {
     float fov_y = 0.0f; // radians
     // Radius of the sphere around target that the view is framed to contain.
     float radius = 0.0f;
+    // Splats nearer to the eye than this (along forward) are not drawn. Zero means only
+    // the renderer's minimum applies.
+    float near_clip = 0.0f;
 };
 
 struct CameraResult {

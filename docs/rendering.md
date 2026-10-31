@@ -19,9 +19,17 @@ Log scales are clamped to [-20, 10] before `exp()`. Color is the DC term only:
 
 ## 3. Choose a view (`camera.cpp`)
 
-The target is the per-axis median of the positions. The 1st to 99th percentile box around it
-sets the framing radius, which ignores floaters. The camera looks down from 45° azimuth and
-20° elevation with a 45° field of view. Up is -Y, as in COLMAP-based training.
+Framing looks at the solid core of the file: splats that are at least half opaque and not
+among the largest 10%. Large, faint splats are mostly floaters. (If fewer than 100 splats
+qualify, all of them are used.) The target is the per-axis median of the core, and the 1st to
+99th percentile box around it sets the framing radius. The radius is also capped at twice the
+distance that 90% of the core lies within, so a scene that thins out far around its middle
+is not shrunk to a speck.
+
+The camera looks from the -Z side toward +Z, as COLMAP capture cameras face the subject, from
+45° azimuth and 20° elevation with a 45° field of view. Up is -Y, as in COLMAP-based
+training. Splats more than 1.5 radii in front of the target are left out, which removes
+foreground clutter in scenes and nothing on a single object.
 
 ## 4. Project and blend (`render.cpp`)
 
@@ -30,13 +38,13 @@ low-pass). Splats behind the camera or off screen are dropped, and an ellipse's 
 most half the image. Splats are sorted far to near and alpha-blended. Thumbnails up to 512 px
 are drawn at twice the size and downsampled. The largest thumbnail is 1024 px.
 
-The result is RGBA with premultiplied alpha. The background is transparent, or optionally
-dark gray.
+The result is RGBA with premultiplied alpha. The background is dark gray by default, so a
+thumbnail looks the same in light and dark Explorer themes; it can also be transparent.
 
 ## Trying it
 
 ```powershell
-splatthumb-cli render scene.ply thumb.png --size 256 --background transparent
+splatthumb-cli render scene.ply thumb.png --size 256 --background gray
 ```
 
 The command prints how long each step took.

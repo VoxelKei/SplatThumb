@@ -36,6 +36,8 @@ To render a thumbnail to a PNG file:
 build\msvc\bin\Release\splatthumb-cli.exe render path\to\scene.ply thumb.png --size 256
 ```
 
+The background is dark gray. Add `--background transparent` for a transparent one.
+
 ## License
 
 [MIT](LICENSE)
