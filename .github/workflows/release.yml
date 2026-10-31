@@ -1,0 +1,144 @@
+name: release
+
+# Pushing a tag such as v0.1.0 builds, tests and publishes the MSI on the Releases page.
+# Running it by hand ("Run workflow") does everything except publishing, as a dry run.
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to check against CMakeLists.txt, without the leading v
+        required: true
+        default: 0.1.0
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build and test MSI
+    runs-on: windows-2022
+    timeout-minutes: 40
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Check version and branch
+        id: version
+        shell: pwsh
+        env:
+          EVENT: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          $version = if ($env:EVENT -eq 'push') { $env:REF_NAME -replace '^v', '' } else { $env:INPUT_VERSION }
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Not a plain x.y.z version: '$version'" }
+          $line = Select-String -Path CMakeLists.txt -Pattern 'project\(SplatThumb VERSION (\d+\.\d+\.\d+)' | Select-Object -First 1
+          if (-not $line) { throw 'project(VERSION) not found in CMakeLists.txt' }
+          $cmake = $line.Matches[0].Groups[1].Value
+          if ($cmake -ne $version) { throw "Version $version does not match CMakeLists.txt ($cmake)" }
+          # Only release commits that are on main.
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor HEAD origin/main
+          if ($LASTEXITCODE -ne 0) { throw 'The commit is not on main' }
+          Write-Host "Releasing $version"
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Add MSVC tools to PATH
+        shell: pwsh
+        run: .github/scripts/Add-MsvcToolsToPath.ps1
+
+      - name: Configure, build, test
+        run: cmake --workflow --preset msvc-release
+
+      - name: Build MSI
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          cmake --build --preset msvc-release --target msi
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          New-Item -ItemType Directory -Force release | Out-Null
+          $name = "SplatThumb-$env:VERSION-x64.msi"
+          Copy-Item "build/msvc/msi/Release/$name" "release/$name"
+          $hash = (Get-FileHash "release/$name" -Algorithm SHA256).Hash.ToLowerInvariant()
+          # sha256sum format, with LF line endings.
+          [IO.File]::WriteAllText("$PWD/release/SHA256SUMS.txt", "$hash  $name`n")
+          Write-Host "$hash  $name"
+
+      - name: Test MSI install, upgrade and uninstall
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: .github/scripts/Test-Msi.ps1 -MsiPath "release/SplatThumb-$env:VERSION-x64.msi" -DllPath build/msvc/bin/Release/splatthumb_shellext.dll -LogDir msi-logs
+
+      - name: Upload release files
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release
+          path: release/
+          if-no-files-found: error
+
+      - name: Upload MSI logs
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: msi-logs
+          path: msi-logs
+          if-no-files-found: ignore
+
+  publish:
+    # Only this job can write to the repository, and only for a pushed tag.
+    name: publish release
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release
+          path: release
+
+      - name: Check files
+        working-directory: release
+        run: sha256sum --check SHA256SUMS.txt
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          hash=$(cut -d' ' -f1 release/SHA256SUMS.txt)
+          prerelease=()
+          # 0.x versions are previews.
+          if [[ "$VERSION" == 0.* ]]; then prerelease=(--prerelease); fi
+          cat > notes.md <<NOTES
+          Per-user installer for Windows 10/11 x64. No administrator rights needed.
+
+          SHA-256 of \`SplatThumb-$VERSION-x64.msi\`:
+
+          \`\`\`
+          $hash
+          \`\`\`
+
+          Check it in PowerShell with \`Get-FileHash .\\SplatThumb-$VERSION-x64.msi\`.
+          The installer is not code-signed yet, so Windows SmartScreen may warn about an unknown
+          publisher. See the README for installing, uninstalling and troubleshooting.
+          NOTES
+          gh release create "$TAG" --repo "$REPO" --verify-tag --title "SplatThumb $VERSION" \
+            --notes-file notes.md "${prerelease[@]}" \
+            "release/SplatThumb-$VERSION-x64.msi" release/SHA256SUMS.txt

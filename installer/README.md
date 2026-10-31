@@ -41,3 +41,22 @@ thumbnail cache after uninstalling, until the cache is cleared (Disk Cleanup, "T
 
 Do not install the MSI while a developer registration from `tools/dev/` is active:
 unregister that first.
+
+## Releasing
+
+`.github/workflows/release.yml` publishes a release when a `v<major>.<minor>.<patch>` tag is
+pushed:
+
+1. Set the version in `project(SplatThumb VERSION ...)` in the top-level `CMakeLists.txt` and
+   merge that to `main`.
+2. Tag the merged commit on `main` and push the tag:
+   `git tag v0.1.0 origin/main` then `git push origin v0.1.0`.
+
+The workflow stops if the tag does not match the CMake version or the commit is not on
+`main`. It builds and tests the Release configuration, builds the MSI, runs the same
+install/upgrade/uninstall checks as CI, and only then creates the release with the MSI and
+`SHA256SUMS.txt`. 0.x versions are marked as pre-releases. Only the final publishing job
+has write access to the repository.
+
+To try everything except publishing, run the workflow by hand from the Actions tab
+("Run workflow") with the version to check.
