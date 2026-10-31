@@ -34,15 +34,17 @@
     </StandardDirectory>
 
     <!-- Files in the user profile need a registry key path (ICE38) and must be removed
-         explicitly (ICE64). RemoveFolder only removes a folder that is empty. -->
+         explicitly (ICE64). RemoveFolder only removes a folder that is empty. WiX cannot
+         generate GUIDs for such components, so they are fixed here: never change them, and
+         never reuse them for other contents. -->
     <ComponentGroup Id="Files" Directory="INSTALLFOLDER">
-      <Component Id="ShellExt">
+      <Component Id="ShellExt" Guid="{0FAF3E8E-84B7-489F-AF07-FD583F4A4F59}">
         <File Id="ShellExtDll" Source="$(var.ShellExtDll)" Name="splatthumb_shellext.dll" />
         <RegistryValue Root="HKCU" Key="Software\SplatThumb" Name="ShellExt" Type="integer" Value="1" KeyPath="yes" />
         <RemoveFolder Id="RemoveInstallFolder" On="uninstall" />
         <RemoveFolder Id="RemoveProgramsDir" Directory="ProgramsDir" On="uninstall" />
       </Component>
-      <Component Id="License">
+      <Component Id="License" Guid="{21621126-0300-4528-8167-E9160D24AE2B}">
         <File Id="LicenseTxt" Source="$(var.LicenseFile)" Name="LICENSE.txt" />
         <RegistryValue Root="HKCU" Key="Software\SplatThumb" Name="License" Type="integer" Value="1" KeyPath="yes" />
       </Component>
