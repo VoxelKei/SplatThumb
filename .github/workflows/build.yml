@@ -59,3 +59,33 @@ jobs:
 
       - name: Configure, build, test
         run: cmake --workflow --preset linux-clang-sanitize
+
+  fuzz:
+    # Short fuzzing run on every change to catch parser crashes early.
+    name: fuzz header parser (60 s)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Build
+        run: |
+          cmake --preset linux-clang-fuzz
+          cmake --build --preset linux-clang-fuzz
+
+      - name: Fuzz
+        run: |
+          mkdir -p fuzz-out/corpus
+          ./build/linux-clang-fuzz/bin/fuzz_header \
+            -dict=fuzz/ply.dict -max_len=70000 -max_total_time=60 \
+            -artifact_prefix=fuzz-out/ fuzz-out/corpus fuzz/corpus
+
+      - name: Upload crashing input
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fuzz-crash
+          path: fuzz-out/crash-*
+          if-no-files-found: ignore

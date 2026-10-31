@@ -28,13 +28,28 @@
         "SPLATTHUMB_SANITIZE": "ON"
       },
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
+    },
+    {
+      "name": "linux-clang-fuzz",
+      "displayName": "Linux clang + libFuzzer + ASan/UBSan",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/linux-clang-fuzz",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "SPLATTHUMB_SANITIZE": "ON",
+        "SPLATTHUMB_BUILD_FUZZERS": "ON",
+        "SPLATTHUMB_BUILD_TESTS": "OFF"
+      },
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
     }
   ],
   "buildPresets": [
     { "name": "msvc-debug", "configurePreset": "msvc", "configuration": "Debug" },
     { "name": "msvc-release", "configurePreset": "msvc", "configuration": "Release" },
     { "name": "msvc-asan", "configurePreset": "msvc-asan", "configuration": "Debug" },
-    { "name": "linux-clang-sanitize", "configurePreset": "linux-clang-sanitize" }
+    { "name": "linux-clang-sanitize", "configurePreset": "linux-clang-sanitize" },
+    { "name": "linux-clang-fuzz", "configurePreset": "linux-clang-fuzz" }
   ],
   "testPresets": [
     {

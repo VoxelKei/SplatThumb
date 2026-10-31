@@ -23,6 +23,12 @@ cmake --workflow --preset msvc-debug
 設定、ビルド、テストまでまとめて実行されます。最適化したビルドは `msvc-release` を使います。
 ビルドしただけでは Windows には何も登録されません。
 
+ファイルがどう判別されるかを確かめるには、次を実行します(ファイルは読むだけです)。
+
+```powershell
+build\msvc\bin\Debug\splatthumb-cli.exe info path\to\scene.ply
+```
+
 ## ライセンス
 
 [MIT](LICENSE)

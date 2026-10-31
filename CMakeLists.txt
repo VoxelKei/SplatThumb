@@ -14,6 +14,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 
 option(SPLATTHUMB_BUILD_TESTS "Build unit tests" ON)
+option(SPLATTHUMB_BUILD_FUZZERS "Build libFuzzer harnesses (clang only)" OFF)
 option(SPLATTHUMB_SANITIZE "Build everything with sanitizers (ASan, plus UBSan on clang/gcc)" OFF)
 
 # Must come before any target (including GoogleTest) so the whole program is built the same way.
@@ -24,6 +25,13 @@ add_subdirectory(cli)
 
 if(WIN32)
     add_subdirectory(shellext)
+endif()
+
+if(SPLATTHUMB_BUILD_FUZZERS)
+    if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        message(FATAL_ERROR "SPLATTHUMB_BUILD_FUZZERS requires clang")
+    endif()
+    add_subdirectory(fuzz)
 endif()
 
 if(SPLATTHUMB_BUILD_TESTS)
