@@ -41,6 +41,17 @@
       <Component Id="ShellExt" Guid="{0FAF3E8E-84B7-489F-AF07-FD583F4A4F59}">
         <File Id="ShellExtDll" Source="$(var.ShellExtDll)" Name="splatthumb_shellext.dll" />
         <RegistryValue Root="HKCU" Key="Software\SplatThumb" Name="ShellExt" Type="integer" Value="1" KeyPath="yes" />
+        <!-- The same four values as tools/dev/Register-Dev.ps1, in the DLL's component so
+             they are installed and removed with it. No DisableProcessIsolation: Explorer
+             runs the handler in a separate process. -->
+        <RegistryValue Root="HKCU" Key="Software\Classes\CLSID\{09C68D16-D21F-4B95-97A1-29B45AEBF4CC}"
+                       Type="string" Value="SplatThumb Thumbnail Handler" />
+        <RegistryValue Root="HKCU" Key="Software\Classes\CLSID\{09C68D16-D21F-4B95-97A1-29B45AEBF4CC}\InprocServer32"
+                       Type="string" Value="[#ShellExtDll]" />
+        <RegistryValue Root="HKCU" Key="Software\Classes\CLSID\{09C68D16-D21F-4B95-97A1-29B45AEBF4CC}\InprocServer32"
+                       Name="ThreadingModel" Type="string" Value="Apartment" />
+        <RegistryValue Root="HKCU" Key="Software\Classes\.ply\ShellEx\{e357fccd-a995-4576-b01f-234630154e96}"
+                       Type="string" Value="{09C68D16-D21F-4B95-97A1-29B45AEBF4CC}" />
         <RemoveFolder Id="RemoveInstallFolder" On="uninstall" />
         <RemoveFolder Id="RemoveProgramsDir" Directory="ProgramsDir" On="uninstall" />
       </Component>
@@ -50,24 +61,8 @@
       </Component>
     </ComponentGroup>
 
-    <!-- The same four values as tools/dev/Register-Dev.ps1. No DisableProcessIsolation:
-         Explorer runs the handler in a separate process. -->
-    <ComponentGroup Id="Registration" Directory="INSTALLFOLDER">
-      <Component Id="ThumbnailHandler">
-        <RegistryValue Root="HKCU" Key="Software\Classes\CLSID\{09C68D16-D21F-4B95-97A1-29B45AEBF4CC}"
-                       Type="string" Value="SplatThumb Thumbnail Handler" KeyPath="yes" />
-        <RegistryValue Root="HKCU" Key="Software\Classes\CLSID\{09C68D16-D21F-4B95-97A1-29B45AEBF4CC}\InprocServer32"
-                       Type="string" Value="[#ShellExtDll]" />
-        <RegistryValue Root="HKCU" Key="Software\Classes\CLSID\{09C68D16-D21F-4B95-97A1-29B45AEBF4CC}\InprocServer32"
-                       Name="ThreadingModel" Type="string" Value="Apartment" />
-        <RegistryValue Root="HKCU" Key="Software\Classes\.ply\ShellEx\{e357fccd-a995-4576-b01f-234630154e96}"
-                       Type="string" Value="{09C68D16-D21F-4B95-97A1-29B45AEBF4CC}" />
-      </Component>
-    </ComponentGroup>
-
     <Feature Id="Main">
       <ComponentGroupRef Id="Files" />
-      <ComponentGroupRef Id="Registration" />
     </Feature>
   </Package>
 </Wix>

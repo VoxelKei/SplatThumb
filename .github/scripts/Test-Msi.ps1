@@ -130,17 +130,38 @@ function New-TestPly([string] $Path, [switch] $Mesh) {
 }
 
 # New files each time, so a thumbnail cached by an earlier round cannot hide a failure.
+# COM ignores per-user (HKCU) class registrations in elevated processes, and CI runs
+# elevated. So the shell is asked from a non-elevated "basic user" process, like Explorer.
+function Get-ShellThumbnail([string] $Path) {
+    $shell = (Get-Process -Id $PID).Path
+    $script = Join-Path $PSScriptRoot 'Get-Thumbnail.ps1'
+    $principal = [Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()
+    if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+        & $shell -NoProfile -File $script -Path $Path
+        return $LASTEXITCODE -eq 0
+    }
+    $out = "$Path.result.txt"
+    $command = "`"$shell`" -NoProfile -NonInteractive -File `"$script`" -Path `"$Path`" -ResultPath `"$out`""
+    Start-Process runas.exe -Wait -WindowStyle Hidden -ArgumentList "/trustlevel:0x20000 `"$($command -replace '"', '\"')`""
+    $deadline = (Get-Date).AddSeconds(60)
+    while (-not (Test-Path -LiteralPath $out) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 500 }
+    Assert (Test-Path -LiteralPath $out) "no result from the non-elevated thumbnail check for $Path"
+    Start-Sleep -Milliseconds 500  # let the writer finish
+    $result = (Get-Content -LiteralPath $out -Raw).Trim()
+    Write-Host "Thumbnail of ${Path} (non-elevated): $result"
+    $null, $width, $null = $result -split ' '
+    [int] $width -gt 0
+}
+
+# New files each time, so a thumbnail cached by an earlier round cannot hide a failure.
 function Test-Thumbnails {
     $id = [guid]::NewGuid().ToString('N')
     $splatPly = Join-Path $work "splat-$id.ply"
     $meshPly = Join-Path $work "mesh-$id.ply"
     New-TestPly $splatPly
     New-TestPly $meshPly -Mesh
-    $shell = (Get-Process -Id $PID).Path
-    & $shell -NoProfile -File (Join-Path $PSScriptRoot 'Get-Thumbnail.ps1') -Path $splatPly
-    Assert ($LASTEXITCODE -eq 0) 'no thumbnail for the 3DGS PLY'
-    & $shell -NoProfile -File (Join-Path $PSScriptRoot 'Get-Thumbnail.ps1') -Path $meshPly
-    Assert ($LASTEXITCODE -ne 0) 'the mesh PLY got a thumbnail'
+    Assert (Get-ShellThumbnail $splatPly) 'no thumbnail for the 3DGS PLY'
+    Assert (-not (Get-ShellThumbnail $meshPly)) 'the mesh PLY got a thumbnail'
 }
 
 # The shell keeps the handler loaded in dllhost.exe for a while after a thumbnail. Report

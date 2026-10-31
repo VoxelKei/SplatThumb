@@ -1,8 +1,9 @@
 # Asks the Windows shell for a file's thumbnail the way Explorer does
 # (IShellItemImageFactory, thumbnails only, no icon fallback). Prints the result and exits
 # 0 when a thumbnail came back, 1 when none did. Run it in its own process: the shell may
-# load the handler DLL into this process or into dllhost.exe.
-param([Parameter(Mandatory)] [string] $Path, [int] $Size = 256)
+# load the handler DLL into this process or into dllhost.exe. With -ResultPath, also writes
+# the result there (for callers that cannot see this process's output).
+param([Parameter(Mandatory)] [string] $Path, [int] $Size = 256, [string] $ResultPath)
 $ErrorActionPreference = 'Stop'
 
 Add-Type -TypeDefinition @'
@@ -51,8 +52,13 @@ public static class SplatThumbCiShell {
 }
 '@
 
-$result = [SplatThumbCiShell]::Get((Resolve-Path -LiteralPath $Path).ProviderPath, $Size)
+try {
+    $result = [SplatThumbCiShell]::Get((Resolve-Path -LiteralPath $Path).ProviderPath, $Size)
+} catch {
+    $result = "error 0 0 ($($_.Exception.Message))"
+}
 Write-Host "Thumbnail of ${Path}: $result"
+if ($ResultPath) { Set-Content -LiteralPath $ResultPath -Value $result }
 $hr, $width, $height = $result -split ' '
 if ([int] $width -gt 0 -and [int] $height -gt 0) { exit 0 }
 exit 1
