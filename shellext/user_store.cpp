@@ -18,6 +18,12 @@ std::optional<std::uint32_t> read_dword(const wchar_t* name) noexcept {
     return static_cast<std::uint32_t>(value);
 }
 
+bool write_dword(const wchar_t* name, std::uint32_t value) noexcept {
+    const DWORD v = value;
+    return RegSetKeyValueW(HKEY_CURRENT_USER, kSettingsKey, name, REG_DWORD, &v, sizeof(v)) ==
+           ERROR_SUCCESS;
+}
+
 } // namespace
 
 std::optional<std::filesystem::path> views_root() noexcept {
@@ -43,6 +49,15 @@ Settings read_settings() noexcept {
     stored.background = read_dword(kBackgroundValue);
     stored.quality = read_dword(kQualityValue);
     return settings_from_stored(stored);
+}
+
+bool write_settings(const Settings& settings) noexcept {
+    const StoredSettings stored = stored_from_settings(settings);
+    bool ok = true;
+    ok = write_dword(kEnabledValue, stored.enabled.value_or(1)) && ok;
+    ok = write_dword(kBackgroundValue, stored.background.value_or(0)) && ok;
+    ok = write_dword(kQualityValue, stored.quality.value_or(1)) && ok;
+    return ok;
 }
 
 } // namespace splatthumb::shellext

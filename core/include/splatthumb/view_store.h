@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <filesystem>
 #include <optional>
 
@@ -23,5 +24,11 @@ bool save_view(const std::filesystem::path& root, const Fingerprint& fp, const V
 
 // Removes the view for fp. Returns true when there is none afterwards.
 bool remove_view(const std::filesystem::path& root, const Fingerprint& fp) noexcept;
+
+// Number of saved view files under root (at most `limit`, to bound the time taken).
+std::size_t count_views(const std::filesystem::path& root, std::size_t limit = 1'000'000) noexcept;
+
+// Removes every saved view (the whole root folder). Returns true when nothing is left.
+bool remove_all_views(const std::filesystem::path& root) noexcept;
 
 } // namespace splatthumb

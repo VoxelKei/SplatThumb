@@ -1,7 +1,8 @@
-# SplatThumb.exe: the viewpoint window (opened from the PLY right-click menu) and, later,
-# the settings window. Win32 only, static CRT like the DLL, no extra runtime.
+# SplatThumb.exe: the viewpoint window (opened from the PLY right-click menu) and the
+# settings window (from the Start menu). Win32 only, static CRT like the DLL, no extra runtime.
 add_executable(SplatThumb WIN32
     main.cpp
+    settings_window.cpp
     strings.cpp
     thumbnail_refresh.cpp
     viewer_window.cpp

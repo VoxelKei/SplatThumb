@@ -76,6 +76,19 @@ look. (The installer adds this to the right-click menu of `.ply` files.)
 The window loads the file with the same limits and checks as the thumbnail handler. While
 dragging it draws at most 30,000 splats at low resolution, then redraws at full quality.
 
+## The settings window
+
+Running `SplatThumb.exe` without arguments (the Start menu shortcut) opens the settings
+window. It shows in Japanese or English, following the Windows display language.
+
+- "Save settings" writes the values below.
+- "Delete all saved views..." removes the whole views folder after asking.
+- "Remake thumbnails in a folder..." asks Windows to make the thumbnails of every `.ply`
+  file directly in the chosen folder again (subfolders are not included, at most 10,000
+  files). With the training-camera box ticked, files that have no saved view but have a
+  `cameras.json` nearby first get a saved view from its first camera. This runs in the
+  background and can be stopped; closing the window stops it after the current file.
+
 ## Settings
 
 Settings are DWORD values under `HKCU\Software\SplatThumb\Settings`. Missing or
