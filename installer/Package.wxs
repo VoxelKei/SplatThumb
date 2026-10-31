@@ -4,9 +4,10 @@
   current user's profile and HKEY_CURRENT_USER, and removes everything it wrote on uninstall.
 
   Built by the `msi` CMake target (installer/CMakeLists.txt), which passes:
-    Version      from project(VERSION) in the top-level CMakeLists.txt
-    ShellExtDll  the built splatthumb_shellext.dll
-    LicenseFile  the repository's LICENSE
+    Version          from project(VERSION) in the top-level CMakeLists.txt
+    ShellExtDll      the built splatthumb_shellext.dll
+    CustomActionDll  the built splatthumb_ca.dll
+    LicenseFile      the repository's LICENSE
 -->
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <!-- The UpgradeCode never changes: it is how a new version finds and replaces an old one. -->
@@ -41,17 +42,16 @@
       <Component Id="ShellExt" Guid="{0FAF3E8E-84B7-489F-AF07-FD583F4A4F59}">
         <File Id="ShellExtDll" Source="$(var.ShellExtDll)" Name="splatthumb_shellext.dll" />
         <RegistryValue Root="HKCU" Key="Software\SplatThumb" Name="ShellExt" Type="integer" Value="1" KeyPath="yes" />
-        <!-- The same four values as tools/dev/Register-Dev.ps1, in the DLL's component so
-             they are installed and removed with it. No DisableProcessIsolation: Explorer
-             runs the handler in a separate process. -->
+        <!-- The CLSID values (the same as tools/dev/Register-Dev.ps1), in the DLL's component
+             so they are installed and removed with it. No DisableProcessIsolation: Explorer
+             runs the handler in a separate process. The .ply\ShellEx value is written by the
+             custom actions below. -->
         <RegistryValue Root="HKCU" Key="Software\Classes\CLSID\{09C68D16-D21F-4B95-97A1-29B45AEBF4CC}"
                        Type="string" Value="SplatThumb Thumbnail Handler" />
         <RegistryValue Root="HKCU" Key="Software\Classes\CLSID\{09C68D16-D21F-4B95-97A1-29B45AEBF4CC}\InprocServer32"
                        Type="string" Value="[#ShellExtDll]" />
         <RegistryValue Root="HKCU" Key="Software\Classes\CLSID\{09C68D16-D21F-4B95-97A1-29B45AEBF4CC}\InprocServer32"
                        Name="ThreadingModel" Type="string" Value="Apartment" />
-        <RegistryValue Root="HKCU" Key="Software\Classes\.ply\ShellEx\{e357fccd-a995-4576-b01f-234630154e96}"
-                       Type="string" Value="{09C68D16-D21F-4B95-97A1-29B45AEBF4CC}" />
         <RemoveFolder Id="RemoveInstallFolder" On="uninstall" />
         <RemoveFolder Id="RemoveProgramsDir" Directory="ProgramsDir" On="uninstall" />
       </Component>
@@ -60,6 +60,33 @@
         <RegistryValue Root="HKCU" Key="Software\SplatThumb" Name="License" Type="integer" Value="1" KeyPath="yes" />
       </Component>
     </ComponentGroup>
+
+    <!-- HKCU\Software\Classes\.ply\ShellEx\{e357...}: Windows Installer would delete every
+         key it leaves empty, including a .ply key that was there before. So a custom action
+         saves what is there (to HKCU\Software\SplatThumb\Previous) and points the handler at
+         SplatThumb, and another puts back exactly what was saved. Each has a rollback twin
+         that undoes it if the install or uninstall fails later. Both also tell the shell
+         that file associations changed. See customaction/ply_registration.h. -->
+    <Binary Id="CustomActions" SourceFile="$(var.CustomActionDll)" />
+    <CustomAction Id="RegisterPly" BinaryRef="CustomActions" DllEntry="RegisterPly"
+                  Execute="deferred" Impersonate="yes" Return="check" />
+    <CustomAction Id="RegisterPlyRollback" BinaryRef="CustomActions" DllEntry="RestorePly"
+                  Execute="rollback" Impersonate="yes" Return="ignore" />
+    <CustomAction Id="RestorePly" BinaryRef="CustomActions" DllEntry="RestorePly"
+                  Execute="deferred" Impersonate="yes" Return="check" />
+    <CustomAction Id="RestorePlyRollback" BinaryRef="CustomActions" DllEntry="RegisterPly"
+                  Execute="rollback" Impersonate="yes" Return="ignore" />
+    <!-- Only for CI: msiexec ... SPLATTHUMB_FAIL_FOR_TEST=1 makes the install or uninstall
+         fail after the changes above, to check the rollback. -->
+    <CustomAction Id="FailForTest" BinaryRef="CustomActions" DllEntry="FailForTest"
+                  Execute="deferred" Impersonate="yes" Return="check" />
+    <InstallExecuteSequence>
+      <Custom Action="RestorePlyRollback" Before="RestorePly" Condition="REMOVE~=&quot;ALL&quot;" />
+      <Custom Action="RestorePly" Before="RemoveRegistryValues" Condition="REMOVE~=&quot;ALL&quot;" />
+      <Custom Action="RegisterPlyRollback" Before="RegisterPly" Condition="NOT Installed AND NOT REMOVE~=&quot;ALL&quot;" />
+      <Custom Action="RegisterPly" After="WriteRegistryValues" Condition="NOT REMOVE~=&quot;ALL&quot;" />
+      <Custom Action="FailForTest" After="RegisterPly" Condition="SPLATTHUMB_FAIL_FOR_TEST = &quot;1&quot;" />
+    </InstallExecuteSequence>
 
     <Feature Id="Main">
       <ComponentGroupRef Id="Files" />

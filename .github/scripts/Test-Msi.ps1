@@ -1,6 +1,8 @@
 # Installs, checks and uninstalls the MSI on the (throwaway) CI machine. After every
 # uninstall, the registry keys and folders the MSI touches must be exactly as before.
-# Also covers installing twice, uninstalling twice, upgrading and refusing a downgrade.
+# Also covers installing twice, uninstalling twice, upgrading, refusing a downgrade, another
+# application's handler being saved and put back, and rollback of a failed install or
+# uninstall.
 param(
     [Parameter(Mandatory)] [string] $MsiPath,
     [Parameter(Mandatory)] [string] $DllPath,
@@ -53,13 +55,13 @@ function Invoke-Msiexec([string] $Name, [string[]] $Arguments) {
     $p.ExitCode
 }
 
-function Install-Msi([string] $Path, [int] $Expect = 0) {
-    $code = Invoke-Msiexec 'install' @('/i', "`"$Path`"")
+function Install-Msi([string] $Path, [int] $Expect = 0, [string[]] $Properties = @()) {
+    $code = Invoke-Msiexec 'install' (@('/i', "`"$Path`"") + $Properties)
     Assert ($code -eq $Expect) "install of $Path returned $code, expected $Expect"
 }
 
-function Uninstall-Msi([string] $Path, [int] $Expect = 0) {
-    $code = Invoke-Msiexec 'uninstall' @('/x', "`"$Path`"")
+function Uninstall-Msi([string] $Path, [int] $Expect = 0, [string[]] $Properties = @()) {
+    $code = Invoke-Msiexec 'uninstall' (@('/x', "`"$Path`"") + $Properties)
     Assert ($code -eq $Expect) "uninstall of $Path returned $code, expected $Expect"
 }
 
@@ -193,7 +195,9 @@ function Build-OtherVersion([string] $Version) {
     Push-Location $repo
     try {
         & dotnet tool run wix build -arch x64 -d "Version=$Version" `
-            -d "ShellExtDll=$((Resolve-Path $DllPath).ProviderPath)" -d "LicenseFile=$repo\LICENSE" `
+            -d "ShellExtDll=$((Resolve-Path $DllPath).ProviderPath)" `
+            -d "CustomActionDll=$(Join-Path (Split-Path (Resolve-Path $DllPath).ProviderPath) 'splatthumb_ca.dll')" `
+            -d "LicenseFile=$repo\LICENSE" `
             -o $out installer\Package.wxs
         Assert ($LASTEXITCODE -eq 0) "wix build of $Version failed"
     } finally {
@@ -244,6 +248,37 @@ function Test-Upgrade {
     Write-Host 'OK: upgrade'
 }
 
+function Test-Rollback([string] $Name) {
+    Write-Host "== rollback ($Name)"
+    $fail = @('SPLATTHUMB_FAIL_FOR_TEST=1')
+    $before = Get-State
+    Install-Msi $MsiPath -Expect 1603 -Properties $fail
+    Assert-NotInstalled
+    $after = Get-State
+    Assert ($after -eq $before) "$Name failed install was not rolled back.`nBefore:`n$before`nAfter:`n$after"
+
+    Install-Msi $MsiPath
+    $installed = Get-State
+    Uninstall-Msi $MsiPath -Expect 1603 -Properties $fail
+    Assert-Installed $Version
+    $after = Get-State
+    Assert ($after -eq $installed) "$Name failed uninstall was not rolled back.`nInstalled:`n$installed`nAfter:`n$after"
+    Uninstall-Msi $MsiPath
+    $after = Get-State
+    Assert ($after -eq $before) "$Name state differs after uninstall.`nBefore:`n$before`nAfter:`n$after"
+    Write-Host "OK: rollback ($Name)"
+}
+
+# Another application's handler, with values of several types.
+function Set-OtherHandler {
+    $key = $hkcu.CreateSubKey("Software\Classes\.ply\ShellEx\$ThumbnailHandlerShellEx")
+    $key.SetValue('', '{11111111-2222-3333-4444-555555555555}')
+    $key.SetValue('Number', 5, [Microsoft.Win32.RegistryValueKind]::DWord)
+    $key.SetValue('Bytes', [byte[]] (1, 2, 3), [Microsoft.Win32.RegistryValueKind]::Binary)
+    $key.SetValue('Lines', [string[]] ('a', 'b'), [Microsoft.Win32.RegistryValueKind]::MultiString)
+    $key.Dispose()
+}
+
 try {
     $plyExisted = $null -ne $hkcu.OpenSubKey('Software\Classes\.ply')
     if (-not $plyExisted) {
@@ -255,8 +290,17 @@ try {
     Test-RoundTrip 'existing .ply key'
     Assert ($null -ne $hkcu.OpenSubKey('Software\Classes\.ply')) 'existing .ply key was removed'
     Test-Upgrade
+    Test-Rollback 'existing .ply key'
+
+    Set-OtherHandler
+    Test-RoundTrip 'another handler'
+    $key = $hkcu.OpenSubKey("Software\Classes\.ply\ShellEx\$ThumbnailHandlerShellEx")
+    Assert ($key.GetValue('') -eq '{11111111-2222-3333-4444-555555555555}') 'another handler: not put back'
+    $key.Dispose()
+    Test-Rollback 'another handler'
 } finally {
     if (-not $plyExisted) { $hkcu.DeleteSubKeyTree('Software\Classes\.ply', $false) }
+    else { $hkcu.DeleteSubKeyTree("Software\Classes\.ply\ShellEx\$ThumbnailHandlerShellEx", $false) }
     Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 }
 Write-Host 'MSI: all checks passed.'
