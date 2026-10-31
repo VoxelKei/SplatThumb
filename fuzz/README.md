@@ -1,15 +1,19 @@
 # fuzz
 
-libFuzzer harness for the PLY header parser and classifier.
+libFuzzer harnesses. Both need clang on Linux.
 
-Requires clang on Linux:
+| Harness | Input | What it covers |
+| --- | --- | --- |
+| `fuzz_header` | Arbitrary bytes | Header parser and classifier, then loading and rendering any file they accept |
+| `fuzz_splats` | Two layout bytes, then vertex data behind a fixed valid 3DGS header | `render_thumbnail`, the same path Explorer uses, with arbitrary record values (NaN, infinities, huge scales, zero rotations) |
 
 ```sh
 cmake --preset linux-clang-fuzz
 cmake --build --preset linux-clang-fuzz
-mkdir -p /tmp/corpus
-./build/linux-clang-fuzz/bin/fuzz_header -dict=fuzz/ply.dict -max_total_time=60 /tmp/corpus fuzz/corpus
+.github/scripts/run-fuzz.sh 60   # 60 seconds per harness
 ```
 
-`fuzz/corpus/` holds small synthetic seed inputs. CI runs the fuzzer for 60 seconds on every
-push and pull request.
+`fuzz/corpus/` and `fuzz/corpus_splats/` hold small synthetic seed inputs; no real scans.
+CI runs each harness for 60 seconds on every push and pull request, and for 20 minutes once a
+week (`.github/workflows/fuzz-weekly.yml`). Crashing inputs are uploaded as the `fuzz-crash`
+artifact.
