@@ -21,6 +21,11 @@ add_executable(splatthumb_tests
     version_test.cpp)
 target_link_libraries(splatthumb_tests PRIVATE splatthumb_core splatthumb_warnings GTest::gtest_main)
 
+if(WIN32)
+    target_sources(splatthumb_tests PRIVATE shellext_test.cpp)
+    target_link_libraries(splatthumb_tests PRIVATE splatthumb_shellext_lib shlwapi)
+endif()
+
 include(GoogleTest)
 # PRE_TEST: discovery runs at test time, when sanitizer runtimes are on PATH.
 gtest_discover_tests(splatthumb_tests DISCOVERY_MODE PRE_TEST)
