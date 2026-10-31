@@ -39,6 +39,11 @@ enum class Status {
     TooManyVertices,
     SizeOverflow,
     FileTooSmall,
+
+    // Rendering
+    UnsupportedKind,
+    Timeout,
+    NothingToDraw,
 };
 
 std::string_view to_string(Status status) noexcept;

@@ -1,8 +1,11 @@
 # core must stay free of Windows headers and external dependencies.
 add_library(splatthumb_core STATIC
     src/byte_source.cpp
+    src/camera.cpp
     src/classify.cpp
+    src/loader.cpp
     src/ply_header.cpp
+    src/splat.cpp
     src/status.cpp
     src/version.cpp)
 
