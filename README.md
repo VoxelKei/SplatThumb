@@ -72,7 +72,11 @@ Windows 11, it is under "Show more options").
 
 The view is remembered by the file's contents, so it stays when you move or rename the file on
 the same PC. It does not travel with a copy to another PC, and it is dropped if the file's
-contents change. Details: [docs/views-and-settings.md](docs/views-and-settings.md).
+contents change.
+
+Saved views are kept in `%LOCALAPPDATA%\SplatThumb\views`, one small text file per file.
+Deleting that folder sends every thumbnail back to the automatic view the next time it is
+made; uninstalling deletes it too. Details: [docs/views-and-settings.md](docs/views-and-settings.md).
 
 ## Settings
 
@@ -80,7 +84,6 @@ Open "SplatThumb" from the Start menu to:
 
 - turn SplatThumb's thumbnails off or on,
 - choose the quality (how many splats are drawn),
-- delete all saved views,
 - remake the thumbnails of a folder after changing a setting.
 
 ## Troubleshooting

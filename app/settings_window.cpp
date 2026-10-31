@@ -17,7 +17,6 @@
 #include <vector>
 
 #include "splatthumb/settings.h"
-#include "splatthumb/view_store.h"
 #include "strings.h"
 #include "thumbnail_refresh.h"
 #include "user_store.h"
@@ -48,8 +47,6 @@ enum Control : int {
     kNote,
     kSave,
     kSavedStatus,
-    kViewCount,
-    kDeleteViews,
     kRemake,
     kStop,
     kProgress,
@@ -62,7 +59,6 @@ enum Control : int {
 struct RemakeJob {
     HWND window = nullptr;
     std::vector<std::filesystem::path> files;
-    std::optional<std::filesystem::path> views_root;
     std::atomic<bool> stop{false};
 };
 
@@ -108,8 +104,6 @@ private:
 
     void load_settings() noexcept;
     void save_settings() noexcept;
-    void update_view_count() noexcept;
-    void delete_views() noexcept;
     void start_remake() noexcept;
     void finish_remake() noexcept;
     std::optional<std::filesystem::path> pick_folder() noexcept;
@@ -117,7 +111,6 @@ private:
     HWND hwnd_ = nullptr;
     HFONT font_ = nullptr;
     UINT dpi_ = 96;
-    std::optional<std::filesystem::path> views_root_;
     RemakeJob* job_ = nullptr;
     HANDLE thread_ = nullptr;
 };
@@ -142,10 +135,8 @@ int SettingsWindow::run(int show) noexcept {
         return 1;
     }
     dpi_ = GetDpiForWindow(hwnd_);
-    views_root_ = shellext::views_root();
     create_controls();
     load_settings();
-    update_view_count();
     ShowWindow(hwnd_, show);
 
     MSG msg;
@@ -174,8 +165,6 @@ void SettingsWindow::create_controls() noexcept {
     add(L"STATIC", text(Text::SettingsNote), SS_LEFT, kNote);
     add(L"BUTTON", text(Text::SaveSettings), WS_TABSTOP | BS_PUSHBUTTON, kSave);
     add(L"STATIC", L"", SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX, kSavedStatus);
-    add(L"STATIC", L"", SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX, kViewCount);
-    add(L"BUTTON", text(Text::DeleteViews), WS_TABSTOP | BS_PUSHBUTTON, kDeleteViews);
     add(L"BUTTON", text(Text::RemakeFolder), WS_TABSTOP | BS_PUSHBUTTON, kRemake);
     const HWND stop = add(L"BUTTON", text(Text::Stop), WS_TABSTOP | BS_PUSHBUTTON, kStop);
     EnableWindow(stop, FALSE);
@@ -240,10 +229,6 @@ void SettingsWindow::layout() noexcept {
     place(kSavedStatus, m + save_w + gap, y, inner - save_w - gap, row + scaled(4));
     y += row + scaled(4) + gap * 3;
 
-    const int delete_w = button_width(kDeleteViews);
-    place(kViewCount, m, y, inner - delete_w - gap, row + scaled(4));
-    place(kDeleteViews, m + inner - delete_w, y, delete_w, row + scaled(4));
-    y += row + scaled(4) + gap * 2;
     const int remake_w = button_width(kRemake);
     const int stop_w = button_width(kStop);
     place(kRemake, m, y, remake_w, row + scaled(4));
@@ -281,34 +266,6 @@ void SettingsWindow::save_settings() noexcept {
     const bool ok = shellext::write_settings(settings_from_stored(stored));
     SetDlgItemTextW(hwnd_, kSavedStatus,
                     ok ? text(Text::SettingsSaved) : text(Text::CannotSaveSettings));
-}
-
-void SettingsWindow::update_view_count() noexcept {
-    const std::size_t n = views_root_ ? count_views(*views_root_) : 0;
-    try {
-        SetDlgItemTextW(hwnd_, kViewCount, text(Text::SavedViews, n).c_str());
-    } catch (...) {
-    }
-    EnableWindow(GetDlgItem(hwnd_, kDeleteViews), n > 0 && job_ == nullptr);
-}
-
-void SettingsWindow::delete_views() noexcept {
-    if (!views_root_) {
-        return;
-    }
-    const std::size_t n = count_views(*views_root_);
-    try {
-        const std::wstring question = text(Text::ConfirmDeleteViews, n);
-        if (MessageBoxW(hwnd_, question.c_str(), text(Text::AppName),
-                        MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) != IDYES) {
-            return;
-        }
-    } catch (...) {
-        return;
-    }
-    remove_all_views(*views_root_);
-    update_view_count();
-    SetDlgItemTextW(hwnd_, kProgress, text(Text::ViewsDeleted));
 }
 
 std::optional<std::filesystem::path> SettingsWindow::pick_folder() noexcept {
@@ -371,7 +328,6 @@ void SettingsWindow::start_remake() noexcept {
         return;
     }
     job->window = hwnd_;
-    job->views_root = views_root_;
     thread_ = CreateThread(nullptr, 0, &remake_thread, job, 0, nullptr);
     if (thread_ == nullptr) {
         delete job;
@@ -379,7 +335,6 @@ void SettingsWindow::start_remake() noexcept {
     }
     job_ = job;
     EnableWindow(GetDlgItem(hwnd_, kRemake), FALSE);
-    EnableWindow(GetDlgItem(hwnd_, kDeleteViews), FALSE);
     EnableWindow(GetDlgItem(hwnd_, kStop), TRUE);
     SetDlgItemTextW(hwnd_, kProgress, text(Text::Remaking));
 }
@@ -394,7 +349,6 @@ void SettingsWindow::finish_remake() noexcept {
     job_ = nullptr;
     EnableWindow(GetDlgItem(hwnd_, kRemake), TRUE);
     EnableWindow(GetDlgItem(hwnd_, kStop), FALSE);
-    update_view_count();
 }
 
 LRESULT CALLBACK SettingsWindow::window_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) noexcept {
@@ -427,9 +381,6 @@ LRESULT SettingsWindow::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
         switch (LOWORD(wp)) {
         case kSave:
             save_settings();
-            return 0;
-        case kDeleteViews:
-            delete_views();
             return 0;
         case kRemake:
             start_remake();

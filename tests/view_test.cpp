@@ -188,21 +188,6 @@ TEST_F(ViewStore, BrokenOrHugeFilesAreIgnored) {
     EXPECT_FALSE(splatthumb::load_view(root_, fp(3)).has_value());
 }
 
-TEST_F(ViewStore, CountAndRemoveAll) {
-    EXPECT_EQ(splatthumb::count_views(root_), 0u);
-    ASSERT_TRUE(splatthumb::save_view(root_, fp(1), sample_view()));
-    ASSERT_TRUE(splatthumb::save_view(root_, fp(2), sample_view()));
-    ASSERT_TRUE(splatthumb::save_view(root_, fp(0xff), sample_view()));
-    // Stray files are not counted.
-    std::ofstream(root_ / "readme.txt") << "x";
-    EXPECT_EQ(splatthumb::count_views(root_), 3u);
-    EXPECT_EQ(splatthumb::count_views(root_, 2), 2u);
-    EXPECT_TRUE(splatthumb::remove_all_views(root_));
-    EXPECT_FALSE(std::filesystem::exists(root_));
-    EXPECT_EQ(splatthumb::count_views(root_), 0u);
-    EXPECT_TRUE(splatthumb::remove_all_views(root_));
-}
-
 // ---- Settings ----
 
 TEST(Settings, MissingValuesAreDefaults) {

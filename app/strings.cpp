@@ -50,12 +50,6 @@ constexpr Entry kTexts[] = {
     {L"Save settings", L"設定を保存"},
     {L"Settings saved.", L"設定を保存しました。"},
     {L"The settings could not be saved.", L"設定を保存できませんでした。"},
-    {L"Saved views: {n}", L"保存した視点: {n} 件"},
-    {L"Delete all saved views...", L"保存した視点をすべて消す..."},
-    {L"Delete all {n} saved views? Their thumbnails return to the automatic view when they "
-     L"are made again.",
-     L"保存した視点 {n} 件をすべて消しますか？サムネイルは、作り直したときに自動の視点に戻ります。"},
-    {L"All saved views were deleted.", L"保存した視点をすべて消しました。"},
     {L"Remake thumbnails in a folder...", L"フォルダーのサムネイルを作り直す..."},
     {L"Stop", L"中止"},
     {L"Remaking thumbnails...", L"サムネイルを作り直しています..."},

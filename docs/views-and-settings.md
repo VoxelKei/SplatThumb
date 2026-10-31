@@ -42,7 +42,9 @@ Views are kept in `%LOCALAPPDATA%\SplatThumb\views\`, one small text file per fi
 views\<first two hex digits>\<fingerprint>.view
 ```
 
-Looking a view up is a single file open, however many are saved.
+Looking a view up is a single file open, however many are saved. The settings window has no
+button to delete views; to drop them all, delete the `views` folder (thumbnails go back to the
+automatic view when they are made again). Uninstalling deletes it as well.
 
 ```
 splatthumb-view 1
@@ -81,7 +83,6 @@ Running `SplatThumb.exe` without arguments (the Start menu shortcut) opens the s
 window. It shows in Japanese or English, following the Windows display language.
 
 - "Save settings" writes the values below.
-- "Delete all saved views..." removes the whole views folder after asking.
 - "Remake thumbnails in a folder..." asks Windows to make the thumbnails of every `.ply`
   file directly in the chosen folder again (subfolders are not included, at most 10,000
   files). This runs in the background and can be stopped; closing the window stops it after
