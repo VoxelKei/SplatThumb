@@ -21,7 +21,7 @@ enum class SampleMode {
 };
 
 struct LoadOptions {
-    std::size_t max_splats = limits::kMaxRenderSplats;
+    std::size_t max_splats = limits::kStandardRenderSplats;
     SampleMode mode = SampleMode::Blocks;
     std::size_t block_size = 100;
 };

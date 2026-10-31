@@ -116,17 +116,26 @@ TEST(Loader, SingleRecord) {
 }
 
 TEST(Loader, ExactlyAtLimitReadsEverything) {
-    ProceduralSource src(splatthumb::limits::kMaxRenderSplats);
+    constexpr std::size_t n = splatthumb::limits::kStandardRenderSplats;
+    ProceduralSource src(n);
     const LoadResult r = load(src);
     ASSERT_EQ(r.status, Status::Ok);
-    EXPECT_EQ(r.records_read, splatthumb::limits::kMaxRenderSplats);
-    EXPECT_EQ(r.splats.back().position[0],
-              static_cast<float>(splatthumb::limits::kMaxRenderSplats - 1));
+    EXPECT_EQ(r.records_read, n);
+    EXPECT_EQ(r.splats.back().position[0], static_cast<float>(n - 1));
 }
 
 TEST(Loader, OneOverLimitIsSampled) {
-    ProceduralSource src(splatthumb::limits::kMaxRenderSplats + 1);
+    ProceduralSource src(splatthumb::limits::kStandardRenderSplats + 1);
     const LoadResult r = load(src);
+    ASSERT_EQ(r.status, Status::Ok);
+    EXPECT_EQ(r.records_read, splatthumb::limits::kStandardRenderSplats);
+}
+
+TEST(Loader, MaxSplatsAboveTheHardCapIsCapped) {
+    ProceduralSource src(splatthumb::limits::kMaxRenderSplats + 1);
+    LoadOptions o;
+    o.max_splats = splatthumb::limits::kMaxRenderSplats * 2;
+    const LoadResult r = load(src, o);
     ASSERT_EQ(r.status, Status::Ok);
     EXPECT_EQ(r.records_read, splatthumb::limits::kMaxRenderSplats);
 }

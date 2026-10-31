@@ -3,12 +3,17 @@ add_library(splatthumb_core STATIC
     src/byte_source.cpp
     src/camera.cpp
     src/classify.cpp
+    src/fingerprint.cpp
     src/loader.cpp
     src/ply_header.cpp
     src/render.cpp
+    src/settings.cpp
+    src/sha256.cpp
     src/splat.cpp
     src/status.cpp
-    src/version.cpp)
+    src/version.cpp
+    src/view.cpp
+    src/view_store.cpp)
 
 target_include_directories(splatthumb_core PUBLIC include)
 target_compile_definitions(splatthumb_core PRIVATE

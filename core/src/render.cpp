@@ -13,6 +13,8 @@ namespace splatthumb {
 namespace {
 
 constexpr float kGray = 0.18f;
+constexpr float kWhite = 1.0f;
+constexpr float kBlack = 0.0f;
 constexpr float kMinAlpha = 1.0f / 255.0f;
 constexpr float kMaxAlpha = 0.99f;
 // Low-pass filter added to the 2D covariance so tiny splats still cover a pixel.
@@ -117,6 +119,17 @@ bool project(const Splat& s, const Camera& cam, int side, float focal, Projected
     return true;
 }
 
+// Linear gray level of an opaque background.
+float background_level(Background background) noexcept {
+    switch (background) {
+    case Background::White: return kWhite;
+    case Background::Black: return kBlack;
+    case Background::Gray:
+    case Background::Transparent: break;
+    }
+    return kGray;
+}
+
 std::uint8_t to_u8(float v) noexcept {
     return static_cast<std::uint8_t>(std::clamp(v, 0.0f, 1.0f) * 255.0f + 0.5f);
 }
@@ -210,6 +223,7 @@ RenderResult render_splats(std::span<const Splat> splats, const Camera& camera,
         }
 
         // Box downsample, optional background, convert to 8 bits.
+        const float bg = background_level(options.background);
         Image& img = result.image;
         img.size = size;
         img.rgba.resize(static_cast<std::size_t>(size) * static_cast<std::size_t>(size) * 4);
@@ -230,11 +244,11 @@ RenderResult render_splats(std::span<const Splat> splats, const Camera& camera,
                 for (float& ch : acc) {
                     ch *= inv;
                 }
-                if (options.background == Background::Gray) {
+                if (options.background != Background::Transparent) {
                     const float keep = 1.0f - acc[3];
-                    acc[0] += kGray * keep;
-                    acc[1] += kGray * keep;
-                    acc[2] += kGray * keep;
+                    acc[0] += bg * keep;
+                    acc[1] += bg * keep;
+                    acc[2] += bg * keep;
                     acc[3] = 1.0f;
                 }
                 std::uint8_t* out =
@@ -259,7 +273,7 @@ RenderResult render_splats(std::span<const Splat> splats, const Camera& camera,
 
 RenderResult render_thumbnail(ByteSource& source, const RenderOptions& options,
                               const LoadOptions& load_options, const Deadline& deadline,
-                              ThumbnailStats* stats) noexcept {
+                              ThumbnailStats* stats, const View* view) noexcept {
     using Clock = std::chrono::steady_clock;
     const auto ms = [](Clock::time_point a, Clock::time_point b) {
         return std::chrono::duration<double, std::milli>(b - a).count();
@@ -287,7 +301,14 @@ RenderResult render_thumbnail(ByteSource& source, const RenderOptions& options,
         return result;
     }
 
-    const CameraResult cam = auto_camera(loaded.splats);
+    CameraResult cam;
+    cam.status = Status::NothingToDraw;
+    if (view != nullptr) {
+        cam = camera_from_view(*view);
+    }
+    if (cam.status != Status::Ok) {
+        cam = auto_camera(loaded.splats);
+    }
     auto t3 = Clock::now();
     st.camera_ms = ms(t2, t3);
     if (cam.status != Status::Ok) {

@@ -40,6 +40,14 @@ struct AutoCameraOptions {
     float high_percentile = 0.99f;
 };
 
+// Builds a camera at eye looking at target, with up_hint giving the screen's up direction
+// (it need not be exactly perpendicular). radius frames a sphere around target; splats well
+// in front of that sphere are clipped. Fails with NothingToDraw when the inputs are not
+// finite, eye and target coincide, up_hint is parallel to the view direction, or radius
+// or fov_y_deg is out of range.
+CameraResult look_at(const Vec3& eye, const Vec3& target, const Vec3& up_hint, float fov_y_deg,
+                     float radius) noexcept;
+
 // Chooses a view of the splats: target at the per-axis median, framed to fit the
 // low..high percentile box, looking down from above with -Y as up (COLMAP convention).
 CameraResult auto_camera(std::span<const Splat> splats,

@@ -25,10 +25,24 @@ inline constexpr std::uint64_t kCompressedChunkSize = 256;
 // Largest vertex count accepted for a splat file.
 inline constexpr std::uint64_t kMaxVertexCount = 50'000'000;
 
+// ---- Fingerprints and saved views ----
+
+// A fingerprint reads the first kFingerprintHeadBytes of a file plus kFingerprintSamples
+// evenly spaced pieces of kFingerprintSampleBytes each: at most 320 KiB, whatever the size.
+inline constexpr std::size_t kFingerprintHeadBytes = 64 * 1024;
+inline constexpr std::size_t kFingerprintSamples = 64;
+inline constexpr std::size_t kFingerprintSampleBytes = 4 * 1024;
+
+// Saved view files larger than this are ignored.
+inline constexpr std::size_t kMaxViewFileBytes = 1024;
+
 // ---- Rendering ----
 
-// At most this many splats are read and drawn; larger files are sampled.
-inline constexpr std::size_t kMaxRenderSplats = 200'000;
+// At most this many splats are read and drawn; larger files are sampled. The quality
+// setting picks one of these; kMaxRenderSplats is the hard cap.
+inline constexpr std::size_t kFastRenderSplats = 50'000;
+inline constexpr std::size_t kStandardRenderSplats = 200'000;
+inline constexpr std::size_t kMaxRenderSplats = 400'000;
 
 // Largest single read from the source while loading splats.
 inline constexpr std::size_t kMaxReadChunkBytes = 1024 * 1024;

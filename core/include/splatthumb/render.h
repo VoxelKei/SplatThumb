@@ -11,6 +11,7 @@
 #include "splatthumb/loader.h"
 #include "splatthumb/splat.h"
 #include "splatthumb/status.h"
+#include "splatthumb/view.h"
 
 namespace splatthumb {
 
@@ -23,6 +24,8 @@ struct Image {
 enum class Background {
     Transparent,
     Gray,
+    White,
+    Black,
 };
 
 struct RenderOptions {
@@ -48,9 +51,11 @@ struct ThumbnailStats {
     std::size_t splats_drawn = 0;
 };
 
-// inspect + load_splats + auto_camera + render_splats under one deadline.
+// inspect + load_splats + auto_camera + render_splats under one deadline. A given view
+// replaces auto_camera; if it cannot make a camera, auto_camera is used instead.
 RenderResult render_thumbnail(ByteSource& source, const RenderOptions& options,
                               const LoadOptions& load_options, const Deadline& deadline,
-                              ThumbnailStats* stats = nullptr) noexcept;
+                              ThumbnailStats* stats = nullptr,
+                              const View* view = nullptr) noexcept;
 
 } // namespace splatthumb

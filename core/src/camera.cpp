@@ -18,6 +18,8 @@ constexpr std::size_t kMinCoreSplats = 100;
 constexpr float kNearDistancePercentile = 0.9f;
 constexpr float kNearDistanceMargin = 2.0f;
 constexpr float kNearClipRadii = 1.5f;
+constexpr float kMinFovDeg = 1.0f;
+constexpr float kMaxFovDeg = 170.0f;
 
 float radians(float deg) noexcept {
     return deg * std::numbers::pi_v<float> / 180.0f;
@@ -45,7 +47,51 @@ float percentile(std::vector<float>& values, float p) noexcept {
     return values[k];
 }
 
+bool finite(const Vec3& v) noexcept {
+    return std::isfinite(v[0]) && std::isfinite(v[1]) && std::isfinite(v[2]);
+}
+
+float length(const Vec3& v) noexcept {
+    return std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+}
+
 } // namespace
+
+CameraResult look_at(const Vec3& eye, const Vec3& target, const Vec3& up_hint, float fov_y_deg,
+                     float radius) noexcept {
+    CameraResult result;
+    result.status = Status::NothingToDraw;
+    if (!finite(eye) || !finite(target) || !finite(up_hint) || !std::isfinite(fov_y_deg) ||
+        !std::isfinite(radius) || fov_y_deg < kMinFovDeg || fov_y_deg > kMaxFovDeg ||
+        !(radius > 0.0f)) {
+        return result;
+    }
+    const Vec3 to_target = sub(target, eye);
+    const float distance = length(to_target);
+    const float up_length = length(up_hint);
+    if (!std::isfinite(distance) || !(distance > 0.0f) || !std::isfinite(up_length) ||
+        !(up_length > 0.0f)) {
+        return result;
+    }
+    Camera& cam = result.camera;
+    cam.eye = eye;
+    cam.target = target;
+    cam.forward = normalize(to_target);
+    const Vec3 side = cross(cam.forward, up_hint);
+    // sin of the angle between forward and up_hint; below this they are too close to parallel.
+    if (!(length(side) > 1e-3f * up_length)) {
+        return result;
+    }
+    cam.right = normalize(side);
+    cam.up = cross(cam.right, cam.forward);
+    cam.fov_y = radians(fov_y_deg);
+    cam.radius = radius;
+    // Leave out what lies well in front of the framed sphere: in a scene that is
+    // foreground clutter right in front of the lens, and an object has nothing there.
+    cam.near_clip = distance - kNearClipRadii * radius;
+    result.status = Status::Ok;
+    return result;
+}
 
 CameraResult auto_camera(std::span<const Splat> splats, const AutoCameraOptions& options) noexcept {
     CameraResult result;
@@ -110,25 +156,15 @@ CameraResult auto_camera(std::span<const Splat> splats, const AutoCameraOptions&
 
         const float az = radians(options.azimuth_deg);
         const float el = radians(std::clamp(options.elevation_deg, -80.0f, 80.0f));
-        const float fov = radians(std::clamp(options.fov_y_deg, 1.0f, 170.0f));
+        const float fov_deg = std::clamp(options.fov_y_deg, kMinFovDeg, kMaxFovDeg);
         // World up is -Y. Elevation moves the eye toward world up. Azimuth 0 puts the eye
         // on the -Z side looking toward +Z, the way COLMAP capture cameras face the subject.
         const Vec3 world_up{0.0f, -1.0f, 0.0f};
         const Vec3 dir{std::cos(el) * std::sin(az), -std::sin(el), -std::cos(el) * std::cos(az)};
-        const float distance = radius / std::sin(fov * 0.5f);
-
-        Camera& cam = result.camera;
-        cam.target = mid;
-        cam.eye = {mid[0] + dir[0] * distance, mid[1] + dir[1] * distance,
-                   mid[2] + dir[2] * distance};
-        cam.forward = normalize(sub(cam.target, cam.eye));
-        cam.right = normalize(cross(cam.forward, world_up));
-        cam.up = cross(cam.right, cam.forward);
-        cam.fov_y = fov;
-        cam.radius = radius;
-        // Leave out what lies well in front of the framed sphere: in a scene that is
-        // foreground clutter right in front of the lens, and an object has nothing there.
-        cam.near_clip = distance - kNearClipRadii * radius;
+        const float distance = radius / std::sin(radians(fov_deg) * 0.5f);
+        const Vec3 eye{mid[0] + dir[0] * distance, mid[1] + dir[1] * distance,
+                       mid[2] + dir[2] * distance};
+        result = look_at(eye, mid, world_up, fov_deg, radius);
     } catch (const std::bad_alloc&) {
         result.status = Status::OutOfMemory;
     }
