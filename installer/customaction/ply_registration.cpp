@@ -1,6 +1,9 @@
 #include "ply_registration.h"
 
+#include <cstddef>
 #include <cwchar>
+#include <iterator>
+#include <string>
 
 namespace splatthumb::installer {
 
@@ -8,6 +11,16 @@ namespace {
 
 constexpr const wchar_t* kPlyExisted = L"PlyExisted";
 constexpr const wchar_t* kShellExExisted = L"ShellExExisted";
+// The right-click item's parent keys, deepest last.
+struct VerbParent {
+    const wchar_t* key;
+    const wchar_t* existed;
+};
+constexpr VerbParent kVerbParents[] = {
+    {kAssociationsKey, L"AssociationsExisted"},
+    {kAssociationsPlyKey, L"AssociationsPlyExisted"},
+    {kAssociationsShellKey, L"AssociationsShellExisted"},
+};
 // Written last: a state without it was interrupted before anything else changed.
 constexpr const wchar_t* kComplete = L"Complete";
 
@@ -61,6 +74,57 @@ LONG point_handler_at_us(HKEY root) noexcept {
     return status;
 }
 
+LONG set_string(HKEY root, const wchar_t* path, const wchar_t* name,
+                const std::wstring& value) noexcept {
+    HKEY key = nullptr;
+    LONG status =
+        RegCreateKeyExW(root, path, 0, nullptr, 0, KEY_SET_VALUE, nullptr, &key, nullptr);
+    if (status != ERROR_SUCCESS) {
+        return status;
+    }
+    status = RegSetValueExW(key, name, 0, REG_SZ, reinterpret_cast<const BYTE*>(value.c_str()),
+                            static_cast<DWORD>((value.size() + 1) * sizeof(wchar_t)));
+    RegCloseKey(key);
+    return status;
+}
+
+// Records which of the right-click item's parent keys exist, unless already recorded
+// (a state saved by v0.1 has none of these values).
+LONG record_verb_parents(HKEY root, HKEY state) noexcept {
+    for (const auto& parent : kVerbParents) {
+        DWORD existed = 0;
+        if (get_dword(state, parent.existed, existed)) {
+            continue;
+        }
+        if (const LONG status = set_dword(state, parent.existed, key_exists(root, parent.key) ? 1 : 0);
+            status != ERROR_SUCCESS) {
+            return status;
+        }
+    }
+    return ERROR_SUCCESS;
+}
+
+// The right-click item. MUIVerb names a string in the program, so Windows shows it in the
+// user's display language; the default value is the English text for anything that does
+// not read MUIVerb.
+LONG write_verb(HKEY root, const wchar_t* exe) noexcept {
+    try {
+        const std::wstring path(exe);
+        LONG status = set_string(root, kVerbKey, L"MUIVerb",
+                                 L"@" + path + L",-" + std::to_wstring(kVerbTextId));
+        if (status == ERROR_SUCCESS) {
+            status = set_string(root, kVerbKey, nullptr, L"Set SplatThumb view");
+        }
+        if (status == ERROR_SUCCESS) {
+            status = set_string(root, kVerbCommandKey, nullptr,
+                                L"\"" + path + L"\" --view \"%1\"");
+        }
+        return status;
+    } catch (...) {
+        return ERROR_NOT_ENOUGH_MEMORY;
+    }
+}
+
 // Copies the key at `from` (values and subkeys) to a new key at `to`.
 LONG copy_key(HKEY root, const wchar_t* from, const wchar_t* to) noexcept {
     HKEY source = nullptr;
@@ -107,16 +171,26 @@ LONG delete_if_empty(HKEY root, const wchar_t* path) noexcept {
     return RegDeleteKeyW(root, path);
 }
 
+// Points the handler at us and adds the right-click item. The state is saved already.
+LONG apply(HKEY root, const wchar_t* exe) noexcept {
+    LONG status = point_handler_at_us(root);
+    if (status == ERROR_SUCCESS && exe != nullptr && *exe != L'\0') {
+        status = write_verb(root, exe);
+    }
+    return status;
+}
+
 } // namespace
 
-LONG register_ply(HKEY root) noexcept {
+LONG register_ply(HKEY root, const wchar_t* exe) noexcept {
     HKEY state = nullptr;
-    if (RegOpenKeyExW(root, kStateKey, 0, KEY_READ, &state) == ERROR_SUCCESS) {
+    if (RegOpenKeyExW(root, kStateKey, 0, KEY_READ | KEY_SET_VALUE, &state) == ERROR_SUCCESS) {
         DWORD complete = 0;
         const bool saved = get_dword(state, kComplete, complete) && complete == 1;
+        const LONG recorded = saved ? record_verb_parents(root, state) : ERROR_SUCCESS;
         RegCloseKey(state);
         if (saved) {
-            return point_handler_at_us(root);
+            return recorded == ERROR_SUCCESS ? apply(root, exe) : recorded;
         }
         // Left over from an interrupted run, before anything else was changed.
         if (const LONG status = delete_tree(root, kStateKey); status != ERROR_SUCCESS) {
@@ -133,6 +207,9 @@ LONG register_ply(HKEY root) noexcept {
     if (status == ERROR_SUCCESS) {
         status = set_dword(state, kShellExExisted, key_exists(root, kShellExKey) ? 1 : 0);
     }
+    if (status == ERROR_SUCCESS) {
+        status = record_verb_parents(root, state);
+    }
     if (status == ERROR_SUCCESS && key_exists(root, kHandlerKey)) {
         status = copy_key(root, kHandlerKey, kSavedHandlerKey);
     }
@@ -144,7 +221,7 @@ LONG register_ply(HKEY root) noexcept {
         delete_tree(root, kStateKey); // nothing else has changed yet
         return status;
     }
-    return point_handler_at_us(root);
+    return apply(root, exe);
 }
 
 LONG restore_ply(HKEY root) noexcept {
@@ -162,6 +239,13 @@ LONG restore_ply(HKEY root) noexcept {
     const bool saved = get_dword(state, kComplete, complete) && complete == 1 &&
                        get_dword(state, kPlyExisted, ply_existed) &&
                        get_dword(state, kShellExExisted, shellex_existed);
+    // Missing values (a state saved by v0.1) count as "existed", so nothing is removed.
+    DWORD parents_existed[std::size(kVerbParents)];
+    for (std::size_t i = 0; i < std::size(kVerbParents); ++i) {
+        if (!get_dword(state, kVerbParents[i].existed, parents_existed[i])) {
+            parents_existed[i] = 1;
+        }
+    }
     RegCloseKey(state);
     if (!saved) {
         // Interrupted before the handler was changed: only the state needs to go.
@@ -177,6 +261,17 @@ LONG restore_ply(HKEY root) noexcept {
             return status; // keep the saved state so a retry can finish
         }
     }
+    // The right-click item is SplatThumb's own key, whoever wrote it.
+    if (status = delete_tree(root, kVerbKey); status != ERROR_SUCCESS) {
+        return status;
+    }
+    for (std::size_t i = std::size(kVerbParents); i-- > 0;) {
+        if (parents_existed[i] == 0) {
+            if (status = delete_if_empty(root, kVerbParents[i].key); status != ERROR_SUCCESS) {
+                return status;
+            }
+        }
+    }
     if (shellex_existed == 0) {
         if (status = delete_if_empty(root, kShellExKey); status != ERROR_SUCCESS) {
             return status;
@@ -188,6 +283,13 @@ LONG restore_ply(HKEY root) noexcept {
         }
     }
     return delete_tree(root, kStateKey);
+}
+
+LONG remove_user_settings(HKEY root) noexcept {
+    if (const LONG status = delete_tree(root, kUserSettingsKey); status != ERROR_SUCCESS) {
+        return status;
+    }
+    return delete_if_empty(root, kUserKey);
 }
 
 } // namespace splatthumb::installer

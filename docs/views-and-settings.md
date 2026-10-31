@@ -63,7 +63,8 @@ the thumbnail uses the automatic view. Unknown keys are ignored. The parser is f
 ## The viewpoint window
 
 `SplatThumb.exe --view <file.ply>` opens a window showing the file as its thumbnail would
-look. (The installer adds this to the right-click menu of `.ply` files.)
+look. The installer adds it to the right-click menu of `.ply` files as "Set view with
+SplatThumb" ("SplatThumb で視点を設定"); on Windows 11 it is under "Show more options".
 
 - Drag to turn the subject, right-drag (or Shift+drag) to move it, Ctrl+drag to turn the
   picture, and use the wheel to zoom. The two 90° buttons fix files stored on their side.
@@ -106,5 +107,6 @@ made again. The app asks Windows for that through `IThumbnailCache` with
 
 ## Uninstalling
 
-From the v0.2 installer on, uninstalling removes `%LOCALAPPDATA%\SplatThumb` (saved views included) and
-`HKCU\Software\SplatThumb`, so nothing is left behind.
+From the v0.2 installer on, uninstalling removes `%LOCALAPPDATA%\SplatThumb` (saved views
+included) and `HKCU\Software\SplatThumb`, so nothing is left behind. Installing a newer
+version over an older one keeps both. See [the installer README](../installer/README.md).

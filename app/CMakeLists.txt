@@ -6,7 +6,8 @@ add_executable(SplatThumb WIN32
     strings.cpp
     thumbnail_refresh.cpp
     viewer_window.cpp
-    SplatThumb.manifest)
+    SplatThumb.manifest
+    SplatThumb.rc)
 target_compile_definitions(SplatThumb PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
 target_link_libraries(SplatThumb PRIVATE
     splatthumb_core splatthumb_shellext_lib splatthumb_warnings
