@@ -1,6 +1,7 @@
 #include "viewer_window.h"
 
 #include <windows.h>
+#include <shellapi.h>
 #include <windowsx.h>
 
 #include <algorithm>
@@ -27,6 +28,7 @@
 #include "splatthumb/training_camera.h"
 #include "splatthumb/view.h"
 #include "splatthumb/view_store.h"
+#include "settings_window.h"
 #include "strings.h"
 #include "thumbnail_refresh.h"
 #include "user_store.h"
@@ -57,19 +59,18 @@ constexpr int kInitialWidth = 760;
 constexpr int kInitialHeight = 820;
 
 enum Control : int {
-    kRotateLeft = 100,
-    kRotateRight,
-    kTraining,
+    kTraining = 100,
     kAutomatic,
     kSave,
+    kSettings,
     kClose,
     kStatus,
 };
 
 constexpr std::array kButtons = {
-    std::pair{kRotateLeft, Text::RotateLeft}, std::pair{kRotateRight, Text::RotateRight},
     std::pair{kTraining, Text::TrainingCamera}, std::pair{kAutomatic, Text::Automatic},
-    std::pair{kSave, Text::Save},             std::pair{kClose, Text::Close},
+    std::pair{kSave, Text::Save},             std::pair{kSettings, Text::OpenSettings},
+    std::pair{kClose, Text::Close},
 };
 
 class Viewer {
@@ -88,6 +89,8 @@ private:
     void create_controls() noexcept;
     void update_font() noexcept;
     void layout() noexcept;
+    void open_settings() noexcept;
+    void reload_background() noexcept;
     RECT picture_rect() const noexcept;
     int scaled(int v) const noexcept { return MulDiv(v, static_cast<int>(dpi_), 96); }
 
@@ -231,8 +234,6 @@ std::optional<int> Viewer::load() noexcept {
     if (const auto cam = find_training_camera(file_)) {
         training_view_ = view_from_training_camera(*cam, automatic.camera);
     }
-    EnableWindow(GetDlgItem(hwnd_, kRotateLeft), TRUE);
-    EnableWindow(GetDlgItem(hwnd_, kRotateRight), TRUE);
     EnableWindow(GetDlgItem(hwnd_, kTraining), training_view_.has_value());
     EnableWindow(GetDlgItem(hwnd_, kSave), fingerprint_ && views_root_);
     EnableWindow(GetDlgItem(hwnd_, kAutomatic), fingerprint_ && views_root_);
@@ -254,6 +255,7 @@ void Viewer::create_controls() noexcept {
                                       nullptr);
         EnableWindow(buttons_[i], FALSE);
     }
+    EnableWindow(GetDlgItem(hwnd_, kSettings), TRUE);
     EnableWindow(GetDlgItem(hwnd_, kClose), TRUE);
     status_ = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOPREFIX,
                               0, 0, 10, 10, hwnd_,
@@ -474,8 +476,43 @@ LRESULT CALLBACK Viewer::window_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) 
     return self->handle(msg, wp, lp);
 }
 
+// Brings an open settings window to the front, or starts SplatThumb.exe again without
+// arguments to open one. A separate process, so either window can be closed first.
+void Viewer::open_settings() noexcept {
+    if (const HWND open = FindWindowW(kSettingsWindowClass, nullptr); open != nullptr) {
+        if (IsIconic(open)) {
+            ShowWindow(open, SW_RESTORE);
+        }
+        SetForegroundWindow(open);
+        return;
+    }
+    std::wstring exe(32768, L'\0');
+    const DWORD length = GetModuleFileNameW(nullptr, exe.data(), static_cast<DWORD>(exe.size()));
+    if (length == 0 || length >= exe.size()) {
+        return;
+    }
+    exe.resize(length);
+    ShellExecuteW(hwnd_, L"open", exe.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+}
+
+// The background may have been changed in the settings window meanwhile. (A changed
+// quality applies the next time the window is opened.)
+void Viewer::reload_background() noexcept {
+    const Settings now = shellext::read_settings();
+    if (now.background != settings_.background) {
+        settings_.background = now.background;
+        dirty_ = true;
+        InvalidateRect(hwnd_, nullptr, FALSE);
+    }
+}
+
 LRESULT Viewer::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
     switch (msg) {
+    case WM_ACTIVATE:
+        if (LOWORD(wp) != WA_INACTIVE) {
+            reload_background();
+        }
+        break;
     case WM_PAINT:
         paint();
         return 0;
@@ -581,12 +618,6 @@ LRESULT Viewer::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
         return 0;
     case WM_COMMAND:
         switch (LOWORD(wp)) {
-        case kRotateLeft:
-            set_view(roll(view_, kPi / 2), true);
-            return 0;
-        case kRotateRight:
-            set_view(roll(view_, -kPi / 2), true);
-            return 0;
         case kTraining:
             if (training_view_) {
                 set_view(*training_view_, true);
@@ -597,6 +628,9 @@ LRESULT Viewer::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
             return 0;
         case kSave:
             save();
+            return 0;
+        case kSettings:
+            open_settings();
             return 0;
         case kClose:
         case IDCANCEL:

@@ -34,7 +34,6 @@ namespace splatthumb::app {
 
 namespace {
 
-constexpr wchar_t kClassName[] = L"SplatThumbSettings";
 
 // A folder with more .ply files than this is only remade up to this many.
 constexpr std::size_t kMaxFolderFiles = 10'000;
@@ -181,11 +180,11 @@ int SettingsWindow::run(int show) noexcept {
     wc.hInstance = GetModuleHandleW(nullptr);
     wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
     wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
-    wc.lpszClassName = kClassName;
+    wc.lpszClassName = kSettingsWindowClass;
     wc.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
     RegisterClassExW(&wc);
 
-    hwnd_ = CreateWindowExW(0, kClassName, text(Text::SettingsTitle),
+    hwnd_ = CreateWindowExW(0, kSettingsWindowClass, text(Text::SettingsTitle),
                             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX |
                                 WS_CLIPCHILDREN,
                             CW_USEDEFAULT, CW_USEDEFAULT, kWidth, 400, nullptr, nullptr,

@@ -66,12 +66,12 @@ the view for one file, right-click it in Explorer and choose "Set view with Spla
 Windows 11, it is under "Show more options").
 
 - Drag to turn the subject, right-drag to move it, use the wheel to zoom, and Ctrl+drag to
-  tilt the picture. The 90° buttons fix files stored on their side.
+  tilt the picture, for example to stand up a file stored on its side.
 - "Training camera" shows the view from the first camera of a `cameras.json` written by the
   original 3D Gaussian Splatting training code, when one is found next to the file or up to
   three folders above it.
-- "Use this view" saves the view and updates the thumbnail. "Automatic" goes back to the
-  automatic view.
+- "Use this view" saves the view and updates the thumbnail. "Reset" goes back to the
+  automatic view. "Settings..." opens the settings window described below.
 
 The view is remembered by the file's contents, so it stays when you move or rename the file on
 the same PC. It does not travel with a copy to another PC, and it is dropped if the file's

@@ -67,12 +67,14 @@ look. The installer adds it to the right-click menu of `.ply` files as "Set view
 SplatThumb" ("SplatThumb で視点を設定"); on Windows 11 it is under "Show more options".
 
 - Drag to turn the subject, right-drag (or Shift+drag) to move it, Ctrl+drag to turn the
-  picture, and use the wheel to zoom. The two 90° buttons fix files stored on their side.
+  picture (for example to stand up a file stored on its side), and use the wheel to zoom.
 - "Training camera" is available when a `cameras.json` from the original 3DGS training
   code is found in the PLY's folder or up to three folders above it. It shows the view from
   its first camera. Only the first camera is read, from at most 1 MiB of the file.
 - "Use this view" saves the view and asks Windows to make the thumbnail again.
-  "Automatic" deletes the saved view and does the same.
+  "Reset" deletes the saved view and does the same. "Settings..." opens the settings window
+  (or brings an open one to the front); a changed background shows in the viewpoint window
+  when it is next active.
 
 The window loads the file with the same limits and checks as the thumbnail handler. While
 dragging it draws at most 30,000 splats at low resolution, then redraws at full quality.
