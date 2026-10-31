@@ -2,8 +2,8 @@
 
 #include <objbase.h>
 
-// Placeholder: no COM classes are provided yet, so every class request fails and
-// Explorer falls back to its default icon.
+#include "class_factory.h"
+#include "module.h"
 
 BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID /*reserved*/) {
     if (reason == DLL_PROCESS_ATTACH) {
@@ -12,14 +12,10 @@ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID /*reserved*/) {
     return TRUE;
 }
 
-STDAPI DllGetClassObject(REFCLSID /*clsid*/, REFIID /*iid*/, LPVOID* ppv) {
-    if (ppv == nullptr) {
-        return E_POINTER;
-    }
-    *ppv = nullptr;
-    return CLASS_E_CLASSNOTAVAILABLE;
+STDAPI DllGetClassObject(REFCLSID clsid, REFIID iid, LPVOID* ppv) {
+    return splatthumb::shellext::get_class_object(clsid, iid, ppv);
 }
 
 STDAPI DllCanUnloadNow() {
-    return S_OK;
+    return splatthumb::shellext::module_in_use() ? S_FALSE : S_OK;
 }
