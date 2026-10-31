@@ -46,6 +46,14 @@ jobs:
         shell: pwsh
         run: .github/scripts/Test-ShellextExports.ps1 -Path ${{ matrix.build_dir }}/bin/${{ matrix.config }}/splatthumb_shellext.dll
 
+      - name: Check development registration scripts (PowerShell 7)
+        shell: pwsh
+        run: .github/scripts/Test-DevRegistration.ps1 -DllPath ${{ matrix.build_dir }}/bin/${{ matrix.config }}/splatthumb_shellext.dll
+
+      - name: Check development registration scripts (Windows PowerShell 5.1)
+        shell: powershell
+        run: .github/scripts/Test-DevRegistration.ps1 -DllPath ${{ matrix.build_dir }}/bin/${{ matrix.config }}/splatthumb_shellext.dll
+
   linux-core:
     # Builds core without Windows headers, which keeps it portable and lets us
     # run UBSan, which MSVC does not provide.
