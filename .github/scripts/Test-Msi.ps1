@@ -171,7 +171,7 @@ function Build-OtherVersion([string] $Version) {
     $out = Join-Path $work "SplatThumb-$Version-x64.msi"
     Push-Location $repo
     try {
-        & dotnet tool run wix build -arch x64 -sice ICE61 -d "Version=$Version" `
+        & dotnet tool run wix build -arch x64 -d "Version=$Version" `
             -d "ShellExtDll=$((Resolve-Path $DllPath).ProviderPath)" -d "LicenseFile=$repo\LICENSE" `
             -o $out installer\Package.wxs
         Assert ($LASTEXITCODE -eq 0) "wix build of $Version failed"

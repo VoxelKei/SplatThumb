@@ -12,12 +12,15 @@ add_custom_target(msi
     COMMAND "${SPLATTHUMB_DOTNET}" tool restore
     COMMAND "${SPLATTHUMB_DOTNET}" tool run wix build
         -arch x64
-        -sice ICE61
         -d "Version=${PROJECT_VERSION}"
         -d "ShellExtDll=$<TARGET_FILE:splatthumb_shellext>"
         -d "LicenseFile=${PROJECT_SOURCE_DIR}/LICENSE"
         -o "${CMAKE_BINARY_DIR}/msi/$<CONFIG>/${SPLATTHUMB_MSI_NAME}"
         "${CMAKE_CURRENT_SOURCE_DIR}/Package.wxs"
+    # Windows Installer's own consistency checks (ICEs). ICE61 only warns that
+    # AllowSameVersionUpgrades is on, which is intended.
+    COMMAND "${SPLATTHUMB_DOTNET}" tool run wix msi validate -sice ICE61
+        "${CMAKE_BINARY_DIR}/msi/$<CONFIG>/${SPLATTHUMB_MSI_NAME}"
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
     COMMENT "Building ${SPLATTHUMB_MSI_NAME}"
     VERBATIM)
