@@ -25,7 +25,6 @@
 #include "splatthumb/orbit.h"
 #include "splatthumb/render.h"
 #include "splatthumb/settings.h"
-#include "splatthumb/training_camera.h"
 #include "splatthumb/view.h"
 #include "splatthumb/view_store.h"
 #include "settings_window.h"
@@ -59,8 +58,7 @@ constexpr int kInitialWidth = 760;
 constexpr int kInitialHeight = 820;
 
 enum Control : int {
-    kTraining = 100,
-    kAutomatic,
+    kAutomatic = 100,
     kSave,
     kSettings,
     kClose,
@@ -68,7 +66,7 @@ enum Control : int {
 };
 
 constexpr std::array kButtons = {
-    std::pair{kTraining, Text::TrainingCamera}, std::pair{kAutomatic, Text::Automatic},
+    std::pair{kAutomatic, Text::Automatic},
     std::pair{kSave, Text::Save},             std::pair{kSettings, Text::OpenSettings},
     std::pair{kClose, Text::Close},
 };
@@ -115,7 +113,6 @@ private:
     std::optional<std::filesystem::path> views_root_;
     View view_{};
     View auto_view_{};
-    std::optional<View> training_view_;
 
     // Mouse dragging.
     bool dragging_ = false;
@@ -230,10 +227,6 @@ std::optional<int> Viewer::load() noexcept {
             view_ = *saved;
         }
     }
-    if (const auto cam = find_training_camera(file_)) {
-        training_view_ = view_from_training_camera(*cam, automatic.camera);
-    }
-    EnableWindow(GetDlgItem(hwnd_, kTraining), training_view_.has_value());
     EnableWindow(GetDlgItem(hwnd_, kSave), fingerprint_ && views_root_);
     EnableWindow(GetDlgItem(hwnd_, kAutomatic), fingerprint_ && views_root_);
     SetCursor(old_cursor);
@@ -598,11 +591,6 @@ LRESULT Viewer::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
         return 0;
     case WM_COMMAND:
         switch (LOWORD(wp)) {
-        case kTraining:
-            if (training_view_) {
-                set_view(*training_view_, true);
-            }
-            return 0;
         case kAutomatic:
             reset();
             return 0;

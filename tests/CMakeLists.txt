@@ -22,7 +22,6 @@ add_executable(splatthumb_tests
     render_test.cpp
     sha256_test.cpp
     splat_test.cpp
-    training_camera_test.cpp
     version_test.cpp
     view_test.cpp)
 target_link_libraries(splatthumb_tests PRIVATE splatthumb_core splatthumb_warnings GTest::gtest_main)

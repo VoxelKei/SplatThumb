@@ -68,9 +68,6 @@ SplatThumb" ("SplatThumb で視点を設定"); on Windows 11 it is under "Show m
 
 - Drag to turn the subject, right-drag (or Shift+drag) to move it, Ctrl+drag to turn the
   picture (for example to stand up a file stored on its side), and use the wheel to zoom.
-- "Training camera" is available when a `cameras.json` from the original 3DGS training
-  code is found in the PLY's folder or up to three folders above it. It shows the view from
-  its first camera. Only the first camera is read, from at most 1 MiB of the file.
 - "Use this view" saves the view and asks Windows to make the thumbnail again.
   "Reset" deletes the saved view and does the same. "Settings..." opens the settings window
   (or brings an open one to the front).
@@ -87,9 +84,8 @@ window. It shows in Japanese or English, following the Windows display language.
 - "Delete all saved views..." removes the whole views folder after asking.
 - "Remake thumbnails in a folder..." asks Windows to make the thumbnails of every `.ply`
   file directly in the chosen folder again (subfolders are not included, at most 10,000
-  files). With the training-camera box ticked, files that have no saved view but have a
-  `cameras.json` nearby first get a saved view from its first camera. This runs in the
-  background and can be stopped; closing the window stops it after the current file.
+  files). This runs in the background and can be stopped; closing the window stops it after
+  the current file.
 
 ## Settings
 

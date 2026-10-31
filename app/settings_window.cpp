@@ -16,15 +16,7 @@
 #include <system_error>
 #include <vector>
 
-#include "splatthumb/camera.h"
-#include "splatthumb/classify.h"
-#include "splatthumb/deadline.h"
-#include "splatthumb/file_byte_source.h"
-#include "splatthumb/fingerprint.h"
-#include "splatthumb/limits.h"
-#include "splatthumb/loader.h"
 #include "splatthumb/settings.h"
-#include "splatthumb/training_camera.h"
 #include "splatthumb/view_store.h"
 #include "strings.h"
 #include "thumbnail_refresh.h"
@@ -58,7 +50,6 @@ enum Control : int {
     kSavedStatus,
     kViewCount,
     kDeleteViews,
-    kUseTraining,
     kRemake,
     kStop,
     kProgress,
@@ -72,7 +63,6 @@ struct RemakeJob {
     HWND window = nullptr;
     std::vector<std::filesystem::path> files;
     std::optional<std::filesystem::path> views_root;
-    bool use_training = false;
     std::atomic<bool> stop{false};
 };
 
@@ -83,42 +73,6 @@ bool is_ply(const std::filesystem::path& p) {
     return ext == L".ply";
 }
 
-// Saves the training camera's view for a file that has no saved view yet.
-void save_training_view(const std::filesystem::path& file,
-                        const std::filesystem::path& views_root) noexcept {
-    const auto cam = find_training_camera(file);
-    if (!cam) {
-        return;
-    }
-    FileByteSource source;
-    if (!source.open(file)) {
-        return;
-    }
-    const auto fp = fingerprint(source);
-    if (!fp || load_view(views_root, *fp)) {
-        return;
-    }
-    const Classification c = inspect(source);
-    if (c.kind == SplatKind::NotSplat) {
-        return;
-    }
-    // Only the framing depth and radius come from the splats, so a small sample is enough.
-    LoadOptions options;
-    options.max_splats = limits::kFastRenderSplats;
-    const LoadResult loaded =
-        load_splats(source, c, options, Deadline::after(std::chrono::seconds(30)));
-    if (loaded.status != Status::Ok) {
-        return;
-    }
-    const CameraResult automatic = auto_camera(loaded.splats);
-    if (automatic.status != Status::Ok) {
-        return;
-    }
-    if (const auto view = view_from_training_camera(*cam, automatic.camera)) {
-        save_view(views_root, *fp, *view);
-    }
-}
-
 DWORD WINAPI remake_thread(void* param) noexcept {
     auto* job = static_cast<RemakeJob*>(param);
     const HRESULT com = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
@@ -126,9 +80,6 @@ DWORD WINAPI remake_thread(void* param) noexcept {
     for (const auto& file : job->files) {
         if (job->stop.load()) {
             break;
-        }
-        if (job->use_training && job->views_root) {
-            save_training_view(file, *job->views_root);
         }
         refresh_thumbnail(file);
         ++done;
@@ -225,8 +176,6 @@ void SettingsWindow::create_controls() noexcept {
     add(L"STATIC", L"", SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX, kSavedStatus);
     add(L"STATIC", L"", SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX, kViewCount);
     add(L"BUTTON", text(Text::DeleteViews), WS_TABSTOP | BS_PUSHBUTTON, kDeleteViews);
-    add(L"BUTTON", text(Text::UseTrainingCameras), WS_TABSTOP | BS_AUTOCHECKBOX | BS_MULTILINE,
-        kUseTraining);
     add(L"BUTTON", text(Text::RemakeFolder), WS_TABSTOP | BS_PUSHBUTTON, kRemake);
     const HWND stop = add(L"BUTTON", text(Text::Stop), WS_TABSTOP | BS_PUSHBUTTON, kStop);
     EnableWindow(stop, FALSE);
@@ -295,8 +244,6 @@ void SettingsWindow::layout() noexcept {
     place(kViewCount, m, y, inner - delete_w - gap, row + scaled(4));
     place(kDeleteViews, m + inner - delete_w, y, delete_w, row + scaled(4));
     y += row + scaled(4) + gap * 2;
-    place(kUseTraining, m, y, inner, row * 2);
-    y += row * 2 + gap;
     const int remake_w = button_width(kRemake);
     const int stop_w = button_width(kStop);
     place(kRemake, m, y, remake_w, row + scaled(4));
@@ -425,7 +372,6 @@ void SettingsWindow::start_remake() noexcept {
     }
     job->window = hwnd_;
     job->views_root = views_root_;
-    job->use_training = IsDlgButtonChecked(hwnd_, kUseTraining) == BST_CHECKED;
     thread_ = CreateThread(nullptr, 0, &remake_thread, job, 0, nullptr);
     if (thread_ == nullptr) {
         delete job;

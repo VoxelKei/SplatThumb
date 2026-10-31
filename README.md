@@ -67,9 +67,6 @@ Windows 11, it is under "Show more options").
 
 - Drag to turn the subject, right-drag to move it, use the wheel to zoom, and Ctrl+drag to
   tilt the picture, for example to stand up a file stored on its side.
-- "Training camera" shows the view from the first camera of a `cameras.json` written by the
-  original 3D Gaussian Splatting training code, when one is found next to the file or up to
-  three folders above it.
 - "Use this view" saves the view and updates the thumbnail. "Reset" goes back to the
   automatic view. "Settings..." opens the settings window described below.
 
@@ -84,8 +81,7 @@ Open "SplatThumb" from the Start menu to:
 - turn SplatThumb's thumbnails off or on,
 - choose the quality (how many splats are drawn),
 - delete all saved views,
-- remake the thumbnails of a folder after changing a setting. Optionally, files without a saved
-  view can start from the training camera, as above.
+- remake the thumbnails of a folder after changing a setting.
 
 ## Troubleshooting
 
