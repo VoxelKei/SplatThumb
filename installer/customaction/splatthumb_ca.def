@@ -1,0 +1,5 @@
+; Custom actions called by the MSI (installer/Package.wxs).
+EXPORTS
+    RegisterPly
+    RestorePly
+    FailForTest

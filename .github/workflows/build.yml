@@ -54,6 +54,42 @@ jobs:
         shell: powershell
         run: .github/scripts/Test-DevRegistration.ps1 -DllPath ${{ matrix.build_dir }}/bin/${{ matrix.config }}/splatthumb_shellext.dll
 
+      # The installer is built and tested from the Release build only.
+      - name: Build MSI
+        if: matrix.preset == 'msvc-release'
+        shell: pwsh
+        run: |
+          cmake --build --preset msvc-release --target msi
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $msi = Get-Item build/msvc/msi/Release/SplatThumb-*-x64.msi
+          $hash = (Get-FileHash $msi -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content -Path "$($msi.FullName).sha256" -Value "$hash  $($msi.Name)" -NoNewline
+          Write-Host "$hash  $($msi.Name)"
+          "MSI_PATH=$($msi.FullName)" >> $env:GITHUB_ENV
+
+      - name: Test MSI install, upgrade and uninstall
+        if: matrix.preset == 'msvc-release'
+        shell: pwsh
+        run: .github/scripts/Test-Msi.ps1 -MsiPath $env:MSI_PATH -DllPath build/msvc/bin/Release/splatthumb_shellext.dll -LogDir msi-logs
+
+      - name: Upload MSI
+        if: matrix.preset == 'msvc-release'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: msi
+          path: |
+            build/msvc/msi/Release/SplatThumb-*-x64.msi
+            build/msvc/msi/Release/SplatThumb-*-x64.msi.sha256
+          if-no-files-found: error
+
+      - name: Upload MSI logs
+        if: failure() && matrix.preset == 'msvc-release'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: msi-logs
+          path: msi-logs
+          if-no-files-found: ignore
+
   linux-core:
     # Builds core without Windows headers, which keeps it portable and lets us
     # run UBSan, which MSVC does not provide.

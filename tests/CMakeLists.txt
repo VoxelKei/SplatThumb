@@ -22,8 +22,8 @@ add_executable(splatthumb_tests
 target_link_libraries(splatthumb_tests PRIVATE splatthumb_core splatthumb_warnings GTest::gtest_main)
 
 if(WIN32)
-    target_sources(splatthumb_tests PRIVATE shellext_test.cpp)
-    target_link_libraries(splatthumb_tests PRIVATE splatthumb_shellext_lib shlwapi)
+    target_sources(splatthumb_tests PRIVATE ply_registration_test.cpp shellext_test.cpp)
+    target_link_libraries(splatthumb_tests PRIVATE splatthumb_ca_lib splatthumb_shellext_lib shlwapi)
 endif()
 
 include(GoogleTest)
