@@ -18,7 +18,6 @@
 
 namespace {
 
-using splatthumb::Background;
 using splatthumb::Fingerprint;
 using splatthumb::Quality;
 using splatthumb::Settings;
@@ -209,22 +208,17 @@ TEST_F(ViewStore, CountAndRemoveAll) {
 TEST(Settings, MissingValuesAreDefaults) {
     const Settings s = splatthumb::settings_from_stored({});
     EXPECT_TRUE(s.enabled);
-    EXPECT_EQ(s.background, Background::Gray);
     EXPECT_EQ(s.quality, Quality::Standard);
 }
 
 TEST(Settings, StoredValuesRoundTrip) {
     for (const bool enabled : {false, true}) {
-        for (const auto bg : {Background::Gray, Background::Transparent, Background::White,
-                              Background::Black}) {
-            for (const auto q : {Quality::Fast, Quality::Standard, Quality::High}) {
-                const Settings s{enabled, bg, q};
-                const Settings back =
-                    splatthumb::settings_from_stored(splatthumb::stored_from_settings(s));
-                EXPECT_EQ(back.enabled, enabled);
-                EXPECT_EQ(back.background, bg);
-                EXPECT_EQ(back.quality, q);
-            }
+        for (const auto q : {Quality::Fast, Quality::Standard, Quality::High}) {
+            const Settings s{enabled, q};
+            const Settings back =
+                splatthumb::settings_from_stored(splatthumb::stored_from_settings(s));
+            EXPECT_EQ(back.enabled, enabled);
+            EXPECT_EQ(back.quality, q);
         }
     }
 }
@@ -232,12 +226,10 @@ TEST(Settings, StoredValuesRoundTrip) {
 TEST(Settings, OutOfRangeValuesFallBackOneByOne) {
     StoredSettings st;
     st.enabled = 0;
-    st.background = 99;
-    st.quality = 0;
+    st.quality = 99;
     const Settings s = splatthumb::settings_from_stored(st);
     EXPECT_FALSE(s.enabled);
-    EXPECT_EQ(s.background, Background::Gray);
-    EXPECT_EQ(s.quality, Quality::Fast);
+    EXPECT_EQ(s.quality, Quality::Standard);
     st.enabled = 0xffffffffu;
     EXPECT_TRUE(splatthumb::settings_from_stored(st).enabled);
 }
@@ -317,22 +309,6 @@ TEST(ThumbnailView, InvalidViewFallsBackToAutomatic) {
     ASSERT_EQ(with_broken.status, Status::Ok);
     ASSERT_EQ(automatic.status, Status::Ok);
     EXPECT_EQ(with_broken.image.rgba, automatic.image.rgba);
-}
-
-TEST(ThumbnailView, BackgroundChoices) {
-    const auto file = two_splats();
-    for (const auto& [bg, level] : {std::pair{Background::White, 255}, std::pair{Background::Black, 0}}) {
-        splatthumb::MemoryByteSource src(file);
-        splatthumb::RenderOptions o;
-        o.size = 32;
-        o.background = bg;
-        const auto r = splatthumb::render_thumbnail(
-            src, o, {}, splatthumb::Deadline::after(std::chrono::hours(1)));
-        ASSERT_EQ(r.status, Status::Ok);
-        // The corner is empty, so it shows the background.
-        EXPECT_EQ(r.image.rgba[0], level);
-        EXPECT_EQ(r.image.rgba[3], 255);
-    }
 }
 
 TEST(ThumbnailView, FingerprintOfAFileFindsItsSavedView) {

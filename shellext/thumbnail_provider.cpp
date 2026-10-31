@@ -125,7 +125,7 @@ IFACEMETHODIMP ThumbnailProvider::GetThumbnail(UINT cx, HBITMAP* bitmap,
     RenderOptions options;
     // render_thumbnail clamps the size; this only keeps the conversion to int safe.
     options.size = cx > static_cast<UINT>(INT_MAX) ? INT_MAX : static_cast<int>(cx);
-    options.background = settings.background;
+    options.background = Background::Gray;
     LoadOptions load;
     load.max_splats = max_splats_for(settings.quality);
     const RenderResult result = render_thumbnail(source, options, load, deadline, nullptr,
@@ -145,8 +145,8 @@ IFACEMETHODIMP ThumbnailProvider::GetThumbnail(UINT cx, HBITMAP* bitmap,
         return E_OUTOFMEMORY;
     }
     *bitmap = made;
-    // Opaque backgrounds have no alpha to interpret.
-    *alpha = settings.background == Background::Transparent ? WTSAT_ARGB : WTSAT_RGB;
+    // The gray background is opaque, so there is no alpha to interpret.
+    *alpha = WTSAT_RGB;
     return S_OK;
 }
 

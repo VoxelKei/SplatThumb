@@ -90,7 +90,6 @@ private:
     void update_font() noexcept;
     void layout() noexcept;
     void open_settings() noexcept;
-    void reload_background() noexcept;
     RECT picture_rect() const noexcept;
     int scaled(int v) const noexcept { return MulDiv(v, static_cast<int>(dpi_), 96); }
 
@@ -351,8 +350,7 @@ void Viewer::render_if_needed(int side) noexcept {
     }
     RenderOptions options;
     options.size = want;
-    options.background = settings_.background == Background::Transparent ? Background::Gray
-                                                                           : settings_.background;
+    options.background = Background::Gray;
     RenderResult r = render_splats(quick ? preview_ : splats_, cam.camera, options,
                                    Deadline::after(quick ? std::chrono::milliseconds(kPreviewTime)
                                                          : std::chrono::milliseconds(kFullTime)));
@@ -363,9 +361,7 @@ void Viewer::render_if_needed(int side) noexcept {
     }
     if (r.status == Status::NothingToDraw) {
         // Looking away from everything: show the empty background.
-        const auto level = static_cast<std::uint8_t>(
-            options.background == Background::White ? 255
-            : options.background == Background::Black ? 0 : 46);
+        constexpr std::uint8_t level = 46; // the dark gray of the thumbnails
         const auto n = static_cast<std::size_t>(options.size);
         r.image.size = options.size;
         try {
@@ -495,24 +491,8 @@ void Viewer::open_settings() noexcept {
     ShellExecuteW(hwnd_, L"open", exe.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 }
 
-// The background may have been changed in the settings window meanwhile. (A changed
-// quality applies the next time the window is opened.)
-void Viewer::reload_background() noexcept {
-    const Settings now = shellext::read_settings();
-    if (now.background != settings_.background) {
-        settings_.background = now.background;
-        dirty_ = true;
-        InvalidateRect(hwnd_, nullptr, FALSE);
-    }
-}
-
 LRESULT Viewer::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
     switch (msg) {
-    case WM_ACTIVATE:
-        if (LOWORD(wp) != WA_INACTIVE) {
-            reload_background();
-        }
-        break;
     case WM_PAINT:
         paint();
         return 0;

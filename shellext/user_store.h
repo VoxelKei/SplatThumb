@@ -11,7 +11,6 @@ namespace splatthumb::shellext {
 // and uninstalling removes both.
 inline constexpr wchar_t kSettingsKey[] = L"Software\\SplatThumb\\Settings";
 inline constexpr wchar_t kEnabledValue[] = L"Enabled";
-inline constexpr wchar_t kBackgroundValue[] = L"Background";
 inline constexpr wchar_t kQualityValue[] = L"Quality";
 
 // %LOCALAPPDATA%\SplatThumb\views, or nullopt if the folder location is unavailable.

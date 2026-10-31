@@ -82,7 +82,7 @@ contents change. Details: [docs/views-and-settings.md](docs/views-and-settings.m
 Open "SplatThumb" from the Start menu to:
 
 - turn SplatThumb's thumbnails off or on,
-- choose the background (dark gray, transparent, white or black) and the quality,
+- choose the quality (how many splats are drawn),
 - delete all saved views,
 - remake the thumbnails of a folder after changing a setting. Optionally, files without a saved
   view can start from the training camera, as above.

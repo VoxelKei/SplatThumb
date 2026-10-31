@@ -46,7 +46,6 @@ std::optional<std::filesystem::path> views_root() noexcept {
 Settings read_settings() noexcept {
     StoredSettings stored;
     stored.enabled = read_dword(kEnabledValue);
-    stored.background = read_dword(kBackgroundValue);
     stored.quality = read_dword(kQualityValue);
     return settings_from_stored(stored);
 }
@@ -55,7 +54,6 @@ bool write_settings(const Settings& settings) noexcept {
     const StoredSettings stored = stored_from_settings(settings);
     bool ok = true;
     ok = write_dword(kEnabledValue, stored.enabled.value_or(1)) && ok;
-    ok = write_dword(kBackgroundValue, stored.background.value_or(0)) && ok;
     ok = write_dword(kQualityValue, stored.quality.value_or(1)) && ok;
     return ok;
 }

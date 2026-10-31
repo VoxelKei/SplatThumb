@@ -52,7 +52,6 @@ constexpr int kComboWidth = 260;
 
 enum Control : int {
     kEnabled = 100,
-    kBackground,
     kQuality,
     kNote,
     kSave,
@@ -64,7 +63,6 @@ enum Control : int {
     kStop,
     kProgress,
     kClose,
-    kBackgroundLabel,
     kQualityLabel,
 };
 
@@ -217,12 +215,6 @@ HWND SettingsWindow::add(const wchar_t* cls, const wchar_t* label, DWORD style, 
 
 void SettingsWindow::create_controls() noexcept {
     add(L"BUTTON", text(Text::EnableThumbnails), WS_TABSTOP | BS_AUTOCHECKBOX, kEnabled);
-    add(L"STATIC", text(Text::BackgroundLabel), SS_LEFT | SS_CENTERIMAGE, kBackgroundLabel);
-    const HWND bg = add(L"COMBOBOX", L"", WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST, kBackground);
-    for (const Text t : {Text::BackgroundGray, Text::BackgroundTransparent, Text::BackgroundWhite,
-                         Text::BackgroundBlack}) {
-        SendMessageW(bg, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(text(t)));
-    }
     add(L"STATIC", text(Text::QualityLabel), SS_LEFT | SS_CENTERIMAGE, kQualityLabel);
     const HWND q = add(L"COMBOBOX", L"", WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST, kQuality);
     for (const Text t : {Text::QualityFast, Text::QualityStandard, Text::QualityHigh}) {
@@ -289,9 +281,6 @@ void SettingsWindow::layout() noexcept {
     int y = m;
     place(kEnabled, m, y, inner, row);
     y += row + gap;
-    place(kBackgroundLabel, m, y, label, row);
-    place(kBackground, m + label, y, scaled(kComboWidth), row * 6);
-    y += row + gap;
     place(kQualityLabel, m, y, label, row);
     place(kQuality, m + label, y, scaled(kComboWidth), row * 6);
     y += row + gap;
@@ -332,18 +321,13 @@ void SettingsWindow::load_settings() noexcept {
     const Settings s = shellext::read_settings();
     const StoredSettings stored = stored_from_settings(s);
     CheckDlgButton(hwnd_, kEnabled, s.enabled ? BST_CHECKED : BST_UNCHECKED);
-    SendDlgItemMessageW(hwnd_, kBackground, CB_SETCURSEL, stored.background.value_or(0), 0);
     SendDlgItemMessageW(hwnd_, kQuality, CB_SETCURSEL, stored.quality.value_or(1), 0);
 }
 
 void SettingsWindow::save_settings() noexcept {
     StoredSettings stored;
     stored.enabled = IsDlgButtonChecked(hwnd_, kEnabled) == BST_CHECKED ? 1u : 0u;
-    const auto bg = SendDlgItemMessageW(hwnd_, kBackground, CB_GETCURSEL, 0, 0);
     const auto q = SendDlgItemMessageW(hwnd_, kQuality, CB_GETCURSEL, 0, 0);
-    if (bg >= 0) {
-        stored.background = static_cast<std::uint32_t>(bg);
-    }
     if (q >= 0) {
         stored.quality = static_cast<std::uint32_t>(q);
     }
@@ -511,7 +495,6 @@ LRESULT SettingsWindow::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
             }
             return 0;
         case kEnabled:
-        case kBackground:
         case kQuality:
             SetDlgItemTextW(hwnd_, kSavedStatus, L"");
             return 0;

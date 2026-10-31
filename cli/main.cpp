@@ -28,7 +28,7 @@ void print_usage() {
               "       splatthumb-cli info <file.ply>\n"
               "       splatthumb-cli fingerprint <file.ply>\n"
               "       splatthumb-cli render <file.ply> <out.png> [--size N]\n"
-              "                     [--background gray|transparent|white|black]\n"
+              "                     [--background gray|transparent]\n"
               "                     [--sampling blocks|uniform]");
 }
 
@@ -125,10 +125,6 @@ bool parse_render_flags(const std::string* args, int n, RenderArgs& out) {
             out.render.background = splatthumb::Background::Transparent;
         } else if (key == "--background" && value == "gray") {
             out.render.background = splatthumb::Background::Gray;
-        } else if (key == "--background" && value == "white") {
-            out.render.background = splatthumb::Background::White;
-        } else if (key == "--background" && value == "black") {
-            out.render.background = splatthumb::Background::Black;
         } else if (key == "--sampling" && value == "blocks") {
             out.load.mode = splatthumb::SampleMode::Blocks;
         } else if (key == "--sampling" && value == "uniform") {

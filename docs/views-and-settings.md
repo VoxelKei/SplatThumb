@@ -73,8 +73,7 @@ SplatThumb" ("SplatThumb で視点を設定"); on Windows 11 it is under "Show m
   its first camera. Only the first camera is read, from at most 1 MiB of the file.
 - "Use this view" saves the view and asks Windows to make the thumbnail again.
   "Reset" deletes the saved view and does the same. "Settings..." opens the settings window
-  (or brings an open one to the front); a changed background shows in the viewpoint window
-  when it is next active.
+  (or brings an open one to the front).
 
 The window loads the file with the same limits and checks as the thumbnail handler. While
 dragging it draws at most 30,000 splats at low resolution, then redraws at full quality.
@@ -100,8 +99,10 @@ out-of-range values use the default.
 | Value | Meaning | Default |
 | --- | --- | --- |
 | `Enabled` | 0 = off (Windows shows its usual icon), anything else = on | on |
-| `Background` | 0 dark gray, 1 transparent, 2 white, 3 black | 0 |
 | `Quality` | Splats drawn at most: 0 = 50,000, 1 = 200,000, 2 = 400,000 | 1 |
+
+The background is always dark gray, so a thumbnail looks the same in light and dark Explorer
+themes. (A transparent background was tried during v0.2 and dropped.)
 
 Windows caches thumbnails, so a changed setting or view shows only after the thumbnail is
 made again. The app asks Windows for that through `IThumbnailCache` with
