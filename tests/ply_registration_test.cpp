@@ -202,4 +202,85 @@ TEST_F(PlyRegistrationTest, InterruptedStateIsDiscarded) {
     EXPECT_TRUE(exists(kPlyKey)); // it existed before this register
 }
 
+constexpr const wchar_t* kExe = L"C:\\Users\\Test User\\AppData\\Local\\Programs\\SplatThumb\\SplatThumb.exe";
+
+TEST_F(PlyRegistrationTest, AddsAndRemovesTheRightClickItem) {
+    RegCloseKey(create(L"Software\\Classes")); // always there in a real HKEY_CURRENT_USER
+    const std::wstring before = dump();
+    ASSERT_EQ(register_ply(root_, kExe), ERROR_SUCCESS);
+
+    wchar_t value[512] = {};
+    DWORD size = sizeof value - sizeof(wchar_t);
+    ASSERT_EQ(RegGetValueW(root_, kVerbCommandKey, nullptr, RRF_RT_REG_SZ, nullptr, value, &size),
+              ERROR_SUCCESS);
+    EXPECT_EQ(std::wstring(value), L"\"" + std::wstring(kExe) + L"\" --view \"%1\"");
+    size = sizeof value - sizeof(wchar_t);
+    ASSERT_EQ(RegGetValueW(root_, kVerbKey, L"MUIVerb", RRF_RT_REG_SZ, nullptr, value, &size),
+              ERROR_SUCCESS);
+    EXPECT_EQ(std::wstring(value), L"@" + std::wstring(kExe) + L",-102");
+
+    ASSERT_EQ(register_ply(root_, kExe), ERROR_SUCCESS); // repair
+    ASSERT_EQ(restore_ply(root_), ERROR_SUCCESS);
+    EXPECT_FALSE(exists(kAssociationsKey));
+    RegDeleteKeyW(root_, L"Software\\SplatThumb");
+    EXPECT_EQ(dump(), before);
+}
+
+TEST_F(PlyRegistrationTest, KeepsOtherRightClickItemsAndEmptyParents) {
+    set_string(L"Software\\Classes\\SystemFileAssociations\\.ply\\shell\\Other\\command",
+               nullptr, L"other.exe \"%1\"");
+    RegCloseKey(create(L"Software\\Classes\\SystemFileAssociations\\.jpg"));
+    const std::wstring before = dump();
+    ASSERT_EQ(register_ply(root_, kExe), ERROR_SUCCESS);
+    EXPECT_TRUE(exists(kVerbKey));
+    ASSERT_EQ(restore_ply(root_), ERROR_SUCCESS);
+    RegDeleteKeyW(root_, L"Software\\SplatThumb");
+    EXPECT_EQ(dump(), before);
+
+    RegDeleteTreeW(root_, L"Software\\Classes\\SystemFileAssociations\\.ply\\shell\\Other");
+    const std::wstring empty_shell = dump(); // an empty shell key that existed before
+    ASSERT_EQ(register_ply(root_, kExe), ERROR_SUCCESS);
+    ASSERT_EQ(restore_ply(root_), ERROR_SUCCESS);
+    EXPECT_TRUE(exists(kAssociationsShellKey));
+    RegDeleteKeyW(root_, L"Software\\SplatThumb");
+    EXPECT_EQ(dump(), empty_shell);
+}
+
+TEST_F(PlyRegistrationTest, RepairOfAnOlderStateRecordsTheItemsParents) {
+    // A state saved by v0.1: no values for the right-click item's parents.
+    set_raw(kStateKey, L"PlyExisted", REG_DWORD, {0, 0, 0, 0});
+    set_raw(kStateKey, L"ShellExExisted", REG_DWORD, {0, 0, 0, 0});
+    set_raw(kStateKey, L"Complete", REG_DWORD, {1, 0, 0, 0});
+    set_string(kHandlerKey, nullptr, kClsid);
+    ASSERT_EQ(register_ply(root_, kExe), ERROR_SUCCESS);
+    EXPECT_TRUE(exists(kVerbKey));
+    ASSERT_EQ(restore_ply(root_), ERROR_SUCCESS);
+    EXPECT_FALSE(exists(kAssociationsKey));
+    EXPECT_FALSE(exists(kPlyKey));
+}
+
+TEST_F(PlyRegistrationTest, RestoreOfAnOlderStateKeepsTheParents) {
+    set_raw(kStateKey, L"PlyExisted", REG_DWORD, {0, 0, 0, 0});
+    set_raw(kStateKey, L"ShellExExisted", REG_DWORD, {0, 0, 0, 0});
+    set_raw(kStateKey, L"Complete", REG_DWORD, {1, 0, 0, 0});
+    set_string(kHandlerKey, nullptr, kClsid);
+    RegCloseKey(create(kAssociationsShellKey));
+    ASSERT_EQ(restore_ply(root_), ERROR_SUCCESS);
+    EXPECT_TRUE(exists(kAssociationsShellKey)); // not recorded, so not ours to remove
+    EXPECT_FALSE(exists(kStateKey));
+}
+
+TEST_F(PlyRegistrationTest, RemovesUserSettingsAndTheEmptyParent) {
+    set_raw(kUserSettingsKey, L"Background", REG_DWORD, {1, 0, 0, 0});
+    ASSERT_EQ(remove_user_settings(root_), ERROR_SUCCESS);
+    EXPECT_FALSE(exists(kUserKey));
+    ASSERT_EQ(remove_user_settings(root_), ERROR_SUCCESS); // nothing left to do
+
+    set_raw(kUserSettingsKey, L"Quality", REG_DWORD, {2, 0, 0, 0});
+    set_raw(kUserKey, L"Other", REG_DWORD, {1, 0, 0, 0});
+    ASSERT_EQ(remove_user_settings(root_), ERROR_SUCCESS);
+    EXPECT_FALSE(exists(kUserSettingsKey));
+    EXPECT_TRUE(exists(kUserKey)); // not empty, so left for its owner
+}
+
 } // namespace

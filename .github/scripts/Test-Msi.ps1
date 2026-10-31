@@ -1,12 +1,14 @@
 # Installs, checks and uninstalls the MSI on the (throwaway) CI machine. After every
 # uninstall, the registry keys and folders the MSI touches must be exactly as before.
-# Also covers installing twice, uninstalling twice, upgrading, refusing a downgrade, another
-# application's handler being saved and put back, and rollback of a failed install or
-# uninstall.
+# Also covers installing twice, uninstalling twice, upgrading (keeping the user's settings
+# and saved views), refusing a downgrade, another application's handler and right-click
+# items being kept, rollback of a failed install or uninstall, and, with -PreviousMsiPath,
+# upgrading from the previous release.
 param(
     [Parameter(Mandatory)] [string] $MsiPath,
     [Parameter(Mandatory)] [string] $DllPath,
-    [Parameter(Mandatory)] [string] $LogDir
+    [Parameter(Mandatory)] [string] $LogDir,
+    [string] $PreviousMsiPath = ''
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 3.0
@@ -23,6 +25,13 @@ $hkcu = [Microsoft.Win32.Registry]::CurrentUser
 $programsDir = Join-Path $env:LOCALAPPDATA 'Programs'
 $installDir = Join-Path $programsDir 'SplatThumb'
 $installedDll = Join-Path $installDir 'splatthumb_shellext.dll'
+$installedExe = Join-Path $installDir 'SplatThumb.exe'
+$shortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'SplatThumb.lnk'
+# What SplatThumb.exe saves for the user, which uninstalling (but not upgrading) removes.
+$dataDir = Join-Path $env:LOCALAPPDATA 'SplatThumb'
+$settingsKey = 'Software\SplatThumb\Settings'
+$associationsKey = 'Software\Classes\SystemFileAssociations'
+$verbKey = "$associationsKey\.ply\shell\SplatThumb.SetView"
 $work = Join-Path ([System.IO.Path]::GetTempPath()) "splatthumb-msi-ci-$PID"
 New-Item -ItemType Directory -Force -Path $work, $LogDir | Out-Null
 $MsiPath = (Resolve-Path $MsiPath).ProviderPath
@@ -36,13 +45,20 @@ $script:logCount = 0
 
 # Everything the MSI may touch, as one string, so "exactly as before" is a string compare.
 function Get-State {
-    $keys = $ManagedKeys + @('Software\SplatThumb')
+    $keys = $ManagedKeys + @('Software\SplatThumb', $settingsKey, 'Software\SplatThumb\Previous',
+        $associationsKey, "$associationsKey\.ply", "$associationsKey\.ply\shell",
+        "$associationsKey\.ply\shell\Other", "$associationsKey\.ply\shell\Other\command",
+        $verbKey, "$verbKey\command")
     $registry = @(foreach ($k in $keys) { Get-KeySnapshot $k })
     $folders = [pscustomobject]@{
         Programs = Test-Path -LiteralPath $programsDir
         Install = Test-Path -LiteralPath $installDir
         Files = @(if (Test-Path -LiteralPath $installDir) {
                 Get-ChildItem -LiteralPath $installDir -Recurse -Force | ForEach-Object { $_.FullName } })
+        Shortcut = Test-Path -LiteralPath $shortcut
+        Data = Test-Path -LiteralPath $dataDir
+        DataFiles = @(if (Test-Path -LiteralPath $dataDir) {
+                Get-ChildItem -LiteralPath $dataDir -Recurse -Force | ForEach-Object { $_.FullName } })
     }
     [pscustomobject]@{ Registry = $registry; Folders = $folders } | ConvertTo-Json -Depth 6
 }
@@ -97,6 +113,35 @@ function Assert-Installed([string] $Version) {
     $key = $hkcu.OpenSubKey("Software\Classes\CLSID\$SplatThumbClsid")
     Assert ($null -eq $key.GetValue('DisableProcessIsolation')) 'process isolation disabled'
     $key.Dispose()
+
+    Assert (Test-Path -LiteralPath $installedExe) 'SplatThumb.exe not installed'
+    Assert (Test-Path -LiteralPath $shortcut) "Start menu shortcut not found at $shortcut"
+    $key = $hkcu.OpenSubKey($verbKey)
+    Assert ($null -ne $key) 'right-click item not registered'
+    Assert ($key.GetValue('MUIVerb') -eq "@$installedExe,-102") "MUIVerb is $($key.GetValue('MUIVerb'))"
+    $key.Dispose()
+    $key = $hkcu.OpenSubKey("$verbKey\command")
+    $expected = "`"$installedExe`" --view `"%1`""
+    Assert ($key.GetValue('') -eq $expected) "right-click command is $($key.GetValue('')), expected $expected"
+    $key.Dispose()
+}
+
+# What using SplatThumb.exe leaves: a setting and a saved view.
+function New-UserData {
+    $key = $hkcu.CreateSubKey($settingsKey)
+    $key.SetValue('Background', 2, [Microsoft.Win32.RegistryValueKind]::DWord)
+    $key.Dispose()
+    $folder = Join-Path $dataDir 'views\ab'
+    New-Item -ItemType Directory -Force -Path $folder | Out-Null
+    $view = "splatthumb-view 1`neye 0 0 -5`ntarget 0 0 0`nup 0 -1 0`nfov 40`nradius 1`n"
+    [System.IO.File]::WriteAllText((Join-Path $folder 'ab000000000000000000000000000000.view'), $view)
+}
+
+function Test-UserDataKept {
+    $key = $hkcu.OpenSubKey($settingsKey)
+    Assert ($null -ne $key -and $key.GetValue('Background') -eq 2) 'settings were not kept'
+    $key.Dispose()
+    Assert (Test-Path -LiteralPath (Join-Path $dataDir 'views\ab\ab000000000000000000000000000000.view')) 'saved view was not kept'
 }
 
 function Assert-NotInstalled {
@@ -196,6 +241,7 @@ function Build-OtherVersion([string] $Version) {
     try {
         & dotnet tool run wix build -arch x64 -d "Version=$Version" `
             -d "ShellExtDll=$((Resolve-Path $DllPath).ProviderPath)" `
+            -d "AppExe=$(Join-Path (Split-Path (Resolve-Path $DllPath).ProviderPath) 'SplatThumb.exe')" `
             -d "CustomActionDll=$(Join-Path (Split-Path (Resolve-Path $DllPath).ProviderPath) 'splatthumb_ca.dll')" `
             -d "LicenseFile=$repo\LICENSE" `
             -o $out installer\Package.wxs
@@ -214,9 +260,11 @@ function Test-RoundTrip([string] $Name) {
     Install-Msi $MsiPath
     Assert-Installed $Version
     Test-Thumbnails
+    New-UserData
 
     Install-Msi $MsiPath  # again: a repair, not a second copy
     Assert-Installed $Version
+    Test-UserDataKept
 
     Wait-DllReleased
     Uninstall-Msi $MsiPath
@@ -236,8 +284,10 @@ function Test-Upgrade {
 
     Install-Msi $MsiPath
     Assert-Installed $Version
+    New-UserData
     Install-Msi $newer
     Assert-Installed $NewerVersion
+    Test-UserDataKept  # upgrading removes the older version, but not what the user saved
     Install-Msi $MsiPath -Expect 1603  # downgrade refused
     Assert-Installed $NewerVersion
 
@@ -258,15 +308,41 @@ function Test-Rollback([string] $Name) {
     Assert ($after -eq $before) "$Name failed install was not rolled back.`nBefore:`n$before`nAfter:`n$after"
 
     Install-Msi $MsiPath
+    New-UserData
     $installed = Get-State
     Uninstall-Msi $MsiPath -Expect 1603 -Properties $fail
     Assert-Installed $Version
+    Test-UserDataKept
     $after = Get-State
     Assert ($after -eq $installed) "$Name failed uninstall was not rolled back.`nInstalled:`n$installed`nAfter:`n$after"
     Uninstall-Msi $MsiPath
     $after = Get-State
     Assert ($after -eq $before) "$Name state differs after uninstall.`nBefore:`n$before`nAfter:`n$after"
     Write-Host "OK: rollback ($Name)"
+}
+
+# The previous release, installed and then upgraded to this build.
+function Test-UpgradeFromPrevious {
+    Write-Host "== upgrade from $PreviousMsiPath"
+    $before = Get-State
+    Install-Msi $PreviousMsiPath
+    Assert (@(Get-InstalledVersions).Count -eq 1) 'previous release not installed'
+    Install-Msi $MsiPath
+    Assert-Installed $Version
+    Test-Thumbnails
+    Wait-DllReleased
+    Uninstall-Msi $MsiPath
+    Assert-NotInstalled
+    $after = Get-State
+    Assert ($after -eq $before) "upgrade from previous: state differs after uninstall.`nBefore:`n$before`nAfter:`n$after"
+    Write-Host 'OK: upgrade from previous'
+}
+
+# Another application's right-click item for .ply files.
+function Set-OtherVerb {
+    $key = $hkcu.CreateSubKey("$associationsKey\.ply\shell\Other\command")
+    $key.SetValue('', 'other.exe "%1"')
+    $key.Dispose()
 }
 
 # Another application's handler, with values of several types.
@@ -290,17 +366,26 @@ try {
     Test-RoundTrip 'existing .ply key'
     Assert ($null -ne $hkcu.OpenSubKey('Software\Classes\.ply')) 'existing .ply key was removed'
     Test-Upgrade
+    if ($PreviousMsiPath) {
+        $PreviousMsiPath = (Resolve-Path $PreviousMsiPath).ProviderPath
+        Test-UpgradeFromPrevious
+    }
     Test-Rollback 'existing .ply key'
 
     Set-OtherHandler
+    Set-OtherVerb
     Test-RoundTrip 'another handler'
     $key = $hkcu.OpenSubKey("Software\Classes\.ply\ShellEx\$ThumbnailHandlerShellEx")
     Assert ($key.GetValue('') -eq '{11111111-2222-3333-4444-555555555555}') 'another handler: not put back'
+    $key.Dispose()
+    $key = $hkcu.OpenSubKey("$associationsKey\.ply\shell\Other\command")
+    Assert ($null -ne $key -and $key.GetValue('') -eq 'other.exe "%1"') 'another right-click item: not kept'
     $key.Dispose()
     Test-Rollback 'another handler'
 } finally {
     if (-not $plyExisted) { $hkcu.DeleteSubKeyTree('Software\Classes\.ply', $false) }
     else { $hkcu.DeleteSubKeyTree("Software\Classes\.ply\ShellEx\$ThumbnailHandlerShellEx", $false) }
+    $hkcu.DeleteSubKeyTree("$associationsKey\.ply\shell\Other", $false)
     Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 }
 Write-Host 'MSI: all checks passed.'

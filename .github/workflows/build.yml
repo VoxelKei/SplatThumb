@@ -67,10 +67,27 @@ jobs:
           Write-Host "$hash  $($msi.Name)"
           "MSI_PATH=$($msi.FullName)" >> $env:GITHUB_ENV
 
+      # The last published release, to test upgrading from it. Checked against the
+      # SHA256SUMS.txt published with it.
+      - name: Download the previous release
+        if: matrix.preset == 'msvc-release'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIOUS_TAG: v0.1.0
+        run: |
+          gh release download $env:PREVIOUS_TAG --repo $env:GITHUB_REPOSITORY --dir previous --pattern '*.msi' --pattern 'SHA256SUMS.txt'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $msi = Get-Item previous/SplatThumb-*-x64.msi
+          $hash = (Get-FileHash $msi -Algorithm SHA256).Hash.ToLowerInvariant()
+          $expected = (Get-Content previous/SHA256SUMS.txt | Where-Object { $_ -like "*$($msi.Name)" }) -split '\s+' | Select-Object -First 1
+          if ($hash -ne $expected) { throw "SHA-256 of $($msi.Name) is $hash, expected $expected" }
+          "PREVIOUS_MSI_PATH=$($msi.FullName)" >> $env:GITHUB_ENV
+
       - name: Test MSI install, upgrade and uninstall
         if: matrix.preset == 'msvc-release'
         shell: pwsh
-        run: .github/scripts/Test-Msi.ps1 -MsiPath $env:MSI_PATH -DllPath build/msvc/bin/Release/splatthumb_shellext.dll -LogDir msi-logs
+        run: .github/scripts/Test-Msi.ps1 -MsiPath $env:MSI_PATH -DllPath build/msvc/bin/Release/splatthumb_shellext.dll -LogDir msi-logs -PreviousMsiPath $env:PREVIOUS_MSI_PATH
 
       - name: Upload MSI
         if: matrix.preset == 'msvc-release'

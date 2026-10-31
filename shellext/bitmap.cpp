@@ -1,6 +1,5 @@
 #include "bitmap.h"
 
-#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 
@@ -29,21 +28,14 @@ HBITMAP make_bitmap(const Image& image) noexcept {
         return nullptr;
     }
 
+    // RGBA to BGRA, keeping the premultiplied alpha.
     auto* dst = static_cast<std::uint8_t*>(bits);
     const std::uint8_t* src = image.rgba.data();
     for (std::size_t i = 0; i < side * side * 4; i += 4) {
-        const unsigned a = src[i + 3];
-        // Undo premultiplication; color <= alpha, so the result stays within 255.
-        const auto straight = [a](std::uint8_t c) -> std::uint8_t {
-            if (a == 0 || a == 255) {
-                return a == 0 ? 0 : c;
-            }
-            return static_cast<std::uint8_t>(std::min(255u, (c * 255u + a / 2) / a));
-        };
-        dst[i + 0] = straight(src[i + 2]);
-        dst[i + 1] = straight(src[i + 1]);
-        dst[i + 2] = straight(src[i + 0]);
-        dst[i + 3] = static_cast<std::uint8_t>(a);
+        dst[i + 0] = src[i + 2];
+        dst[i + 1] = src[i + 1];
+        dst[i + 2] = src[i + 0];
+        dst[i + 3] = src[i + 3];
     }
     return bitmap;
 }

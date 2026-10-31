@@ -2,4 +2,5 @@
 EXPORTS
     RegisterPly
     RestorePly
+    RemoveUserData
     FailForTest

@@ -6,6 +6,7 @@
   Built by the `msi` CMake target (installer/CMakeLists.txt), which passes:
     Version          from project(VERSION) in the top-level CMakeLists.txt
     ShellExtDll      the built splatthumb_shellext.dll
+    AppExe           the built SplatThumb.exe (settings and viewpoint windows)
     CustomActionDll  the built splatthumb_ca.dll
     LicenseFile      the repository's LICENSE
 -->
@@ -59,13 +60,23 @@
         <File Id="LicenseTxt" Source="$(var.LicenseFile)" Name="LICENSE.txt" />
         <RegistryValue Root="HKCU" Key="Software\SplatThumb" Name="License" Type="integer" Value="1" KeyPath="yes" />
       </Component>
+      <!-- The settings window (Start menu > SplatThumb) and the viewpoint window (from the
+           .ply right-click item, which the custom actions below write). -->
+      <Component Id="App" Guid="{567BEEEC-BA3F-4D3D-BD14-E3434A932D1D}">
+        <File Id="AppExe" Source="$(var.AppExe)" Name="SplatThumb.exe" />
+        <Shortcut Id="AppShortcut" Directory="ProgramMenuFolder" Name="SplatThumb"
+                  Description="SplatThumb settings" Target="[#AppExe]" WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue Root="HKCU" Key="Software\SplatThumb" Name="App" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
     </ComponentGroup>
+    <StandardDirectory Id="ProgramMenuFolder" />
 
-    <!-- HKCU\Software\Classes\.ply\ShellEx\{e357...}: Windows Installer would delete every
-         key it leaves empty, including a .ply key that was there before. So a custom action
-         saves what is there (to HKCU\Software\SplatThumb\Previous) and points the handler at
-         SplatThumb, and another puts back exactly what was saved. Each has a rollback twin
-         that undoes it if the install or uninstall fails later. Both also tell the shell
+    <!-- HKCU\Software\Classes\.ply\ShellEx\{e357...} and the right-click item under
+         HKCU\Software\Classes\SystemFileAssociations\.ply\shell: Windows Installer would
+         delete every key it leaves empty, including a .ply key that was there before. So a
+         custom action saves what is there (to HKCU\Software\SplatThumb\Previous), points the
+         handler at SplatThumb and adds the item, and another puts back exactly what was
+         saved. Each has a rollback twin that undoes it if the install or uninstall fails later. Both also tell the shell
          that file associations changed. See customaction/ply_registration.h. -->
     <Binary Id="CustomActions" SourceFile="$(var.CustomActionDll)" />
     <CustomAction Id="RegisterPly" BinaryRef="CustomActions" DllEntry="RegisterPly"
@@ -76,6 +87,16 @@
                   Execute="deferred" Impersonate="yes" Return="check" />
     <CustomAction Id="RestorePlyRollback" BinaryRef="CustomActions" DllEntry="RegisterPly"
                   Execute="rollback" Impersonate="yes" Return="ignore" />
+    <!-- RegisterPly (and its use as a rollback) gets the path of SplatThumb.exe for the
+         right-click item. INSTALLFOLDER is known in uninstalls too, unlike [#AppExe]. -->
+    <SetProperty Id="RegisterPly" Value="[INSTALLFOLDER]SplatThumb.exe" Before="RegisterPly" Sequence="execute" />
+    <SetProperty Id="RestorePlyRollback" Value="[INSTALLFOLDER]SplatThumb.exe" Before="RestorePlyRollback" Sequence="execute" />
+    <!-- Uninstalling also deletes what SplatThumb.exe saved: the settings and the saved views
+         (%LOCALAPPDATA%\SplatThumb). A commit action runs only once the uninstall has
+         succeeded, so a failed uninstall keeps them. Not when an upgrade removes the older
+         version (UPGRADINGPRODUCTCODE is set then), so upgrading keeps them. -->
+    <CustomAction Id="RemoveUserData" BinaryRef="CustomActions" DllEntry="RemoveUserData"
+                  Execute="commit" Impersonate="yes" Return="ignore" />
     <!-- Only for CI: msiexec ... SPLATTHUMB_FAIL_FOR_TEST=1 makes the install or uninstall
          fail after the changes above, to check the rollback. -->
     <CustomAction Id="FailForTest" BinaryRef="CustomActions" DllEntry="FailForTest"
@@ -85,6 +106,7 @@
       <Custom Action="RestorePly" Before="RemoveRegistryValues" Condition="REMOVE~=&quot;ALL&quot;" />
       <Custom Action="RegisterPlyRollback" Before="RegisterPly" Condition="NOT Installed AND NOT REMOVE~=&quot;ALL&quot;" />
       <Custom Action="RegisterPly" After="WriteRegistryValues" Condition="NOT REMOVE~=&quot;ALL&quot;" />
+      <Custom Action="RemoveUserData" After="RestorePly" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
       <Custom Action="FailForTest" After="RegisterPly" Condition="SPLATTHUMB_FAIL_FOR_TEST = &quot;1&quot;" />
     </InstallExecuteSequence>
 

@@ -1,0 +1,24 @@
+// Resources of SplatThumb.exe. Saved as UTF-8.
+#pragma code_page(65001)
+#include <windows.h>
+
+// The text of the "set the view" item in the .ply right-click menu. The installer points
+// the menu item's MUIVerb at "@SplatThumb.exe,-102", so Windows picks the string in the
+// user's display language. Keep the id in sync with kVerbTextId in
+// installer/customaction/ply_registration.h.
+#define IDS_VERB 102
+
+// English. Not LANG_NEUTRAL: Windows looks for a neutral string before the display
+// language, so a neutral table would be shown on Japanese Windows too. Display languages
+// without a table of their own fall back to English.
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+STRINGTABLE
+BEGIN
+    IDS_VERB "Set view with SplatThumb"
+END
+
+LANGUAGE LANG_JAPANESE, SUBLANG_DEFAULT
+STRINGTABLE
+BEGIN
+    IDS_VERB "SplatThumb で視点を設定"
+END
