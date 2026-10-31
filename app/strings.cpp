@@ -2,6 +2,9 @@
 
 #include <windows.h>
 
+#include <cstddef>
+#include <iterator>
+
 namespace splatthumb::app {
 
 namespace {
@@ -37,7 +40,7 @@ constexpr Entry kTexts[] = {
      L"エクスプローラーで .ply ファイルを右クリックし、「SplatThumb で視点を設定」を選んでください。"},
 };
 
-static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == static_cast<int>(Text::Usage) + 1);
+static_assert(std::size(kTexts) == static_cast<std::size_t>(Text::Usage) + 1);
 
 bool japanese() noexcept {
     static const bool ja = PRIMARYLANGID(GetUserDefaultUILanguage()) == LANG_JAPANESE;
@@ -47,7 +50,7 @@ bool japanese() noexcept {
 } // namespace
 
 const wchar_t* text(Text id) noexcept {
-    const Entry& e = kTexts[static_cast<int>(id)];
+    const Entry& e = kTexts[static_cast<std::size_t>(id)];
     return japanese() ? e.ja : e.en;
 }
 
