@@ -118,7 +118,7 @@ function Assert-Installed([string] $Version) {
     Assert (Test-Path -LiteralPath $shortcut) "Start menu shortcut not found at $shortcut"
     $key = $hkcu.OpenSubKey($verbKey)
     Assert ($null -ne $key) 'right-click item not registered'
-    Assert ($key.GetValue('MUIVerb') -eq "@$installedExe,-101") "MUIVerb is $($key.GetValue('MUIVerb'))"
+    Assert ($key.GetValue('MUIVerb') -eq "@$installedExe,-102") "MUIVerb is $($key.GetValue('MUIVerb'))"
     $key.Dispose()
     $key = $hkcu.OpenSubKey("$verbKey\command")
     $expected = "`"$installedExe`" --view `"%1`""

@@ -217,7 +217,7 @@ TEST_F(PlyRegistrationTest, AddsAndRemovesTheRightClickItem) {
     size = sizeof value - sizeof(wchar_t);
     ASSERT_EQ(RegGetValueW(root_, kVerbKey, L"MUIVerb", RRF_RT_REG_SZ, nullptr, value, &size),
               ERROR_SUCCESS);
-    EXPECT_EQ(std::wstring(value), L"@" + std::wstring(kExe) + L",-101");
+    EXPECT_EQ(std::wstring(value), L"@" + std::wstring(kExe) + L",-102");
 
     ASSERT_EQ(register_ply(root_, kExe), ERROR_SUCCESS); // repair
     ASSERT_EQ(restore_ply(root_), ERROR_SUCCESS);
