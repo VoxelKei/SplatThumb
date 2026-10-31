@@ -14,7 +14,7 @@ body:
     attributes:
       label: SplatThumb version
       description: Settings > Apps > Installed apps shows it under SplatThumb.
-      placeholder: 0.1.0
+      placeholder: 0.2.0
     validations:
       required: true
   - type: input
