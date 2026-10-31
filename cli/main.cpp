@@ -1,9 +1,15 @@
+#include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
+#include <string>
 #include <string_view>
 
 #include "file_byte_source.h"
+#include "png_writer.h"
 #include "splatthumb/classify.h"
+#include "splatthumb/limits.h"
+#include "splatthumb/render.h"
 #include "splatthumb/version.h"
 
 namespace {
@@ -13,10 +19,13 @@ constexpr int kExitSplat = 0;
 constexpr int kExitNotSplat = 1;
 constexpr int kExitUsage = 2;
 constexpr int kExitCannotOpen = 3;
+constexpr int kExitRenderFailed = 4;
 
 void print_usage() {
     std::puts("usage: splatthumb-cli --version\n"
-              "       splatthumb-cli info <file.ply>");
+              "       splatthumb-cli info <file.ply>\n"
+              "       splatthumb-cli render <file.ply> <out.png> [--size N]\n"
+              "                     [--background transparent|gray] [--sampling blocks|uniform]");
 }
 
 void print(std::string_view label, std::string_view value) {
@@ -68,6 +77,75 @@ int run_info(const std::filesystem::path& path) {
     return kExitSplat;
 }
 
+struct RenderArgs {
+    splatthumb::RenderOptions render;
+    splatthumb::LoadOptions load;
+};
+
+// Parses the optional render flags in args[0..n). Returns false on bad input.
+bool parse_render_flags(const std::string* args, int n, RenderArgs& out) {
+    for (int i = 0; i < n; i += 2) {
+        if (i + 1 >= n) {
+            return false;
+        }
+        const std::string& key = args[i];
+        const std::string& value = args[i + 1];
+        if (key == "--size") {
+            char* end = nullptr;
+            const long v = std::strtol(value.c_str(), &end, 10);
+            if (end == value.c_str() || *end != '\0' || v < splatthumb::limits::kMinThumbnailSize ||
+                v > splatthumb::limits::kMaxThumbnailSize) {
+                return false;
+            }
+            out.render.size = static_cast<int>(v);
+        } else if (key == "--background" && value == "transparent") {
+            out.render.background = splatthumb::Background::Transparent;
+        } else if (key == "--background" && value == "gray") {
+            out.render.background = splatthumb::Background::Gray;
+        } else if (key == "--sampling" && value == "blocks") {
+            out.load.mode = splatthumb::SampleMode::Blocks;
+        } else if (key == "--sampling" && value == "uniform") {
+            out.load.mode = splatthumb::SampleMode::Uniform;
+        } else {
+            return false;
+        }
+    }
+    return true;
+}
+
+int run_render(const std::filesystem::path& in, const std::filesystem::path& out,
+               const RenderArgs& args) {
+    splatthumb::cli::FileByteSource source;
+    if (!source.open(in)) {
+        std::fputs("error: cannot open file\n", stderr);
+        return kExitCannotOpen;
+    }
+    splatthumb::ThumbnailStats stats;
+    const auto deadline = splatthumb::Deadline::after(
+        std::chrono::milliseconds(splatthumb::limits::kRenderTimeLimitMs));
+    const auto start = std::chrono::steady_clock::now();
+    const splatthumb::RenderResult r =
+        splatthumb::render_thumbnail(source, args.render, args.load, deadline, &stats);
+    const double total_ms =
+        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
+
+    print("vertices:", stats.vertex_count);
+    print("loaded:", stats.splats_loaded);
+    print("drawn:", stats.splats_drawn);
+    std::printf("%-12s inspect %.1f / load %.1f / camera %.1f / render %.1f / total %.1f ms\n",
+                "time:", stats.inspect_ms, stats.load_ms, stats.camera_ms, stats.render_ms,
+                total_ms);
+    if (r.status != splatthumb::Status::Ok) {
+        print("error:", splatthumb::to_string(r.status));
+        return kExitRenderFailed;
+    }
+    if (!splatthumb::cli::write_png(out, r.image)) {
+        std::fputs("error: cannot write PNG\n", stderr);
+        return kExitCannotOpen;
+    }
+    return 0;
+}
+
 template <typename Char>
 int run(int argc, Char** argv) {
     if (argc == 2 && std::filesystem::path(argv[1]) == "--version") {
@@ -78,6 +156,18 @@ int run(int argc, Char** argv) {
     if (argc == 3 && std::filesystem::path(argv[1]) == "info") {
         return run_info(std::filesystem::path(argv[2]));
     }
+    if (argc >= 4 && argc <= 10 && std::filesystem::path(argv[1]) == "render") {
+        // Flags are ASCII; convert them through path for both char and wchar_t argv.
+        std::string flags[6];
+        const int n = argc - 4;
+        for (int i = 0; i < n; ++i) {
+            flags[i] = std::filesystem::path(argv[4 + i]).string();
+        }
+        RenderArgs args;
+        if (parse_render_flags(flags, n, args)) {
+            return run_render(std::filesystem::path(argv[2]), std::filesystem::path(argv[3]), args);
+        }
+    }
     print_usage();
     return kExitUsage;
 }
@@ -87,10 +177,20 @@ int run(int argc, Char** argv) {
 #ifdef _WIN32
 // wmain so that paths with non-ASCII characters (e.g. Japanese folder names) work.
 int wmain(int argc, wchar_t** argv) {
-    return run(argc, argv);
+    try {
+        return run(argc, argv);
+    } catch (...) {
+        print_usage();
+        return kExitUsage;
+    }
 }
 #else
 int main(int argc, char** argv) {
-    return run(argc, argv);
+    try {
+        return run(argc, argv);
+    } catch (...) {
+        print_usage();
+        return kExitUsage;
+    }
 }
 #endif

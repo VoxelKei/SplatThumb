@@ -16,6 +16,7 @@ add_executable(splatthumb_tests
     loader_test.cpp
     mutation_test.cpp
     ply_header_test.cpp
+    render_test.cpp
     splat_test.cpp
     version_test.cpp)
 target_link_libraries(splatthumb_tests PRIVATE splatthumb_core splatthumb_warnings GTest::gtest_main)

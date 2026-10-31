@@ -29,6 +29,12 @@ cmake --workflow --preset msvc-debug
 build\msvc\bin\Debug\splatthumb-cli.exe info path\to\scene.ply
 ```
 
+サムネイルを PNG に書き出すには、次を実行します。
+
+```powershell
+build\msvc\bin\Release\splatthumb-cli.exe render path\to\scene.ply thumb.png --size 256
+```
+
 ## ライセンス
 
 [MIT](LICENSE)
