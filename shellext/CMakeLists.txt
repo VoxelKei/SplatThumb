@@ -5,11 +5,12 @@ add_library(splatthumb_shellext_lib STATIC
     class_factory.cpp
     module.cpp
     stream_byte_source.cpp
-    thumbnail_provider.cpp)
+    thumbnail_provider.cpp
+    user_store.cpp)
 target_include_directories(splatthumb_shellext_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(splatthumb_shellext_lib PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
 target_link_libraries(splatthumb_shellext_lib
-    PUBLIC splatthumb_core ole32 uuid gdi32
+    PUBLIC splatthumb_core ole32 uuid gdi32 advapi32 shell32
     PRIVATE splatthumb_warnings)
 
 add_library(splatthumb_shellext SHARED

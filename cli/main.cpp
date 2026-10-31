@@ -8,9 +8,11 @@
 #include "file_byte_source.h"
 #include "png_writer.h"
 #include "splatthumb/classify.h"
+#include "splatthumb/fingerprint.h"
 #include "splatthumb/limits.h"
 #include "splatthumb/render.h"
 #include "splatthumb/version.h"
+#include "splatthumb/view_store.h"
 
 namespace {
 
@@ -24,8 +26,10 @@ constexpr int kExitRenderFailed = 4;
 void print_usage() {
     std::puts("usage: splatthumb-cli --version\n"
               "       splatthumb-cli info <file.ply>\n"
+              "       splatthumb-cli fingerprint <file.ply>\n"
               "       splatthumb-cli render <file.ply> <out.png> [--size N]\n"
-              "                     [--background transparent|gray] [--sampling blocks|uniform]");
+              "                     [--background gray|transparent|white|black]\n"
+              "                     [--sampling blocks|uniform]");
 }
 
 void print(std::string_view label, std::string_view value) {
@@ -77,6 +81,25 @@ int run_info(const std::filesystem::path& path) {
     return kExitSplat;
 }
 
+// Prints the fingerprint that names the file's saved view, and where that view is kept.
+int run_fingerprint(const std::filesystem::path& path) {
+    splatthumb::cli::FileByteSource source;
+    if (!source.open(path)) {
+        std::fputs("error: cannot open file\n", stderr);
+        return kExitCannotOpen;
+    }
+    const auto fp = splatthumb::fingerprint(source);
+    if (!fp) {
+        std::fputs("error: cannot read file\n", stderr);
+        return kExitCannotOpen;
+    }
+    print("fingerprint:", fp->hex());
+    const std::string view =
+        splatthumb::view_file_path("views", *fp).generic_string();
+    print("view file:", view);
+    return 0;
+}
+
 struct RenderArgs {
     splatthumb::RenderOptions render;
     splatthumb::LoadOptions load;
@@ -102,6 +125,10 @@ bool parse_render_flags(const std::string* args, int n, RenderArgs& out) {
             out.render.background = splatthumb::Background::Transparent;
         } else if (key == "--background" && value == "gray") {
             out.render.background = splatthumb::Background::Gray;
+        } else if (key == "--background" && value == "white") {
+            out.render.background = splatthumb::Background::White;
+        } else if (key == "--background" && value == "black") {
+            out.render.background = splatthumb::Background::Black;
         } else if (key == "--sampling" && value == "blocks") {
             out.load.mode = splatthumb::SampleMode::Blocks;
         } else if (key == "--sampling" && value == "uniform") {
@@ -155,6 +182,9 @@ int run(int argc, Char** argv) {
     }
     if (argc == 3 && std::filesystem::path(argv[1]) == "info") {
         return run_info(std::filesystem::path(argv[2]));
+    }
+    if (argc == 3 && std::filesystem::path(argv[1]) == "fingerprint") {
+        return run_fingerprint(std::filesystem::path(argv[2]));
     }
     if (argc >= 4 && argc <= 10 && std::filesystem::path(argv[1]) == "render") {
         // Flags are ASCII; convert them through path for both char and wchar_t argv.
