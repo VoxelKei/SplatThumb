@@ -84,7 +84,11 @@ if ($diff.Count -gt 0) {
     throw 'Restore incomplete. The state file was kept; please report this.'
 }
 
-$done = [System.IO.Path]::ChangeExtension($StatePath, ".restored-$((Get-Date).ToString('yyyyMMdd-HHmmss')).json")
+$base = Join-Path (Split-Path -Parent $StatePath) ([System.IO.Path]::GetFileNameWithoutExtension($StatePath))
+$done = "$base.restored-$((Get-Date).ToString('yyyyMMdd-HHmmss-fff')).json"
+for ($n = 2; Test-Path -LiteralPath $done; $n++) {
+    $done = "$base.restored-$((Get-Date).ToString('yyyyMMdd-HHmmss-fff'))-$n.json"
+}
 Move-Item -LiteralPath $StatePath -Destination $done
 Write-Host 'Restored: the registry matches the state before registration.'
 Write-Host "The state file was kept as $done"

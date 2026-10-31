@@ -6,7 +6,8 @@ $ErrorActionPreference = 'Stop'
 $tools = Join-Path $PSScriptRoot '..\..\tools\dev'
 . (Join-Path $tools 'DevRegistration.Common.ps1')
 
-$state = Join-Path ([System.IO.Path]::GetTempPath()) "splatthumb-ci-$PID.json"
+$stateName = "splatthumb-ci-$PID"
+$state = Join-Path ([System.IO.Path]::GetTempPath()) "$stateName.json"
 $hkcu = [Microsoft.Win32.Registry]::CurrentUser
 $handlerKey = "Software\Classes\.ply\ShellEx\$ThumbnailHandlerShellEx"
 
@@ -41,7 +42,9 @@ function Test-RoundTrip([string] $Name) {
     $diff = @(Compare-Snapshot $before (Get-Snapshot))
     Assert ($diff.Count -eq 0) "$Name registry differs after unregister: $($diff -join '; ')"
     Assert (-not (Test-Path $state)) "$Name state file was not retired"
-    Remove-Item "$([System.IO.Path]::ChangeExtension($state, $null)).restored-*.json" -ErrorAction SilentlyContinue
+    $restored = @(Get-ChildItem -LiteralPath (Split-Path -Parent $state) -Filter "$stateName.restored-*.json")
+    Assert ($restored.Count -eq 1) "$Name expected one retired state file, found $($restored.Count)"
+    $restored | Remove-Item
     Write-Host "OK: $Name"
 }
 
