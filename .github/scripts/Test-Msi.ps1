@@ -131,17 +131,17 @@ function New-TestPly([string] $Path, [switch] $Mesh) {
 
 # New files each time, so a thumbnail cached by an earlier round cannot hide a failure.
 # COM ignores per-user (HKCU) class registrations in elevated processes, and CI runs
-# elevated. So the shell is asked from a non-elevated "basic user" process, like Explorer.
+# elevated. So the check runs in a non-elevated "basic user" process, like Explorer.
 function Get-ShellThumbnail([string] $Path) {
     $shell = (Get-Process -Id $PID).Path
     $script = Join-Path $PSScriptRoot 'Get-Thumbnail.ps1'
     $principal = [Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()
     if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-        & $shell -NoProfile -File $script -Path $Path
+        & $shell -NoProfile -STA -File $script -Path $Path
         return $LASTEXITCODE -eq 0
     }
     $out = "$Path.result.txt"
-    $command = "`"$shell`" -NoProfile -NonInteractive -File `"$script`" -Path `"$Path`" -ResultPath `"$out`""
+    $command = "`"$shell`" -NoProfile -NonInteractive -STA -File `"$script`" -Path `"$Path`" -ResultPath `"$out`""
     Start-Process runas.exe -Wait -WindowStyle Hidden -ArgumentList "/trustlevel:0x20000 `"$($command -replace '"', '\"')`""
     $deadline = (Get-Date).AddSeconds(60)
     while (-not (Test-Path -LiteralPath $out) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 500 }
