@@ -1,0 +1,12 @@
+# Proposes updates to the pinned GitHub Actions once a week.
+# The WiX toolset stays pinned to v5 (see installer/README.md), so .NET tools are not
+# watched.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']

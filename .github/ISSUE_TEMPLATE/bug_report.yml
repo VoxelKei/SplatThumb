@@ -1,0 +1,41 @@
+name: Bug report
+description: A thumbnail is wrong or missing, or installing or uninstalling misbehaves.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Security problems (crashes or hangs caused by a crafted file, for example) should be
+        reported privately instead; see SECURITY.md.
+
+        Please do not attach real-world scans. They can show people or private places.
+  - type: input
+    id: version
+    attributes:
+      label: SplatThumb version
+      description: Settings > Apps > Installed apps shows it under SplatThumb.
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      description: Run `winver` to see it.
+      placeholder: Windows 11 24H2 (build 26100)
+    validations:
+      required: true
+  - type: textarea
+    id: file
+    attributes:
+      label: About the file
+      description: >-
+        Which tool made it, its size and splat count. If you built SplatThumb from source, the
+        output of `splatthumb-cli.exe info <file>` helps most.
+  - type: textarea
+    id: steps
+    attributes:
+      label: What happened
+      description: Steps to reproduce, what you expected, and what you saw instead.
+    validations:
+      required: true
