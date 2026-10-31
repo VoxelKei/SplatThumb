@@ -4,11 +4,30 @@
 
 Windows Explorer thumbnails for 3D Gaussian Splatting `.ply` files.
 
-> **Status: early development.** Nothing is ready to install yet.
+> **Status: early development.** There is no release yet. You can build the installer from
+> source (see below).
 
 SplatThumb only renders PLY files that are 3D Gaussian Splatting scenes, detected from the file
 header. Meshes and point clouds are left to Windows. It reads files and never modifies them, makes
 no network connections, and collects no telemetry.
+
+## Install and uninstall
+
+Requirements: Windows 10/11 x64. SplatThumb installs for your user account only and needs no
+administrator rights.
+
+1. Run `SplatThumb-<version>-x64.msi`. The installer is not code-signed yet, so Windows
+   SmartScreen may warn that it is from an unknown publisher. Choose "More info", then
+   "Run anyway", only if you got the file from this project.
+2. Open a folder with 3D Gaussian Splatting `.ply` files in Explorer and choose large icons.
+
+To uninstall, open Settings > Apps > Installed apps, and choose Uninstall next to SplatThumb.
+Uninstalling removes the files and the registry entries the installer wrote, and puts back the
+`.ply` thumbnail handler that was registered before, if any.
+
+Windows keeps thumbnails it has already made in its thumbnail cache, so they can still show
+after uninstalling. To clear the cache, run Disk Cleanup, check only "Thumbnails", and choose
+OK.
 
 ## Building from source
 
