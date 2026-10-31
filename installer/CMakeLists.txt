@@ -8,7 +8,13 @@ target_link_libraries(splatthumb_ca_lib PUBLIC advapi32 PRIVATE splatthumb_warni
 add_library(splatthumb_ca SHARED
     customaction/custom_actions.cpp
     customaction/splatthumb_ca.def)
-target_link_libraries(splatthumb_ca PRIVATE splatthumb_ca_lib msi shell32 splatthumb_warnings)
+# msi.lib by file name: a plain `msi` would mean the msi target below.
+if(MSVC)
+    set(SPLATTHUMB_MSI_LIB msi.lib)
+else()
+    set(SPLATTHUMB_MSI_LIB -lmsi)
+endif()
+target_link_libraries(splatthumb_ca PRIVATE splatthumb_ca_lib ${SPLATTHUMB_MSI_LIB} shell32 splatthumb_warnings)
 
 # `cmake --build --preset msvc-release --target msi` builds
 # <build dir>/msi/<config>/SplatThumb-<version>-x64.msi with the WiX Toolset version pinned
