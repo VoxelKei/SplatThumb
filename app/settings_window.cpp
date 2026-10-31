@@ -45,7 +45,6 @@ enum Control : int {
     kEnabled = 100,
     kQuality,
     kNote,
-    kSave,
     kSavedStatus,
     kRemake,
     kStop,
@@ -163,7 +162,6 @@ void SettingsWindow::create_controls() noexcept {
         SendMessageW(q, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(text(t)));
     }
     add(L"STATIC", text(Text::SettingsNote), SS_LEFT, kNote);
-    add(L"BUTTON", text(Text::SaveSettings), WS_TABSTOP | BS_PUSHBUTTON, kSave);
     add(L"STATIC", L"", SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX, kSavedStatus);
     add(L"BUTTON", text(Text::RemakeFolder), WS_TABSTOP | BS_PUSHBUTTON, kRemake);
     const HWND stop = add(L"BUTTON", text(Text::Stop), WS_TABSTOP | BS_PUSHBUTTON, kStop);
@@ -224,10 +222,8 @@ void SettingsWindow::layout() noexcept {
     y += row + gap;
     place(kNote, m, y, inner, row * 2);
     y += row * 2 + gap;
-    const int save_w = button_width(kSave);
-    place(kSave, m, y, save_w, row + scaled(4));
-    place(kSavedStatus, m + save_w + gap, y, inner - save_w - gap, row + scaled(4));
-    y += row + scaled(4) + gap * 3;
+    place(kSavedStatus, m, y, inner, row);
+    y += row + gap * 2;
 
     const int remake_w = button_width(kRemake);
     const int stop_w = button_width(kStop);
@@ -379,9 +375,6 @@ LRESULT SettingsWindow::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
     }
     case WM_COMMAND:
         switch (LOWORD(wp)) {
-        case kSave:
-            save_settings();
-            return 0;
         case kRemake:
             start_remake();
             return 0;
@@ -391,9 +384,16 @@ LRESULT SettingsWindow::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
                 EnableWindow(GetDlgItem(hwnd_, kStop), FALSE);
             }
             return 0;
+        // Save as soon as a value changes; there is no Save button.
         case kEnabled:
+            if (HIWORD(wp) == BN_CLICKED) {
+                save_settings();
+            }
+            return 0;
         case kQuality:
-            SetDlgItemTextW(hwnd_, kSavedStatus, L"");
+            if (HIWORD(wp) == CBN_SELCHANGE) {
+                save_settings();
+            }
             return 0;
         case kClose:
         case IDCANCEL:

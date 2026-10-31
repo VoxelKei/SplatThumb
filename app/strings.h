@@ -29,7 +29,6 @@ enum class Text {
     QualityStandard,
     QualityHigh,
     SettingsNote,
-    SaveSettings,
     SettingsSaved,
     CannotSaveSettings,
     RemakeFolder,

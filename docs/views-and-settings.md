@@ -82,7 +82,7 @@ dragging it draws at most 30,000 splats at low resolution, then redraws at full 
 Running `SplatThumb.exe` without arguments (the Start menu shortcut) opens the settings
 window. It shows in Japanese or English, following the Windows display language.
 
-- "Save settings" writes the values below.
+- Changing a setting saves it right away; there is no Save button.
 - "Remake thumbnails in a folder..." asks Windows to make the thumbnails of every `.ply`
   file directly in the chosen folder again (subfolders are not included, at most 10,000
   files). This runs in the background and can be stopped; closing the window stops it after

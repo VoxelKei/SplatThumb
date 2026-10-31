@@ -43,11 +43,10 @@ constexpr Entry kTexts[] = {
     {L"Fast (up to 50,000 splats)", L"速さ優先(最大 5 万個)"},
     {L"Standard (up to 200,000 splats)", L"標準(最大 20 万個)"},
     {L"High (up to 400,000 splats)", L"高品質(最大 40 万個)"},
-    {L"Changes apply to thumbnails made from now on. To update a folder that is already "
-     L"shown, use \"Remake thumbnails in a folder\" below.",
-     L"変更は、これから作られるサムネイルに反映されます。表示済みのフォルダーは、下の"
-     L"「フォルダーのサムネイルを作り直す」で更新できます。"},
-    {L"Save settings", L"設定を保存"},
+    {L"Changes are saved right away and apply to thumbnails made from now on. To update a "
+     L"folder that is already shown, use \"Remake thumbnails in a folder\" below.",
+     L"変更はすぐに保存され、これから作られるサムネイルに反映されます。表示済みのフォルダーは、"
+     L"下の「フォルダーのサムネイルを作り直す」で更新できます。"},
     {L"Settings saved.", L"設定を保存しました。"},
     {L"The settings could not be saved.", L"設定を保存できませんでした。"},
     {L"Remake thumbnails in a folder...", L"フォルダーのサムネイルを作り直す..."},
