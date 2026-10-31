@@ -1,6 +1,7 @@
 // Feeds arbitrary bytes to parse_header() and classify(), then loads and frames accepted
-// standard files. Any crash, sanitizer report, accepted file whose declared data does not
-// fit in the input, or non-finite camera is a bug.
+// standard files, and renders them at the smallest size. Any crash, sanitizer report,
+// accepted file whose declared data does not fit in the input, non-finite camera or
+// wrongly sized image is a bug.
 
 #include <chrono>
 #include <cmath>
@@ -10,7 +11,9 @@
 
 #include "splatthumb/camera.h"
 #include "splatthumb/classify.h"
+#include "splatthumb/limits.h"
 #include "splatthumb/loader.h"
+#include "splatthumb/render.h"
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) {
     splatthumb::MemoryByteSource source(
@@ -29,9 +32,20 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
             source, c, options, splatthumb::Deadline::after(std::chrono::seconds(1)));
         if (loaded.status == splatthumb::Status::Ok) {
             const auto cam = splatthumb::auto_camera(loaded.splats);
-            if (cam.status == splatthumb::Status::Ok &&
-                (!std::isfinite(cam.camera.eye[0]) || !std::isfinite(cam.camera.radius))) {
-                __builtin_trap();
+            if (cam.status == splatthumb::Status::Ok) {
+                if (!std::isfinite(cam.camera.eye[0]) || !std::isfinite(cam.camera.radius)) {
+                    __builtin_trap();
+                }
+                splatthumb::RenderOptions render_options;
+                render_options.size = splatthumb::limits::kMinThumbnailSize;
+                const auto img = splatthumb::render_splats(
+                    loaded.splats, cam.camera, render_options,
+                    splatthumb::Deadline::after(std::chrono::seconds(1)));
+                if (img.status == splatthumb::Status::Ok &&
+                    img.image.rgba.size() != static_cast<std::size_t>(img.image.size) *
+                                                 static_cast<std::size_t>(img.image.size) * 4) {
+                    __builtin_trap();
+                }
             }
         }
     }

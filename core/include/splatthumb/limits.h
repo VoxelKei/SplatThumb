@@ -43,4 +43,14 @@ inline constexpr float kMaxLogScale = 10.0f;
 // Splats with any position coordinate beyond this magnitude are skipped.
 inline constexpr float kMaxAbsCoordinate = 1.0e6f;
 
+// Largest thumbnail side in pixels; larger requests are clamped.
+inline constexpr int kMaxThumbnailSize = 1024;
+inline constexpr int kMinThumbnailSize = 16;
+
+// Requests up to this size are drawn at 2x and downsampled for anti-aliasing.
+inline constexpr int kMaxSupersampledSize = 512;
+
+// A single splat covers at most this fraction of the image side as its radius.
+inline constexpr float kMaxSplatRadiusFraction = 0.5f;
+
 } // namespace splatthumb::limits

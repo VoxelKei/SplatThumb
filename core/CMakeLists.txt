@@ -5,6 +5,7 @@ add_library(splatthumb_core STATIC
     src/classify.cpp
     src/loader.cpp
     src/ply_header.cpp
+    src/render.cpp
     src/splat.cpp
     src/status.cpp
     src/version.cpp)

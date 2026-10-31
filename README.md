@@ -30,6 +30,12 @@ To check how SplatThumb classifies a file (read-only):
 build\msvc\bin\Debug\splatthumb-cli.exe info path\to\scene.ply
 ```
 
+To render a thumbnail to a PNG file:
+
+```powershell
+build\msvc\bin\Release\splatthumb-cli.exe render path\to\scene.ply thumb.png --size 256
+```
+
 ## License
 
 [MIT](LICENSE)
