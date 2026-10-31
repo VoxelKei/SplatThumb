@@ -39,7 +39,8 @@ build\msvc\bin\Release\splatthumb-cli.exe render path\to\scene.ply thumb.png --s
 The background is dark gray. Add `--background transparent` for a transparent one.
 
 To try the Explorer thumbnail handler from a local build, see
-[docs/dev-registration.md](docs/dev-registration.md).
+[docs/dev-registration.md](docs/dev-registration.md). To build the installer (MSI), see
+[installer/README.md](installer/README.md).
 
 ## License
 

@@ -37,7 +37,7 @@ build\msvc\bin\Release\splatthumb-cli.exe render path\to\scene.ply thumb.png --s
 
 背景は暗いグレーです。透過にしたいときは `--background transparent` を付けます。
 
-自分でビルドした DLL を Explorer で試す方法は [docs/dev-registration.md](docs/dev-registration.md)(英語)にあります。
+自分でビルドした DLL を Explorer で試す方法は [docs/dev-registration.md](docs/dev-registration.md)(英語)にあります。インストーラー(MSI)の作り方は [installer/README.md](installer/README.md)(英語)にあります。
 
 ## ライセンス
 

@@ -25,6 +25,7 @@ add_subdirectory(cli)
 
 if(WIN32)
     add_subdirectory(shellext)
+    add_subdirectory(installer)
 endif()
 
 if(SPLATTHUMB_BUILD_FUZZERS)
