@@ -40,3 +40,13 @@ For both kinds:
 - The vertex count is between 1 and 50,000,000.
 - The header size plus every element's `count x record size` is computed with overflow
   checks and must not exceed the file size. Extra bytes after the data are allowed.
+
+For a compressed splat, also:
+
+- The `chunk` element has the twelve `float` properties `min_x min_y min_z max_x max_y max_z
+  min_scale_x min_scale_y min_scale_z max_scale_x max_scale_y max_scale_z`. The six color
+  ranges `min_r ... max_b` are optional (older files store colors directly).
+- Each chunk covers 256 vertices, so there must be at least `ceil(vertex count / 256)` chunks.
+- When drawing, a chunk whose ranges are not finite, or a vertex whose position falls outside the
+  coordinate limit, is skipped. Unpacked values always have a fixed size, so a small file cannot
+  expand into a large amount of data.

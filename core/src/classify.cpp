@@ -43,9 +43,45 @@ bool float_offset(const PlyElement& e, std::string_view name, std::size_t& out) 
     return true;
 }
 
-bool has_uint32(const PlyElement& e, std::string_view name) noexcept {
+bool uint32_offset(const PlyElement& e, std::string_view name, std::size_t& out) noexcept {
     const PlyProperty* p = e.find(name);
-    return p != nullptr && !p->is_list && p->type == ScalarType::UInt32;
+    if (p == nullptr || p->is_list || p->type != ScalarType::UInt32) {
+        return false;
+    }
+    out = p->offset;
+    return true;
+}
+
+template <std::size_t N>
+bool float_offsets(const PlyElement& e, const std::array<std::string_view, N>& names,
+                   std::array<std::size_t, N>& out) noexcept {
+    for (std::size_t i = 0; i < N; ++i) {
+        if (!float_offset(e, names[i], out[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Fills everything but the chunk position and count, which classify() knows.
+bool fill_compressed_layout(const PlyElement& chunk, const PlyElement& v,
+                            CompressedLayout& l) noexcept {
+    static constexpr std::array<std::string_view, 6> kPosition = {
+        "min_x", "min_y", "min_z", "max_x", "max_y", "max_z"};
+    static constexpr std::array<std::string_view, 6> kScale = {
+        "min_scale_x", "min_scale_y", "min_scale_z", "max_scale_x", "max_scale_y", "max_scale_z"};
+    static constexpr std::array<std::string_view, 6> kColor = {"min_r", "min_g", "min_b",
+                                                               "max_r", "max_g", "max_b"};
+    if (!uint32_offset(v, "packed_position", l.packed_position) ||
+        !uint32_offset(v, "packed_rotation", l.packed_rotation) ||
+        !uint32_offset(v, "packed_scale", l.packed_scale) ||
+        !uint32_offset(v, "packed_color", l.packed_color) ||
+        !float_offsets(chunk, kPosition, l.position) || !float_offsets(chunk, kScale, l.scale)) {
+        return false;
+    }
+    l.has_color_range = float_offsets(chunk, kColor, l.color);
+    l.chunk_stride = chunk.record_size;
+    return true;
 }
 
 bool fill_standard_layout(const PlyElement& v, StandardLayout& l) noexcept {
@@ -88,14 +124,19 @@ Classification classify(const PlyHeader& header, std::uint64_t file_size) noexce
     }
 
     // Every element must have fixed-size records so that offsets and the total size are known.
+    const PlyElement* chunk = header.find("chunk");
     std::uint64_t offset = header.header_size;
     std::uint64_t vertex_offset = 0;
+    std::uint64_t chunk_offset = 0;
     for (const PlyElement& e : header.elements) {
         if (e.has_list) {
             return reject(Status::HasListProperty);
         }
         if (&e == vertex) {
             vertex_offset = offset;
+        }
+        if (&e == chunk) {
+            chunk_offset = offset;
         }
         std::uint64_t bytes = 0;
         if (!checked_mul(e.count, e.record_size, bytes) || !checked_add(offset, bytes, offset)) {
@@ -107,10 +148,10 @@ Classification classify(const PlyHeader& header, std::uint64_t file_size) noexce
     if (fill_standard_layout(*vertex, c.layout)) {
         c.kind = SplatKind::Standard;
         c.sh_rest_count = count_sh_rest(*vertex);
-    } else if (header.find("chunk") != nullptr && has_uint32(*vertex, "packed_position") &&
-               has_uint32(*vertex, "packed_rotation") && has_uint32(*vertex, "packed_scale") &&
-               has_uint32(*vertex, "packed_color")) {
+    } else if (chunk != nullptr && fill_compressed_layout(*chunk, *vertex, c.compressed)) {
         c.kind = SplatKind::Compressed;
+        c.compressed.chunk_data_offset = chunk_offset;
+        c.compressed.chunk_count = chunk->count;
     } else {
         return reject(Status::MissingSplatProperties);
     }
@@ -123,6 +164,12 @@ Classification classify(const PlyHeader& header, std::uint64_t file_size) noexce
     }
     if (offset > file_size) {
         return reject(Status::FileTooSmall);
+    }
+    // Every vertex needs its chunk; vertex->count <= kMaxVertexCount, so no overflow.
+    if (c.kind == SplatKind::Compressed &&
+        c.compressed.chunk_count <
+            (vertex->count + limits::kCompressedChunkSize - 1) / limits::kCompressedChunkSize) {
+        return reject(Status::ChunkCountMismatch);
     }
 
     c.status = Status::Ok;

@@ -1,6 +1,7 @@
 #include "splatthumb/loader.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <new>
 #include <span>
 
@@ -47,12 +48,15 @@ bool for_each_run(std::uint64_t n, std::uint64_t m, const LoadOptions& options, 
 LoadResult load_splats(ByteSource& source, const Classification& c, const LoadOptions& options,
                        const Deadline& deadline) noexcept {
     LoadResult result;
-    if (c.kind != SplatKind::Standard) {
-        result.status = c.kind == SplatKind::NotSplat ? c.status : Status::UnsupportedKind;
+    if (c.kind == SplatKind::NotSplat) {
+        result.status = c.status;
         return result;
     }
+    const bool compressed = c.kind == SplatKind::Compressed;
     const std::size_t stride = c.vertex_stride;
-    if (stride == 0 || stride > limits::kMaxReadChunkBytes || c.vertex_count == 0) {
+    const std::size_t chunk_stride = c.compressed.chunk_stride;
+    if (stride == 0 || stride > limits::kMaxReadChunkBytes || c.vertex_count == 0 ||
+        (compressed && (chunk_stride == 0 || chunk_stride > limits::kMaxReadChunkBytes))) {
         result.status = Status::NothingToDraw;
         return result;
     }
@@ -66,9 +70,34 @@ LoadResult load_splats(ByteSource& source, const Classification& c, const LoadOp
 
     try {
         result.splats.reserve(static_cast<std::size_t>(m));
-        const std::size_t records_per_chunk = limits::kMaxReadChunkBytes / stride;
-        std::vector<std::byte> buffer(std::min<std::uint64_t>(records_per_chunk, m) * stride);
+        const std::size_t records_per_read = limits::kMaxReadChunkBytes / stride;
+        std::vector<std::byte> buffer(std::min<std::uint64_t>(records_per_read, m) * stride);
         Status status = Status::Ok;
+
+        // Compressed files: the chunk record of the last vertex decoded. Runs are read in
+        // increasing order, so each chunk is read about once.
+        std::vector<std::byte> chunk_record(compressed ? chunk_stride : 0);
+        std::uint64_t loaded_chunk = UINT64_MAX;
+        const auto decode = [&](std::uint64_t index, std::span<const std::byte> record,
+                                Splat& s) -> bool {
+            if (!compressed) {
+                return decode_standard_record(record, c.layout, s);
+            }
+            const std::uint64_t chunk_index = index / limits::kCompressedChunkSize;
+            if (chunk_index != loaded_chunk) {
+                // classify() guaranteed chunk_count >= ceil(n / 256) and that every element
+                // fits in the file, so this read is in bounds.
+                const std::uint64_t at =
+                    c.compressed.chunk_data_offset + chunk_index * chunk_stride;
+                ++result.read_calls;
+                if (source.read_at(at, chunk_record) != chunk_record.size()) {
+                    status = Status::ReadError;
+                    return false;
+                }
+                loaded_chunk = chunk_index;
+            }
+            return decode_compressed_record(record, chunk_record, c.compressed, s);
+        };
 
         for_each_run(n, m, options, [&](Run run) {
             while (run.count > 0) {
@@ -78,18 +107,20 @@ LoadResult load_splats(ByteSource& source, const Classification& c, const LoadOp
                 }
                 const auto k = static_cast<std::size_t>(
                     std::min<std::uint64_t>(run.count, buffer.size() / stride));
-                const std::span<std::byte> chunk(buffer.data(), k * stride);
+                const std::span<std::byte> records(buffer.data(), k * stride);
                 // classify() guaranteed offset + n * stride <= file size, so no overflow.
                 const std::uint64_t offset = c.vertex_data_offset + run.first * stride;
                 ++result.read_calls;
-                if (source.read_at(offset, chunk) != chunk.size()) {
+                if (source.read_at(offset, records) != records.size()) {
                     status = Status::ReadError;
                     return false;
                 }
                 for (std::size_t r = 0; r < k; ++r) {
                     Splat s;
-                    if (decode_standard_record(chunk.subspan(r * stride, stride), c.layout, s)) {
+                    if (decode(run.first + r, records.subspan(r * stride, stride), s)) {
                         result.splats.push_back(s);
+                    } else if (status != Status::Ok) {
+                        return false;
                     } else {
                         ++result.records_skipped;
                     }

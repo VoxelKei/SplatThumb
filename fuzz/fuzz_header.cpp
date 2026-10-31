@@ -1,5 +1,5 @@
 // Feeds arbitrary bytes to parse_header() and classify(), then loads and frames accepted
-// standard files, and renders them at the smallest size. Any crash, sanitizer report,
+// standard and compressed files, and renders them at the smallest size. Any crash, sanitizer report,
 // accepted file whose declared data does not fit in the input, non-finite camera or
 // wrongly sized image is a bug.
 
@@ -25,7 +25,15 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
             __builtin_trap();
         }
     }
-    if (c.kind == splatthumb::SplatKind::Standard) {
+    if (c.kind == splatthumb::SplatKind::Compressed) {
+        const auto& l = c.compressed;
+        if (l.chunk_count * splatthumb::limits::kCompressedChunkSize < c.vertex_count ||
+            l.chunk_data_offset > size || l.chunk_stride == 0 ||
+            l.chunk_count > (size - l.chunk_data_offset) / l.chunk_stride) {
+            __builtin_trap();
+        }
+    }
+    if (c.kind != splatthumb::SplatKind::NotSplat) {
         splatthumb::LoadOptions options;
         options.max_splats = 1000;
         const auto loaded = splatthumb::load_splats(

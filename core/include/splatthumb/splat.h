@@ -23,6 +23,11 @@ struct Splat {
 bool decode_standard_record(std::span<const std::byte> record, const StandardLayout& layout,
                             Splat& out) noexcept;
 
+// Converts one vertex record of a Compressed file, given the record of its chunk. Skips
+// records the same way as decode_standard_record; non-finite chunk values skip them too.
+bool decode_compressed_record(std::span<const std::byte> record, std::span<const std::byte> chunk,
+                              const CompressedLayout& layout, Splat& out) noexcept;
+
 // Numerically safe logistic function.
 float sigmoid(float x) noexcept;
 

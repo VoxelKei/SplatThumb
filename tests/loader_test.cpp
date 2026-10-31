@@ -183,11 +183,9 @@ TEST(Loader, StopsAtDeadline) {
     EXPECT_EQ(r.status, Status::Timeout);
 }
 
-TEST(Loader, RejectsNonStandardKinds) {
+TEST(Loader, PassesOnWhyNotASplat) {
     Classification c;
-    c.kind = splatthumb::SplatKind::Compressed;
     splatthumb::MemoryByteSource src({});
-    EXPECT_EQ(splatthumb::load_splats(src, c, {}, far_future()).status, Status::UnsupportedKind);
     c.kind = splatthumb::SplatKind::NotSplat;
     c.status = Status::HasFaces;
     EXPECT_EQ(splatthumb::load_splats(src, c, {}, far_future()).status, Status::HasFaces);
