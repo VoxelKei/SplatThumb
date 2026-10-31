@@ -31,12 +31,14 @@ enum class Text {
     SettingsNote,
     SettingsSaved,
     CannotSaveSettings,
-    RemakeFolder,
+    RemakeAll,
+    RemakeAllNote,
+    Searching,
     Stop,
     Remaking,
     Remade,
     Stopped,
-    NoPlyFiles,
+    NothingToRemake,
 };
 
 const wchar_t* text(Text id) noexcept;

@@ -46,4 +46,33 @@ bool refresh_thumbnail(const std::filesystem::path& file) noexcept {
     return ok;
 }
 
+bool has_cached_thumbnail(const std::filesystem::path& file) noexcept {
+    bool cached = false;
+    IShellItem* item = nullptr;
+    IThumbnailCache* cache = nullptr;
+    if (SUCCEEDED(SHCreateItemFromParsingName(file.c_str(), nullptr, IID_PPV_ARGS(&item))) &&
+        SUCCEEDED(CoCreateInstance(kLocalThumbnailCache, nullptr, CLSCTX_INPROC_SERVER,
+                                   IID_PPV_ARGS(&cache)))) {
+        for (const UINT size : kSizes) {
+            ISharedBitmap* bitmap = nullptr;
+            const HRESULT hr =
+                cache->GetThumbnail(item, size, WTS_INCACHEONLY, &bitmap, nullptr, nullptr);
+            if (bitmap != nullptr) {
+                bitmap->Release();
+                cached = cached || hr == S_OK;
+            }
+            if (cached) {
+                break;
+            }
+        }
+    }
+    if (cache != nullptr) {
+        cache->Release();
+    }
+    if (item != nullptr) {
+        item->Release();
+    }
+    return cached;
+}
+
 } // namespace splatthumb::app

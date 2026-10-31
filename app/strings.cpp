@@ -44,20 +44,25 @@ constexpr Entry kTexts[] = {
     {L"Standard (up to 200,000 splats)", L"標準(最大 20 万個)"},
     {L"High (up to 400,000 splats)", L"高品質(最大 40 万個)"},
     {L"Changes are saved right away and apply to thumbnails made from now on. To update a "
-     L"folder that is already shown, use \"Remake thumbnails in a folder\" below.",
+     L"folder that is already shown, use \"Remake all existing thumbnails\" below.",
      L"変更はすぐに保存され、これから作られるサムネイルに反映されます。表示済みのフォルダーは、"
-     L"下の「フォルダーのサムネイルを作り直す」で更新できます。"},
+     L"下の「既存のサムネイルを全て再生成する」で更新できます。"},
     {L"Settings saved.", L"設定を保存しました。"},
     {L"The settings could not be saved.", L"設定を保存できませんでした。"},
-    {L"Remake thumbnails in a folder...", L"フォルダーのサムネイルを作り直す..."},
+    {L"Remake all existing thumbnails...", L"既存のサムネイルを全て再生成する..."},
+    {L"Looks for .ply files in the folder you choose and all folders inside it, and remakes those "
+     L"that already have a thumbnail. Choose a drive such as K:\\ to cover all of it.",
+     L"選んだフォルダーとその中のすべてのフォルダーから .ply ファイルを探し、すでにサムネイルが"
+     L"あるものを作り直します。K:\\ などのドライブを選ぶと、その全体が対象になります。"},
+    {L"Looking for .ply files... {n} found", L".ply ファイルを探しています... {n} 個見つかりました"},
     {L"Stop", L"中止"},
     {L"Remaking thumbnails...", L"サムネイルを作り直しています..."},
     {L"Remade the thumbnails of {n} files.", L"{n} 個のファイルのサムネイルを作り直しました。"},
     {L"Stopped.", L"中止しました。"},
-    {L"There are no .ply files in this folder.", L"このフォルダーには .ply ファイルがありません。"},
+    {L"No thumbnails to remake were found.", L"作り直すサムネイルは見つかりませんでした。"},
 };
 
-static_assert(std::size(kTexts) == static_cast<std::size_t>(Text::NoPlyFiles) + 1);
+static_assert(std::size(kTexts) == static_cast<std::size_t>(Text::NothingToRemake) + 1);
 
 bool japanese() noexcept {
     static const bool ja = PRIMARYLANGID(GetUserDefaultUILanguage()) == LANG_JAPANESE;

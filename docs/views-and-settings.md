@@ -83,10 +83,15 @@ Running `SplatThumb.exe` without arguments (the Start menu shortcut) opens the s
 window. It shows in Japanese or English, following the Windows display language.
 
 - Changing a setting saves it right away; there is no Save button.
-- "Remake thumbnails in a folder..." asks Windows to make the thumbnails of every `.ply`
-  file directly in the chosen folder again (subfolders are not included, at most 10,000
-  files). This runs in the background and can be stopped; closing the window stops it after
-  the current file.
+- "Remake all existing thumbnails..." asks for a folder, looks for `.ply` files in it and in
+  every folder inside it, and asks Windows to make again the thumbnails of those that already
+  have one in its thumbnail cache. Files without a cached thumbnail are skipped; Explorer
+  makes theirs with the current settings when it shows them. Choosing a drive (for example
+  `K:\`) covers the whole drive. The search never follows links or junctions, skips the
+  Windows folder, the recycle bin and "System Volume Information", and stops after 100,000
+  `.ply` files or 64 folder levels. Windows keeps no list of the files it has thumbnails for,
+  so searching is the only way to find them. This runs in the background and can be stopped;
+  closing the window stops it after the current file.
 
 ## Settings
 

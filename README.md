@@ -84,7 +84,8 @@ Open "SplatThumb" from the Start menu to:
 
 - turn SplatThumb's thumbnails off or on,
 - choose the quality (how many splats are drawn),
-- remake the thumbnails of a folder after changing a setting.
+- remake the existing thumbnails in a folder and all folders inside it after changing a
+  setting.
 
 ## Troubleshooting
 
@@ -92,7 +93,7 @@ Open "SplatThumb" from the Start menu to:
 icons, never thumbnails" is off. Use a view with large icons; "Details" and "List" show icons only.
 
 **A thumbnail is old, or missing after installing.** Windows reuses thumbnails from its cache.
-Use "Remake thumbnails in a folder" in the settings, or clear the cache with Disk Cleanup
+Use "Remake all existing thumbnails" in the settings, or clear the cache with Disk Cleanup
 ("Thumbnails" only).
 
 **Another app's thumbnail shows instead.** Only one thumbnail handler can be registered for

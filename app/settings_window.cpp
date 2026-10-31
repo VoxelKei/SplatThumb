@@ -5,17 +5,15 @@
 #include <shobjidl.h>
 
 #include <algorithm>
-#include <array>
 #include <atomic>
 #include <cstddef>
-#include <cwctype>
 #include <filesystem>
 #include <new>
 #include <optional>
 #include <string>
-#include <system_error>
 #include <vector>
 
+#include "ply_search.h"
 #include "splatthumb/settings.h"
 #include "strings.h"
 #include "thumbnail_refresh.h"
@@ -25,13 +23,10 @@ namespace splatthumb::app {
 
 namespace {
 
-
-// A folder with more .ply files than this is only remade up to this many.
-constexpr std::size_t kMaxFolderFiles = 10'000;
-
 // Messages from the remake thread.
-constexpr UINT kProgressMessage = WM_APP + 1; // wParam = files done, lParam = total
-constexpr UINT kDoneMessage = WM_APP + 2;     // wParam = files done, lParam = stopped
+constexpr UINT kSearchMessage = WM_APP + 1;   // wParam = .ply files found so far
+constexpr UINT kProgressMessage = WM_APP + 2; // wParam = files checked, lParam = total
+constexpr UINT kDoneMessage = WM_APP + 3;     // wParam = thumbnails remade, lParam = stopped
 
 // Layout in 96-DPI units.
 constexpr int kWidth = 560;
@@ -47,6 +42,7 @@ enum Control : int {
     kNote,
     kSavedStatus,
     kRemake,
+    kRemakeNote,
     kStop,
     kProgress,
     kClose,
@@ -57,33 +53,46 @@ enum Control : int {
 // stop flag.
 struct RemakeJob {
     HWND window = nullptr;
-    std::vector<std::filesystem::path> files;
+    std::filesystem::path folder;
     std::atomic<bool> stop{false};
 };
 
-bool is_ply(const std::filesystem::path& p) {
-    std::wstring ext = p.extension().wstring();
-    std::transform(ext.begin(), ext.end(), ext.begin(),
-                   [](wchar_t c) { return static_cast<wchar_t>(std::towlower(c)); });
-    return ext == L".ply";
-}
-
+// Finds the .ply files in the chosen folder and its subfolders, then remakes the thumbnails of
+// those that already have one in Windows' cache. Files without one are left alone, so this
+// adds nothing to the cache.
 DWORD WINAPI remake_thread(void* param) noexcept {
     auto* job = static_cast<RemakeJob*>(param);
     const HRESULT com = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-    std::size_t done = 0;
-    for (const auto& file : job->files) {
+    std::vector<std::filesystem::path> files;
+    try {
+        PlySearch search;
+        search.roots = {job->folder};
+        search.skip = system_folders();
+        search.stop = &job->stop;
+        search.progress = [job](std::size_t found) {
+            PostMessageW(job->window, kSearchMessage, found, 0);
+        };
+        files = find_ply_files(search);
+    } catch (...) {
+        // Out of memory: nothing to remake.
+    }
+    std::size_t checked = 0;
+    std::size_t remade = 0;
+    for (const auto& file : files) {
         if (job->stop.load()) {
             break;
         }
-        refresh_thumbnail(file);
-        ++done;
-        PostMessageW(job->window, kProgressMessage, done, static_cast<LPARAM>(job->files.size()));
+        if (has_cached_thumbnail(file)) {
+            refresh_thumbnail(file);
+            ++remade;
+        }
+        ++checked;
+        PostMessageW(job->window, kProgressMessage, checked, static_cast<LPARAM>(files.size()));
     }
     if (SUCCEEDED(com)) {
         CoUninitialize();
     }
-    PostMessageW(job->window, kDoneMessage, done, job->stop.load() ? 1 : 0);
+    PostMessageW(job->window, kDoneMessage, remade, job->stop.load() ? 1 : 0);
     return 0;
 }
 
@@ -163,9 +172,10 @@ void SettingsWindow::create_controls() noexcept {
     }
     add(L"STATIC", text(Text::SettingsNote), SS_LEFT, kNote);
     add(L"STATIC", L"", SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX, kSavedStatus);
-    add(L"BUTTON", text(Text::RemakeFolder), WS_TABSTOP | BS_PUSHBUTTON, kRemake);
+    add(L"BUTTON", text(Text::RemakeAll), WS_TABSTOP | BS_PUSHBUTTON, kRemake);
     const HWND stop = add(L"BUTTON", text(Text::Stop), WS_TABSTOP | BS_PUSHBUTTON, kStop);
     EnableWindow(stop, FALSE);
+    add(L"STATIC", text(Text::RemakeAllNote), SS_LEFT, kRemakeNote);
     add(L"STATIC", L"", SS_LEFT | SS_NOPREFIX, kProgress);
     add(L"BUTTON", text(Text::Close), WS_TABSTOP | BS_PUSHBUTTON, kClose);
     update_font();
@@ -230,6 +240,8 @@ void SettingsWindow::layout() noexcept {
     place(kRemake, m, y, remake_w, row + scaled(4));
     place(kStop, m + remake_w + gap, y, stop_w, row + scaled(4));
     y += row + scaled(4) + gap;
+    place(kRemakeNote, m, y, inner, row * 2);
+    y += row * 2;
     place(kProgress, m, y, inner, row);
     y += row + gap * 2;
     const int close_w = std::max(button_width(kClose), scaled(90));
@@ -304,26 +316,13 @@ void SettingsWindow::start_remake() noexcept {
     if (job == nullptr) {
         return;
     }
+    job->window = hwnd_;
     try {
-        std::error_code ec;
-        for (auto it = std::filesystem::directory_iterator(*folder, ec);
-             !ec && it != std::filesystem::directory_iterator() &&
-             job->files.size() < kMaxFolderFiles;
-             it.increment(ec)) {
-            if (it->is_regular_file(ec) && is_ply(it->path())) {
-                job->files.push_back(it->path());
-            }
-        }
-        std::sort(job->files.begin(), job->files.end());
+        job->folder = *folder;
     } catch (...) {
-        job->files.clear();
-    }
-    if (job->files.empty()) {
         delete job;
-        SetDlgItemTextW(hwnd_, kProgress, text(Text::NoPlyFiles));
         return;
     }
-    job->window = hwnd_;
     thread_ = CreateThread(nullptr, 0, &remake_thread, job, 0, nullptr);
     if (thread_ == nullptr) {
         delete job;
@@ -332,7 +331,7 @@ void SettingsWindow::start_remake() noexcept {
     job_ = job;
     EnableWindow(GetDlgItem(hwnd_, kRemake), FALSE);
     EnableWindow(GetDlgItem(hwnd_, kStop), TRUE);
-    SetDlgItemTextW(hwnd_, kProgress, text(Text::Remaking));
+    SetDlgItemTextW(hwnd_, kProgress, text(Text::Searching));
 }
 
 void SettingsWindow::finish_remake() noexcept {
@@ -403,6 +402,12 @@ LRESULT SettingsWindow::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
             break;
         }
         break;
+    case kSearchMessage:
+        try {
+            SetDlgItemTextW(hwnd_, kProgress, text(Text::Searching, wp).c_str());
+        } catch (...) {
+        }
+        return 0;
     case kProgressMessage:
         try {
             std::wstring s = text(Text::Remaking);
@@ -414,8 +419,9 @@ LRESULT SettingsWindow::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
     case kDoneMessage:
         finish_remake();
         try {
-            const std::wstring s =
-                lp != 0 ? std::wstring(text(Text::Stopped)) : text(Text::Remade, wp);
+            const std::wstring s = lp != 0   ? std::wstring(text(Text::Stopped))
+                                   : wp == 0 ? std::wstring(text(Text::NothingToRemake))
+                                             : text(Text::Remade, wp);
             SetDlgItemTextW(hwnd_, kProgress, s.c_str());
         } catch (...) {
         }
