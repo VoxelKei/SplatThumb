@@ -3,6 +3,9 @@
 The MSI is the supported way to install SplatThumb. To try a DLL you built yourself, the
 scripts in `tools/dev/` register it for your user account only, and undo it exactly.
 
+Do not use them while SplatThumb is installed from the MSI, and unregister before installing
+the MSI: both use the same CLSID, so each would overwrite the other's registration.
+
 ## What they change
 
 Only `HKEY_CURRENT_USER`, and no administrator rights are needed:
