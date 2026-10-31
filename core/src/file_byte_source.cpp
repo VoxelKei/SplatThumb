@@ -1,10 +1,10 @@
-#include "file_byte_source.h"
+#include "splatthumb/file_byte_source.h"
 
 #include <algorithm>
 #include <limits>
 #include <system_error>
 
-namespace splatthumb::cli {
+namespace splatthumb {
 
 bool FileByteSource::open(const std::filesystem::path& path) noexcept {
     try {
@@ -48,4 +48,4 @@ std::size_t FileByteSource::read_at(std::uint64_t offset, std::span<std::byte> o
     }
 }
 
-} // namespace splatthumb::cli
+} // namespace splatthumb

@@ -60,6 +60,22 @@ finite or exceed the coordinate limit, and views that cannot make a camera are i
 the thumbnail uses the automatic view. Unknown keys are ignored. The parser is fuzzed by
 `fuzz/fuzz_view.cpp`.
 
+## The viewpoint window
+
+`SplatThumb.exe --view <file.ply>` opens a window showing the file as its thumbnail would
+look. (The installer adds this to the right-click menu of `.ply` files.)
+
+- Drag to turn the subject, right-drag (or Shift+drag) to move it, Ctrl+drag to turn the
+  picture, and use the wheel to zoom. The two 90° buttons fix files stored on their side.
+- "Training camera" is available when a `cameras.json` from the original 3DGS training
+  code is found in the PLY's folder or up to three folders above it. It shows the view from
+  its first camera. Only the first camera is read, from at most 1 MiB of the file.
+- "Use this view" saves the view and asks Windows to make the thumbnail again.
+  "Automatic" deletes the saved view and does the same.
+
+The window loads the file with the same limits and checks as the thumbnail handler. While
+dragging it draws at most 30,000 splats at low resolution, then redraws at full quality.
+
 ## Settings
 
 Settings are DWORD values under `HKCU\Software\SplatThumb\Settings`. Missing or
