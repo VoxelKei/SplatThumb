@@ -4,6 +4,8 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -44,6 +46,31 @@ inline std::vector<std::byte> make_file(std::string_view header, std::size_t dat
     std::vector<std::byte> bytes(header.size() + data_bytes, std::byte{0});
     for (std::size_t i = 0; i < header.size(); ++i) {
         bytes[i] = static_cast<std::byte>(header[i]);
+    }
+    return bytes;
+}
+
+// File values of one standard-layout record, in kStandardVertexProperties order.
+struct RawSplat {
+    float x = 0, y = 0, z = 0;
+    float f_dc[3] = {0, 0, 0};
+    float opacity = 5.0f; // sigmoid(5) ~ 0.99
+    float scale[3] = {-3, -3, -3};
+    float rot[4] = {1, 0, 0, 0};
+};
+
+inline void write_record(const RawSplat& s, std::byte* out) {
+    const float v[14] = {s.x,        s.y,        s.z,        s.f_dc[0], s.f_dc[1],
+                         s.f_dc[2],  s.opacity,  s.scale[0], s.scale[1], s.scale[2],
+                         s.rot[0],   s.rot[1],   s.rot[2],   s.rot[3]};
+    std::memcpy(out, v, sizeof v);
+}
+
+inline std::vector<std::byte> make_standard_file(std::span<const RawSplat> splats) {
+    const std::string header = standard_header(splats.size());
+    std::vector<std::byte> bytes = make_file(header, splats.size() * kStandardRecordSize);
+    for (std::size_t i = 0; i < splats.size(); ++i) {
+        write_record(splats[i], bytes.data() + header.size() + i * kStandardRecordSize);
     }
     return bytes;
 }

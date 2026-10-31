@@ -3,13 +3,16 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <random>
 #include <vector>
 
 #include "ply_builder.h"
+#include "splatthumb/camera.h"
 #include "splatthumb/classify.h"
+#include "splatthumb/loader.h"
 
 namespace {
 
@@ -36,10 +39,14 @@ std::vector<std::byte> mutate(std::vector<std::byte> bytes, std::mt19937& rng) {
 }
 
 TEST(Mutation, CorruptedFilesNeverCrash) {
-    const std::vector<std::byte> original =
-        make_file(standard_header(4), 4 * kStandardRecordSize);
+    std::vector<RawSplat> raw(4);
+    for (std::size_t i = 0; i < raw.size(); ++i) {
+        raw[i].x = static_cast<float>(i);
+    }
+    const std::vector<std::byte> original = make_standard_file(raw);
     std::mt19937 rng(20261030);
     int accepted = 0;
+    int loaded_ok = 0;
     for (int i = 0; i < 20000; ++i) {
         const std::vector<std::byte> bytes = mutate(original, rng);
         splatthumb::MemoryByteSource src(bytes);
@@ -48,10 +55,17 @@ TEST(Mutation, CorruptedFilesNeverCrash) {
             ++accepted;
             // Anything accepted must fit in the file.
             ASSERT_LE(c.vertex_data_offset + c.vertex_count * c.vertex_stride, bytes.size());
+            const auto loaded = splatthumb::load_splats(
+                src, c, {}, splatthumb::Deadline::after(std::chrono::seconds(10)));
+            if (loaded.status == splatthumb::Status::Ok) {
+                ++loaded_ok;
+                (void)splatthumb::auto_camera(loaded.splats);
+            }
         }
     }
     // Some mutations (e.g. in the data section) leave the file valid.
     EXPECT_GT(accepted, 0);
+    EXPECT_GT(loaded_ok, 0);
 }
 
 } // namespace
