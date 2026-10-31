@@ -16,6 +16,7 @@
 #include <utility>
 #include <vector>
 
+#include "bitmap.h"
 #include "class_factory.h"
 #include "clsid.h"
 #include "module.h"
@@ -244,6 +245,27 @@ TEST(StreamByteSource, HoldsAReference) {
         EXPECT_EQ(stream.refs(), 2u);
     }
     EXPECT_EQ(stream.refs(), 1u);
+}
+
+TEST(Bitmap, KeepsPremultipliedAlpha) {
+    splatthumb::Image image;
+    image.size = 2;
+    // Clear, half-covered red, opaque green, opaque blue (RGBA, premultiplied).
+    image.rgba = {0, 0, 0, 0, 100, 0, 0, 128, 0, 255, 0, 255, 0, 0, 255, 255};
+    HBITMAP bitmap = splatthumb::shellext::make_bitmap(image);
+    ASSERT_NE(bitmap, nullptr);
+    DIBSECTION dib{};
+    ASSERT_EQ(GetObjectW(bitmap, sizeof dib, &dib), static_cast<int>(sizeof dib));
+    ASSERT_EQ(dib.dsBm.bmBitsPixel, 32);
+    const auto* bgra = static_cast<const std::uint8_t*>(dib.dsBm.bmBits);
+    const std::vector<std::uint8_t> got(bgra, bgra + 16);
+    const std::vector<std::uint8_t> expected = {0, 0, 0, 0, 0, 0, 100, 128,
+                                                0, 255, 0, 255, 255, 0, 0, 255};
+    EXPECT_EQ(got, expected);
+    for (std::size_t i = 0; i < got.size(); i += 4) {
+        EXPECT_LE(std::max({got[i], got[i + 1], got[i + 2]}), got[i + 3]) << i;
+    }
+    DeleteObject(bitmap);
 }
 
 TEST(ThumbnailProvider, DrawsAStandardFile) {
