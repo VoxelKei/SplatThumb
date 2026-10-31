@@ -8,7 +8,7 @@
 
 #include "splatthumb/byte_source.h"
 
-namespace splatthumb::cli {
+namespace splatthumb {
 
 // Read-only ByteSource over a file. The file is never written.
 class FileByteSource final : public ByteSource {
@@ -24,4 +24,4 @@ private:
     std::uint64_t size_ = 0;
 };
 
-} // namespace splatthumb::cli
+} // namespace splatthumb

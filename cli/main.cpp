@@ -5,9 +5,9 @@
 #include <string>
 #include <string_view>
 
-#include "file_byte_source.h"
 #include "png_writer.h"
 #include "splatthumb/classify.h"
+#include "splatthumb/file_byte_source.h"
 #include "splatthumb/fingerprint.h"
 #include "splatthumb/limits.h"
 #include "splatthumb/render.h"
@@ -60,7 +60,7 @@ std::string_view sh_degree(std::size_t rest_count) {
 }
 
 int run_info(const std::filesystem::path& path) {
-    splatthumb::cli::FileByteSource source;
+    splatthumb::FileByteSource source;
     if (!source.open(path)) {
         std::fputs("error: cannot open file\n", stderr);
         return kExitCannotOpen;
@@ -83,7 +83,7 @@ int run_info(const std::filesystem::path& path) {
 
 // Prints the fingerprint that names the file's saved view, and where that view is kept.
 int run_fingerprint(const std::filesystem::path& path) {
-    splatthumb::cli::FileByteSource source;
+    splatthumb::FileByteSource source;
     if (!source.open(path)) {
         std::fputs("error: cannot open file\n", stderr);
         return kExitCannotOpen;
@@ -142,7 +142,7 @@ bool parse_render_flags(const std::string* args, int n, RenderArgs& out) {
 
 int run_render(const std::filesystem::path& in, const std::filesystem::path& out,
                const RenderArgs& args) {
-    splatthumb::cli::FileByteSource source;
+    splatthumb::FileByteSource source;
     if (!source.open(in)) {
         std::fputs("error: cannot open file\n", stderr);
         return kExitCannotOpen;
