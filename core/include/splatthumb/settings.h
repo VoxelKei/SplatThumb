@@ -4,8 +4,6 @@
 #include <cstdint>
 #include <optional>
 
-#include "splatthumb/render.h"
-
 namespace splatthumb {
 
 // How many splats a thumbnail draws at most.
@@ -19,14 +17,12 @@ enum class Quality {
 // these are the defaults when a value is missing.
 struct Settings {
     bool enabled = true;
-    Background background = Background::Gray;
     Quality quality = Quality::Standard;
 };
 
 // Raw stored values, as read; nullopt when a value is missing or unreadable.
 struct StoredSettings {
     std::optional<std::uint32_t> enabled;    // 0 = off, anything else = on
-    std::optional<std::uint32_t> background; // 0 gray, 1 transparent, 2 white, 3 black
     std::optional<std::uint32_t> quality;    // 0 fast, 1 standard, 2 high
 };
 

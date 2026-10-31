@@ -9,4 +9,8 @@ namespace splatthumb::app {
 // thumbnail cache entries for this file are replaced. Returns false if Windows refused.
 bool refresh_thumbnail(const std::filesystem::path& file) noexcept;
 
+// Whether Windows' thumbnail cache already holds a thumbnail of the file at one of the common
+// sizes. Only reads the cache; never makes a thumbnail.
+bool has_cached_thumbnail(const std::filesystem::path& file) noexcept;
+
 } // namespace splatthumb::app

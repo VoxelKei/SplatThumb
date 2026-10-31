@@ -2,6 +2,7 @@
 # settings window (from the Start menu). Win32 only, static CRT like the DLL, no extra runtime.
 add_executable(SplatThumb WIN32
     main.cpp
+    ply_search.cpp
     settings_window.cpp
     strings.cpp
     thumbnail_refresh.cpp

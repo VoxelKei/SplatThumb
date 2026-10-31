@@ -66,26 +66,26 @@ the view for one file, right-click it in Explorer and choose "Set view with Spla
 Windows 11, it is under "Show more options").
 
 - Drag to turn the subject, right-drag to move it, use the wheel to zoom, and Ctrl+drag to
-  tilt the picture. The 90° buttons fix files stored on their side.
-- "Training camera" shows the view from the first camera of a `cameras.json` written by the
-  original 3D Gaussian Splatting training code, when one is found next to the file or up to
-  three folders above it.
-- "Use this view" saves the view and updates the thumbnail. "Automatic" goes back to the
-  automatic view.
+  tilt the picture, for example to stand up a file stored on its side.
+- "Use this view" saves the view and updates the thumbnail. "Reset" goes back to the
+  automatic view. "Settings..." opens the settings window described below.
 
 The view is remembered by the file's contents, so it stays when you move or rename the file on
 the same PC. It does not travel with a copy to another PC, and it is dropped if the file's
-contents change. Details: [docs/views-and-settings.md](docs/views-and-settings.md).
+contents change.
+
+Saved views are kept in `%LOCALAPPDATA%\SplatThumb\views`, one small text file per file.
+Deleting that folder sends every thumbnail back to the automatic view the next time it is
+made; uninstalling deletes it too. Details: [docs/views-and-settings.md](docs/views-and-settings.md).
 
 ## Settings
 
 Open "SplatThumb" from the Start menu to:
 
 - turn SplatThumb's thumbnails off or on,
-- choose the background (dark gray, transparent, white or black) and the quality,
-- delete all saved views,
-- remake the thumbnails of a folder after changing a setting. Optionally, files without a saved
-  view can start from the training camera, as above.
+- choose the quality (how many splats are drawn),
+- remake the existing thumbnails in a folder and all folders inside it after changing a
+  setting.
 
 ## Troubleshooting
 
@@ -93,7 +93,7 @@ Open "SplatThumb" from the Start menu to:
 icons, never thumbnails" is off. Use a view with large icons; "Details" and "List" show icons only.
 
 **A thumbnail is old, or missing after installing.** Windows reuses thumbnails from its cache.
-Use "Remake thumbnails in a folder" in the settings, or clear the cache with Disk Cleanup
+Use "Remake all existing thumbnails" in the settings, or clear the cache with Disk Cleanup
 ("Thumbnails" only).
 
 **Another app's thumbnail shows instead.** Only one thumbnail handler can be registered for

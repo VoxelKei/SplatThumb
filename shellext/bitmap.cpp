@@ -28,7 +28,7 @@ HBITMAP make_bitmap(const Image& image) noexcept {
         return nullptr;
     }
 
-    // RGBA to BGRA, keeping the premultiplied alpha.
+    // RGBA to BGRA.
     auto* dst = static_cast<std::uint8_t*>(bits);
     const std::uint8_t* src = image.rgba.data();
     for (std::size_t i = 0; i < side * side * 4; i += 4) {

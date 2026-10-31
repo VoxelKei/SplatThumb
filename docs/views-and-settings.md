@@ -42,7 +42,9 @@ Views are kept in `%LOCALAPPDATA%\SplatThumb\views\`, one small text file per fi
 views\<first two hex digits>\<fingerprint>.view
 ```
 
-Looking a view up is a single file open, however many are saved.
+Looking a view up is a single file open, however many are saved. The settings window has no
+button to delete views; to drop them all, delete the `views` folder (thumbnails go back to the
+automatic view when they are made again). Uninstalling deletes it as well.
 
 ```
 splatthumb-view 1
@@ -67,12 +69,10 @@ look. The installer adds it to the right-click menu of `.ply` files as "Set view
 SplatThumb" ("SplatThumb で視点を設定"); on Windows 11 it is under "Show more options".
 
 - Drag to turn the subject, right-drag (or Shift+drag) to move it, Ctrl+drag to turn the
-  picture, and use the wheel to zoom. The two 90° buttons fix files stored on their side.
-- "Training camera" is available when a `cameras.json` from the original 3DGS training
-  code is found in the PLY's folder or up to three folders above it. It shows the view from
-  its first camera. Only the first camera is read, from at most 1 MiB of the file.
+  picture (for example to stand up a file stored on its side), and use the wheel to zoom.
 - "Use this view" saves the view and asks Windows to make the thumbnail again.
-  "Automatic" deletes the saved view and does the same.
+  "Reset" deletes the saved view and does the same. "Settings..." opens the settings window
+  (or brings an open one to the front).
 
 The window loads the file with the same limits and checks as the thumbnail handler. While
 dragging it draws at most 30,000 splats at low resolution, then redraws at full quality.
@@ -82,13 +82,16 @@ dragging it draws at most 30,000 splats at low resolution, then redraws at full 
 Running `SplatThumb.exe` without arguments (the Start menu shortcut) opens the settings
 window. It shows in Japanese or English, following the Windows display language.
 
-- "Save settings" writes the values below.
-- "Delete all saved views..." removes the whole views folder after asking.
-- "Remake thumbnails in a folder..." asks Windows to make the thumbnails of every `.ply`
-  file directly in the chosen folder again (subfolders are not included, at most 10,000
-  files). With the training-camera box ticked, files that have no saved view but have a
-  `cameras.json` nearby first get a saved view from its first camera. This runs in the
-  background and can be stopped; closing the window stops it after the current file.
+- Changing a setting saves it right away; there is no Save button.
+- "Remake all existing thumbnails..." asks for a folder, looks for `.ply` files in it and in
+  every folder inside it, and asks Windows to make again the thumbnails of those that already
+  have one in its thumbnail cache. Files without a cached thumbnail are skipped; Explorer
+  makes theirs with the current settings when it shows them. Choosing a drive (for example
+  `K:\`) covers the whole drive. The search never follows links or junctions, skips the
+  Windows folder, the recycle bin and "System Volume Information", and stops after 100,000
+  `.ply` files or 64 folder levels. Windows keeps no list of the files it has thumbnails for,
+  so searching is the only way to find them. This runs in the background and can be stopped;
+  closing the window stops it after the current file.
 
 ## Settings
 
@@ -98,8 +101,10 @@ out-of-range values use the default.
 | Value | Meaning | Default |
 | --- | --- | --- |
 | `Enabled` | 0 = off (Windows shows its usual icon), anything else = on | on |
-| `Background` | 0 dark gray, 1 transparent, 2 white, 3 black | 0 |
 | `Quality` | Splats drawn at most: 0 = 50,000, 1 = 200,000, 2 = 400,000 | 1 |
+
+The background is always dark gray, so a thumbnail looks the same in light and dark Explorer
+themes. (A transparent background was tried during v0.2 and dropped.)
 
 Windows caches thumbnails, so a changed setting or view shows only after the thumbnail is
 made again. The app asks Windows for that through `IThumbnailCache` with

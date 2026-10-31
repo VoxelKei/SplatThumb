@@ -5,27 +5,16 @@
 #include <shobjidl.h>
 
 #include <algorithm>
-#include <array>
 #include <atomic>
 #include <cstddef>
-#include <cwctype>
 #include <filesystem>
 #include <new>
 #include <optional>
 #include <string>
-#include <system_error>
 #include <vector>
 
-#include "splatthumb/camera.h"
-#include "splatthumb/classify.h"
-#include "splatthumb/deadline.h"
-#include "splatthumb/file_byte_source.h"
-#include "splatthumb/fingerprint.h"
-#include "splatthumb/limits.h"
-#include "splatthumb/loader.h"
+#include "ply_search.h"
 #include "splatthumb/settings.h"
-#include "splatthumb/training_camera.h"
-#include "splatthumb/view_store.h"
 #include "strings.h"
 #include "thumbnail_refresh.h"
 #include "user_store.h"
@@ -34,14 +23,10 @@ namespace splatthumb::app {
 
 namespace {
 
-constexpr wchar_t kClassName[] = L"SplatThumbSettings";
-
-// A folder with more .ply files than this is only remade up to this many.
-constexpr std::size_t kMaxFolderFiles = 10'000;
-
 // Messages from the remake thread.
-constexpr UINT kProgressMessage = WM_APP + 1; // wParam = files done, lParam = total
-constexpr UINT kDoneMessage = WM_APP + 2;     // wParam = files done, lParam = stopped
+constexpr UINT kSearchMessage = WM_APP + 1;   // wParam = .ply files found so far
+constexpr UINT kProgressMessage = WM_APP + 2; // wParam = files checked, lParam = total
+constexpr UINT kDoneMessage = WM_APP + 3;     // wParam = thumbnails remade, lParam = stopped
 
 // Layout in 96-DPI units.
 constexpr int kWidth = 560;
@@ -53,19 +38,14 @@ constexpr int kComboWidth = 260;
 
 enum Control : int {
     kEnabled = 100,
-    kBackground,
     kQuality,
     kNote,
-    kSave,
     kSavedStatus,
-    kViewCount,
-    kDeleteViews,
-    kUseTraining,
     kRemake,
+    kRemakeNote,
     kStop,
     kProgress,
     kClose,
-    kBackgroundLabel,
     kQualityLabel,
 };
 
@@ -73,74 +53,46 @@ enum Control : int {
 // stop flag.
 struct RemakeJob {
     HWND window = nullptr;
-    std::vector<std::filesystem::path> files;
-    std::optional<std::filesystem::path> views_root;
-    bool use_training = false;
+    std::filesystem::path folder;
     std::atomic<bool> stop{false};
 };
 
-bool is_ply(const std::filesystem::path& p) {
-    std::wstring ext = p.extension().wstring();
-    std::transform(ext.begin(), ext.end(), ext.begin(),
-                   [](wchar_t c) { return static_cast<wchar_t>(std::towlower(c)); });
-    return ext == L".ply";
-}
-
-// Saves the training camera's view for a file that has no saved view yet.
-void save_training_view(const std::filesystem::path& file,
-                        const std::filesystem::path& views_root) noexcept {
-    const auto cam = find_training_camera(file);
-    if (!cam) {
-        return;
-    }
-    FileByteSource source;
-    if (!source.open(file)) {
-        return;
-    }
-    const auto fp = fingerprint(source);
-    if (!fp || load_view(views_root, *fp)) {
-        return;
-    }
-    const Classification c = inspect(source);
-    if (c.kind == SplatKind::NotSplat) {
-        return;
-    }
-    // Only the framing depth and radius come from the splats, so a small sample is enough.
-    LoadOptions options;
-    options.max_splats = limits::kFastRenderSplats;
-    const LoadResult loaded =
-        load_splats(source, c, options, Deadline::after(std::chrono::seconds(30)));
-    if (loaded.status != Status::Ok) {
-        return;
-    }
-    const CameraResult automatic = auto_camera(loaded.splats);
-    if (automatic.status != Status::Ok) {
-        return;
-    }
-    if (const auto view = view_from_training_camera(*cam, automatic.camera)) {
-        save_view(views_root, *fp, *view);
-    }
-}
-
+// Finds the .ply files in the chosen folder and its subfolders, then remakes the thumbnails of
+// those that already have one in Windows' cache. Files without one are left alone, so this
+// adds nothing to the cache.
 DWORD WINAPI remake_thread(void* param) noexcept {
     auto* job = static_cast<RemakeJob*>(param);
     const HRESULT com = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-    std::size_t done = 0;
-    for (const auto& file : job->files) {
+    std::vector<std::filesystem::path> files;
+    try {
+        PlySearch search;
+        search.roots = {job->folder};
+        search.skip = system_folders();
+        search.stop = &job->stop;
+        search.progress = [job](std::size_t found) {
+            PostMessageW(job->window, kSearchMessage, found, 0);
+        };
+        files = find_ply_files(search);
+    } catch (...) {
+        // Out of memory: nothing to remake.
+    }
+    std::size_t checked = 0;
+    std::size_t remade = 0;
+    for (const auto& file : files) {
         if (job->stop.load()) {
             break;
         }
-        if (job->use_training && job->views_root) {
-            save_training_view(file, *job->views_root);
+        if (has_cached_thumbnail(file)) {
+            refresh_thumbnail(file);
+            ++remade;
         }
-        refresh_thumbnail(file);
-        ++done;
-        PostMessageW(job->window, kProgressMessage, done, static_cast<LPARAM>(job->files.size()));
+        ++checked;
+        PostMessageW(job->window, kProgressMessage, checked, static_cast<LPARAM>(files.size()));
     }
     if (SUCCEEDED(com)) {
         CoUninitialize();
     }
-    PostMessageW(job->window, kDoneMessage, done, job->stop.load() ? 1 : 0);
+    PostMessageW(job->window, kDoneMessage, remade, job->stop.load() ? 1 : 0);
     return 0;
 }
 
@@ -160,8 +112,6 @@ private:
 
     void load_settings() noexcept;
     void save_settings() noexcept;
-    void update_view_count() noexcept;
-    void delete_views() noexcept;
     void start_remake() noexcept;
     void finish_remake() noexcept;
     std::optional<std::filesystem::path> pick_folder() noexcept;
@@ -169,7 +119,6 @@ private:
     HWND hwnd_ = nullptr;
     HFONT font_ = nullptr;
     UINT dpi_ = 96;
-    std::optional<std::filesystem::path> views_root_;
     RemakeJob* job_ = nullptr;
     HANDLE thread_ = nullptr;
 };
@@ -181,11 +130,11 @@ int SettingsWindow::run(int show) noexcept {
     wc.hInstance = GetModuleHandleW(nullptr);
     wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
     wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
-    wc.lpszClassName = kClassName;
+    wc.lpszClassName = kSettingsWindowClass;
     wc.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
     RegisterClassExW(&wc);
 
-    hwnd_ = CreateWindowExW(0, kClassName, text(Text::SettingsTitle),
+    hwnd_ = CreateWindowExW(0, kSettingsWindowClass, text(Text::SettingsTitle),
                             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX |
                                 WS_CLIPCHILDREN,
                             CW_USEDEFAULT, CW_USEDEFAULT, kWidth, 400, nullptr, nullptr,
@@ -194,10 +143,8 @@ int SettingsWindow::run(int show) noexcept {
         return 1;
     }
     dpi_ = GetDpiForWindow(hwnd_);
-    views_root_ = shellext::views_root();
     create_controls();
     load_settings();
-    update_view_count();
     ShowWindow(hwnd_, show);
 
     MSG msg;
@@ -218,27 +165,17 @@ HWND SettingsWindow::add(const wchar_t* cls, const wchar_t* label, DWORD style, 
 
 void SettingsWindow::create_controls() noexcept {
     add(L"BUTTON", text(Text::EnableThumbnails), WS_TABSTOP | BS_AUTOCHECKBOX, kEnabled);
-    add(L"STATIC", text(Text::BackgroundLabel), SS_LEFT | SS_CENTERIMAGE, kBackgroundLabel);
-    const HWND bg = add(L"COMBOBOX", L"", WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST, kBackground);
-    for (const Text t : {Text::BackgroundGray, Text::BackgroundTransparent, Text::BackgroundWhite,
-                         Text::BackgroundBlack}) {
-        SendMessageW(bg, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(text(t)));
-    }
     add(L"STATIC", text(Text::QualityLabel), SS_LEFT | SS_CENTERIMAGE, kQualityLabel);
     const HWND q = add(L"COMBOBOX", L"", WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST, kQuality);
     for (const Text t : {Text::QualityFast, Text::QualityStandard, Text::QualityHigh}) {
         SendMessageW(q, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(text(t)));
     }
     add(L"STATIC", text(Text::SettingsNote), SS_LEFT, kNote);
-    add(L"BUTTON", text(Text::SaveSettings), WS_TABSTOP | BS_PUSHBUTTON, kSave);
     add(L"STATIC", L"", SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX, kSavedStatus);
-    add(L"STATIC", L"", SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX, kViewCount);
-    add(L"BUTTON", text(Text::DeleteViews), WS_TABSTOP | BS_PUSHBUTTON, kDeleteViews);
-    add(L"BUTTON", text(Text::UseTrainingCameras), WS_TABSTOP | BS_AUTOCHECKBOX | BS_MULTILINE,
-        kUseTraining);
-    add(L"BUTTON", text(Text::RemakeFolder), WS_TABSTOP | BS_PUSHBUTTON, kRemake);
+    add(L"BUTTON", text(Text::RemakeAll), WS_TABSTOP | BS_PUSHBUTTON, kRemake);
     const HWND stop = add(L"BUTTON", text(Text::Stop), WS_TABSTOP | BS_PUSHBUTTON, kStop);
     EnableWindow(stop, FALSE);
+    add(L"STATIC", text(Text::RemakeAllNote), SS_LEFT, kRemakeNote);
     add(L"STATIC", L"", SS_LEFT | SS_NOPREFIX, kProgress);
     add(L"BUTTON", text(Text::Close), WS_TABSTOP | BS_PUSHBUTTON, kClose);
     update_font();
@@ -290,30 +227,21 @@ void SettingsWindow::layout() noexcept {
     int y = m;
     place(kEnabled, m, y, inner, row);
     y += row + gap;
-    place(kBackgroundLabel, m, y, label, row);
-    place(kBackground, m + label, y, scaled(kComboWidth), row * 6);
-    y += row + gap;
     place(kQualityLabel, m, y, label, row);
     place(kQuality, m + label, y, scaled(kComboWidth), row * 6);
     y += row + gap;
     place(kNote, m, y, inner, row * 2);
     y += row * 2 + gap;
-    const int save_w = button_width(kSave);
-    place(kSave, m, y, save_w, row + scaled(4));
-    place(kSavedStatus, m + save_w + gap, y, inner - save_w - gap, row + scaled(4));
-    y += row + scaled(4) + gap * 3;
+    place(kSavedStatus, m, y, inner, row);
+    y += row + gap * 2;
 
-    const int delete_w = button_width(kDeleteViews);
-    place(kViewCount, m, y, inner - delete_w - gap, row + scaled(4));
-    place(kDeleteViews, m + inner - delete_w, y, delete_w, row + scaled(4));
-    y += row + scaled(4) + gap * 2;
-    place(kUseTraining, m, y, inner, row * 2);
-    y += row * 2 + gap;
     const int remake_w = button_width(kRemake);
     const int stop_w = button_width(kStop);
     place(kRemake, m, y, remake_w, row + scaled(4));
     place(kStop, m + remake_w + gap, y, stop_w, row + scaled(4));
     y += row + scaled(4) + gap;
+    place(kRemakeNote, m, y, inner, row * 2);
+    y += row * 2;
     place(kProgress, m, y, inner, row);
     y += row + gap * 2;
     const int close_w = std::max(button_width(kClose), scaled(90));
@@ -333,52 +261,19 @@ void SettingsWindow::load_settings() noexcept {
     const Settings s = shellext::read_settings();
     const StoredSettings stored = stored_from_settings(s);
     CheckDlgButton(hwnd_, kEnabled, s.enabled ? BST_CHECKED : BST_UNCHECKED);
-    SendDlgItemMessageW(hwnd_, kBackground, CB_SETCURSEL, stored.background.value_or(0), 0);
     SendDlgItemMessageW(hwnd_, kQuality, CB_SETCURSEL, stored.quality.value_or(1), 0);
 }
 
 void SettingsWindow::save_settings() noexcept {
     StoredSettings stored;
     stored.enabled = IsDlgButtonChecked(hwnd_, kEnabled) == BST_CHECKED ? 1u : 0u;
-    const auto bg = SendDlgItemMessageW(hwnd_, kBackground, CB_GETCURSEL, 0, 0);
     const auto q = SendDlgItemMessageW(hwnd_, kQuality, CB_GETCURSEL, 0, 0);
-    if (bg >= 0) {
-        stored.background = static_cast<std::uint32_t>(bg);
-    }
     if (q >= 0) {
         stored.quality = static_cast<std::uint32_t>(q);
     }
     const bool ok = shellext::write_settings(settings_from_stored(stored));
     SetDlgItemTextW(hwnd_, kSavedStatus,
                     ok ? text(Text::SettingsSaved) : text(Text::CannotSaveSettings));
-}
-
-void SettingsWindow::update_view_count() noexcept {
-    const std::size_t n = views_root_ ? count_views(*views_root_) : 0;
-    try {
-        SetDlgItemTextW(hwnd_, kViewCount, text(Text::SavedViews, n).c_str());
-    } catch (...) {
-    }
-    EnableWindow(GetDlgItem(hwnd_, kDeleteViews), n > 0 && job_ == nullptr);
-}
-
-void SettingsWindow::delete_views() noexcept {
-    if (!views_root_) {
-        return;
-    }
-    const std::size_t n = count_views(*views_root_);
-    try {
-        const std::wstring question = text(Text::ConfirmDeleteViews, n);
-        if (MessageBoxW(hwnd_, question.c_str(), text(Text::AppName),
-                        MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) != IDYES) {
-            return;
-        }
-    } catch (...) {
-        return;
-    }
-    remove_all_views(*views_root_);
-    update_view_count();
-    SetDlgItemTextW(hwnd_, kProgress, text(Text::ViewsDeleted));
 }
 
 std::optional<std::filesystem::path> SettingsWindow::pick_folder() noexcept {
@@ -421,28 +316,13 @@ void SettingsWindow::start_remake() noexcept {
     if (job == nullptr) {
         return;
     }
+    job->window = hwnd_;
     try {
-        std::error_code ec;
-        for (auto it = std::filesystem::directory_iterator(*folder, ec);
-             !ec && it != std::filesystem::directory_iterator() &&
-             job->files.size() < kMaxFolderFiles;
-             it.increment(ec)) {
-            if (it->is_regular_file(ec) && is_ply(it->path())) {
-                job->files.push_back(it->path());
-            }
-        }
-        std::sort(job->files.begin(), job->files.end());
+        job->folder = *folder;
     } catch (...) {
-        job->files.clear();
-    }
-    if (job->files.empty()) {
         delete job;
-        SetDlgItemTextW(hwnd_, kProgress, text(Text::NoPlyFiles));
         return;
     }
-    job->window = hwnd_;
-    job->views_root = views_root_;
-    job->use_training = IsDlgButtonChecked(hwnd_, kUseTraining) == BST_CHECKED;
     thread_ = CreateThread(nullptr, 0, &remake_thread, job, 0, nullptr);
     if (thread_ == nullptr) {
         delete job;
@@ -450,9 +330,8 @@ void SettingsWindow::start_remake() noexcept {
     }
     job_ = job;
     EnableWindow(GetDlgItem(hwnd_, kRemake), FALSE);
-    EnableWindow(GetDlgItem(hwnd_, kDeleteViews), FALSE);
     EnableWindow(GetDlgItem(hwnd_, kStop), TRUE);
-    SetDlgItemTextW(hwnd_, kProgress, text(Text::Remaking));
+    SetDlgItemTextW(hwnd_, kProgress, text(Text::Searching));
 }
 
 void SettingsWindow::finish_remake() noexcept {
@@ -465,7 +344,6 @@ void SettingsWindow::finish_remake() noexcept {
     job_ = nullptr;
     EnableWindow(GetDlgItem(hwnd_, kRemake), TRUE);
     EnableWindow(GetDlgItem(hwnd_, kStop), FALSE);
-    update_view_count();
 }
 
 LRESULT CALLBACK SettingsWindow::window_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) noexcept {
@@ -496,12 +374,6 @@ LRESULT SettingsWindow::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
     }
     case WM_COMMAND:
         switch (LOWORD(wp)) {
-        case kSave:
-            save_settings();
-            return 0;
-        case kDeleteViews:
-            delete_views();
-            return 0;
         case kRemake:
             start_remake();
             return 0;
@@ -511,10 +383,16 @@ LRESULT SettingsWindow::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
                 EnableWindow(GetDlgItem(hwnd_, kStop), FALSE);
             }
             return 0;
+        // Save as soon as a value changes; there is no Save button.
         case kEnabled:
-        case kBackground:
+            if (HIWORD(wp) == BN_CLICKED) {
+                save_settings();
+            }
+            return 0;
         case kQuality:
-            SetDlgItemTextW(hwnd_, kSavedStatus, L"");
+            if (HIWORD(wp) == CBN_SELCHANGE) {
+                save_settings();
+            }
             return 0;
         case kClose:
         case IDCANCEL:
@@ -524,6 +402,12 @@ LRESULT SettingsWindow::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
             break;
         }
         break;
+    case kSearchMessage:
+        try {
+            SetDlgItemTextW(hwnd_, kProgress, text(Text::Searching, wp).c_str());
+        } catch (...) {
+        }
+        return 0;
     case kProgressMessage:
         try {
             std::wstring s = text(Text::Remaking);
@@ -535,8 +419,9 @@ LRESULT SettingsWindow::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
     case kDoneMessage:
         finish_remake();
         try {
-            const std::wstring s =
-                lp != 0 ? std::wstring(text(Text::Stopped)) : text(Text::Remade, wp);
+            const std::wstring s = lp != 0   ? std::wstring(text(Text::Stopped))
+                                   : wp == 0 ? std::wstring(text(Text::NothingToRemake))
+                                             : text(Text::Remade, wp);
             SetDlgItemTextW(hwnd_, kProgress, s.c_str());
         } catch (...) {
         }

@@ -9,15 +9,6 @@ Settings settings_from_stored(const StoredSettings& stored) noexcept {
     if (stored.enabled) {
         s.enabled = *stored.enabled != 0;
     }
-    if (stored.background) {
-        switch (*stored.background) {
-        case 0: s.background = Background::Gray; break;
-        case 1: s.background = Background::Transparent; break;
-        case 2: s.background = Background::White; break;
-        case 3: s.background = Background::Black; break;
-        default: break;
-        }
-    }
     if (stored.quality) {
         switch (*stored.quality) {
         case 0: s.quality = Quality::Fast; break;
@@ -32,12 +23,6 @@ Settings settings_from_stored(const StoredSettings& stored) noexcept {
 StoredSettings stored_from_settings(const Settings& settings) noexcept {
     StoredSettings out;
     out.enabled = settings.enabled ? 1u : 0u;
-    switch (settings.background) {
-    case Background::Gray: out.background = 0u; break;
-    case Background::Transparent: out.background = 1u; break;
-    case Background::White: out.background = 2u; break;
-    case Background::Black: out.background = 3u; break;
-    }
     switch (settings.quality) {
     case Quality::Fast: out.quality = 0u; break;
     case Quality::Standard: out.quality = 1u; break;

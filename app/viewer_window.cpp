@@ -1,6 +1,7 @@
 #include "viewer_window.h"
 
 #include <windows.h>
+#include <shellapi.h>
 #include <windowsx.h>
 
 #include <algorithm>
@@ -24,9 +25,9 @@
 #include "splatthumb/orbit.h"
 #include "splatthumb/render.h"
 #include "splatthumb/settings.h"
-#include "splatthumb/training_camera.h"
 #include "splatthumb/view.h"
 #include "splatthumb/view_store.h"
+#include "settings_window.h"
 #include "strings.h"
 #include "thumbnail_refresh.h"
 #include "user_store.h"
@@ -57,19 +58,17 @@ constexpr int kInitialWidth = 760;
 constexpr int kInitialHeight = 820;
 
 enum Control : int {
-    kRotateLeft = 100,
-    kRotateRight,
-    kTraining,
-    kAutomatic,
+    kAutomatic = 100,
     kSave,
+    kSettings,
     kClose,
     kStatus,
 };
 
 constexpr std::array kButtons = {
-    std::pair{kRotateLeft, Text::RotateLeft}, std::pair{kRotateRight, Text::RotateRight},
-    std::pair{kTraining, Text::TrainingCamera}, std::pair{kAutomatic, Text::Automatic},
-    std::pair{kSave, Text::Save},             std::pair{kClose, Text::Close},
+    std::pair{kAutomatic, Text::Automatic},
+    std::pair{kSave, Text::Save},             std::pair{kSettings, Text::OpenSettings},
+    std::pair{kClose, Text::Close},
 };
 
 class Viewer {
@@ -88,6 +87,7 @@ private:
     void create_controls() noexcept;
     void update_font() noexcept;
     void layout() noexcept;
+    void open_settings() noexcept;
     RECT picture_rect() const noexcept;
     int scaled(int v) const noexcept { return MulDiv(v, static_cast<int>(dpi_), 96); }
 
@@ -113,7 +113,6 @@ private:
     std::optional<std::filesystem::path> views_root_;
     View view_{};
     View auto_view_{};
-    std::optional<View> training_view_;
 
     // Mouse dragging.
     bool dragging_ = false;
@@ -228,12 +227,6 @@ std::optional<int> Viewer::load() noexcept {
             view_ = *saved;
         }
     }
-    if (const auto cam = find_training_camera(file_)) {
-        training_view_ = view_from_training_camera(*cam, automatic.camera);
-    }
-    EnableWindow(GetDlgItem(hwnd_, kRotateLeft), TRUE);
-    EnableWindow(GetDlgItem(hwnd_, kRotateRight), TRUE);
-    EnableWindow(GetDlgItem(hwnd_, kTraining), training_view_.has_value());
     EnableWindow(GetDlgItem(hwnd_, kSave), fingerprint_ && views_root_);
     EnableWindow(GetDlgItem(hwnd_, kAutomatic), fingerprint_ && views_root_);
     SetCursor(old_cursor);
@@ -254,6 +247,7 @@ void Viewer::create_controls() noexcept {
                                       nullptr);
         EnableWindow(buttons_[i], FALSE);
     }
+    EnableWindow(GetDlgItem(hwnd_, kSettings), TRUE);
     EnableWindow(GetDlgItem(hwnd_, kClose), TRUE);
     status_ = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOPREFIX,
                               0, 0, 10, 10, hwnd_,
@@ -349,8 +343,7 @@ void Viewer::render_if_needed(int side) noexcept {
     }
     RenderOptions options;
     options.size = want;
-    options.background = settings_.background == Background::Transparent ? Background::Gray
-                                                                           : settings_.background;
+    options.background = Background::Gray;
     RenderResult r = render_splats(quick ? preview_ : splats_, cam.camera, options,
                                    Deadline::after(quick ? std::chrono::milliseconds(kPreviewTime)
                                                          : std::chrono::milliseconds(kFullTime)));
@@ -361,9 +354,7 @@ void Viewer::render_if_needed(int side) noexcept {
     }
     if (r.status == Status::NothingToDraw) {
         // Looking away from everything: show the empty background.
-        const auto level = static_cast<std::uint8_t>(
-            options.background == Background::White ? 255
-            : options.background == Background::Black ? 0 : 46);
+        constexpr std::uint8_t level = 46; // the dark gray of the thumbnails
         const auto n = static_cast<std::size_t>(options.size);
         r.image.size = options.size;
         try {
@@ -474,6 +465,25 @@ LRESULT CALLBACK Viewer::window_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) 
     return self->handle(msg, wp, lp);
 }
 
+// Brings an open settings window to the front, or starts SplatThumb.exe again without
+// arguments to open one. A separate process, so either window can be closed first.
+void Viewer::open_settings() noexcept {
+    if (const HWND open = FindWindowW(kSettingsWindowClass, nullptr); open != nullptr) {
+        if (IsIconic(open)) {
+            ShowWindow(open, SW_RESTORE);
+        }
+        SetForegroundWindow(open);
+        return;
+    }
+    std::wstring exe(32768, L'\0');
+    const DWORD length = GetModuleFileNameW(nullptr, exe.data(), static_cast<DWORD>(exe.size()));
+    if (length == 0 || length >= exe.size()) {
+        return;
+    }
+    exe.resize(length);
+    ShellExecuteW(hwnd_, L"open", exe.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+}
+
 LRESULT Viewer::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
     switch (msg) {
     case WM_PAINT:
@@ -581,22 +591,14 @@ LRESULT Viewer::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
         return 0;
     case WM_COMMAND:
         switch (LOWORD(wp)) {
-        case kRotateLeft:
-            set_view(roll(view_, kPi / 2), true);
-            return 0;
-        case kRotateRight:
-            set_view(roll(view_, -kPi / 2), true);
-            return 0;
-        case kTraining:
-            if (training_view_) {
-                set_view(*training_view_, true);
-            }
-            return 0;
         case kAutomatic:
             reset();
             return 0;
         case kSave:
             save();
+            return 0;
+        case kSettings:
+            open_settings();
             return 0;
         case kClose:
         case IDCANCEL:

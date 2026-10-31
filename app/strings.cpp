@@ -19,13 +19,11 @@ constexpr Entry kTexts[] = {
     {L"SplatThumb", L"SplatThumb"},
     {L"SplatThumb - Thumbnail view", L"SplatThumb - サムネイルの視点"},
     {L"Loading...", L"読み込み中..."},
-    {L"Drag to turn, right-drag to move, wheel to zoom.",
-     L"ドラッグで回転、右ドラッグで移動、ホイールで拡大と縮小。"},
-    {L"Turn left 90°", L"左に 90°"},
-    {L"Turn right 90°", L"右に 90°"},
-    {L"Training camera", L"学習時のカメラ"},
-    {L"Automatic", L"自動に戻す"},
+    {L"Drag to turn, right-drag to move, Ctrl+drag to tilt, wheel to zoom.",
+     L"ドラッグで回転、右ドラッグで移動、Ctrl+ドラッグで傾き、ホイールで拡大と縮小。"},
+    {L"Reset", L"リセット"},
     {L"Use this view", L"この視点をサムネイルにする"},
+    {L"Settings...", L"全体の設定..."},
     {L"Close", L"閉じる"},
     {L"Saved. The thumbnail has been updated.", L"保存しました。サムネイルを作り直しました。"},
     {L"Back to the automatic view. The thumbnail has been updated.",
@@ -41,39 +39,30 @@ constexpr Entry kTexts[] = {
     {L"SplatThumb - Settings", L"SplatThumb - 設定"},
     {L"Show SplatThumb thumbnails for 3DGS PLY files",
      L"3DGS の PLY ファイルに SplatThumb のサムネイルを表示する"},
-    {L"Background", L"背景"},
-    {L"Dark gray", L"暗いグレー"},
-    {L"Transparent", L"透過"},
-    {L"White", L"白"},
-    {L"Black", L"黒"},
     {L"Quality", L"品質"},
     {L"Fast (up to 50,000 splats)", L"速さ優先(最大 5 万個)"},
     {L"Standard (up to 200,000 splats)", L"標準(最大 20 万個)"},
     {L"High (up to 400,000 splats)", L"高品質(最大 40 万個)"},
-    {L"Changes apply to thumbnails made from now on. To update a folder that is already "
-     L"shown, use \"Remake thumbnails in a folder\" below.",
-     L"変更は、これから作られるサムネイルに反映されます。表示済みのフォルダーは、下の"
-     L"「フォルダーのサムネイルを作り直す」で更新できます。"},
-    {L"Save settings", L"設定を保存"},
+    {L"Changes are saved right away and apply to thumbnails made from now on. To update a "
+     L"folder that is already shown, use \"Remake all existing thumbnails\" below.",
+     L"変更はすぐに保存され、これから作られるサムネイルに反映されます。表示済みのフォルダーは、"
+     L"下の「既存のサムネイルを全て再生成する」で更新できます。"},
     {L"Settings saved.", L"設定を保存しました。"},
     {L"The settings could not be saved.", L"設定を保存できませんでした。"},
-    {L"Saved views: {n}", L"保存した視点: {n} 件"},
-    {L"Delete all saved views...", L"保存した視点をすべて消す..."},
-    {L"Delete all {n} saved views? Their thumbnails return to the automatic view when they "
-     L"are made again.",
-     L"保存した視点 {n} 件をすべて消しますか？サムネイルは、作り直したときに自動の視点に戻ります。"},
-    {L"All saved views were deleted.", L"保存した視点をすべて消しました。"},
-    {L"For files without a saved view, use the training camera (cameras.json) when there is one",
-     L"視点を保存していないファイルは、学習時のカメラ(cameras.json)があればその視点にする"},
-    {L"Remake thumbnails in a folder...", L"フォルダーのサムネイルを作り直す..."},
+    {L"Remake all existing thumbnails...", L"既存のサムネイルを全て再生成する..."},
+    {L"Looks for .ply files in the folder you choose and all folders inside it, and remakes those "
+     L"that already have a thumbnail. Choose a drive such as K:\\ to cover all of it.",
+     L"選んだフォルダーとその中のすべてのフォルダーから .ply ファイルを探し、すでにサムネイルが"
+     L"あるものを作り直します。K:\\ などのドライブを選ぶと、その全体が対象になります。"},
+    {L"Looking for .ply files... {n} found", L".ply ファイルを探しています... {n} 個見つかりました"},
     {L"Stop", L"中止"},
     {L"Remaking thumbnails...", L"サムネイルを作り直しています..."},
     {L"Remade the thumbnails of {n} files.", L"{n} 個のファイルのサムネイルを作り直しました。"},
     {L"Stopped.", L"中止しました。"},
-    {L"There are no .ply files in this folder.", L"このフォルダーには .ply ファイルがありません。"},
+    {L"No thumbnails to remake were found.", L"作り直すサムネイルは見つかりませんでした。"},
 };
 
-static_assert(std::size(kTexts) == static_cast<std::size_t>(Text::NoPlyFiles) + 1);
+static_assert(std::size(kTexts) == static_cast<std::size_t>(Text::NothingToRemake) + 1);
 
 bool japanese() noexcept {
     static const bool ja = PRIMARYLANGID(GetUserDefaultUILanguage()) == LANG_JAPANESE;

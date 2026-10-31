@@ -24,8 +24,6 @@ struct Image {
 enum class Background {
     Transparent,
     Gray,
-    White,
-    Black,
 };
 
 struct RenderOptions {
