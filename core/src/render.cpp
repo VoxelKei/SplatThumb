@@ -37,7 +37,7 @@ bool project(const Splat& s, const Camera& cam, int side, float focal, Projected
     const float x = dot3(p, cam.right);
     const float y = dot3(p, cam.up);
     const float z = dot3(p, cam.forward);
-    const float near_z = cam.radius * 0.01f;
+    const float near_z = std::max(cam.radius * 0.01f, cam.near_clip);
     if (!(z > near_z)) {
         return false;
     }

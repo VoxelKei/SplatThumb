@@ -35,6 +35,8 @@ build\msvc\bin\Debug\splatthumb-cli.exe info path\to\scene.ply
 build\msvc\bin\Release\splatthumb-cli.exe render path\to\scene.ply thumb.png --size 256
 ```
 
+背景は暗いグレーです。透過にしたいときは `--background transparent` を付けます。
+
 ## ライセンス
 
 [MIT](LICENSE)

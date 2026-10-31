@@ -60,7 +60,9 @@ RenderResult render(const std::vector<Splat>& splats, RenderOptions o = {}) {
 }
 
 TEST(Render, SingleSplatColorsTheCenter) {
-    const RenderResult r = render({splat(0, 0, 0, 1, 0, 0)});
+    RenderOptions o;
+    o.background = Background::Transparent;
+    const RenderResult r = render({splat(0, 0, 0, 1, 0, 0)}, o);
     ASSERT_EQ(r.status, Status::Ok);
     ASSERT_EQ(r.image.size, 256);
     ASSERT_EQ(r.image.rgba.size(), 256u * 256u * 4u);
@@ -73,7 +75,9 @@ TEST(Render, SingleSplatColorsTheCenter) {
 }
 
 TEST(Render, OutputIsPremultiplied) {
-    const RenderResult r = render({splat(0, 0, 0, 1, 1, 1, 0.5f, 0.5f)});
+    RenderOptions o;
+    o.background = Background::Transparent;
+    const RenderResult r = render({splat(0, 0, 0, 1, 1, 1, 0.5f, 0.5f)}, o);
     ASSERT_EQ(r.status, Status::Ok);
     for (std::size_t i = 0; i < r.image.rgba.size(); i += 4) {
         ASSERT_LE(r.image.rgba[i], r.image.rgba[i + 3]);
@@ -98,19 +102,28 @@ TEST(Render, NearSplatCoversFarSplat) {
 
 TEST(Render, ScreenUpIsWorldMinusY) {
     // A splat at world -y should appear in the upper half.
-    const RenderResult r = render({splat(0, -2, 0, 1, 1, 1)});
+    RenderOptions o;
+    o.background = Background::Transparent;
+    const RenderResult r = render({splat(0, -2, 0, 1, 1, 1)}, o);
     ASSERT_EQ(r.status, Status::Ok);
     EXPECT_GT(pixel(r.image, 128, 80)[3], pixel(r.image, 128, 176)[3]);
 }
 
-TEST(Render, GrayBackgroundIsOpaque) {
-    RenderOptions o;
-    o.background = Background::Gray;
-    const RenderResult r = render({splat(0, 0, 0, 1, 0, 0)}, o);
+TEST(Render, DefaultBackgroundIsOpaqueGray) {
+    const RenderResult r = render({splat(0, 0, 0, 1, 0, 0)});
     ASSERT_EQ(r.status, Status::Ok);
     const std::uint8_t* corner = pixel(r.image, 0, 0);
     EXPECT_EQ(corner[3], 255);
     EXPECT_NEAR(corner[0], 46, 1);
+}
+
+TEST(Render, SplatsInsideNearClipAreNotDrawn) {
+    Camera c = front_camera();
+    c.near_clip = 8.0f; // eye at z = -10, so only z > -2 is drawn
+    const std::vector<Splat> splats = {splat(0, 0, -5, 1, 1, 1), splat(0, 0, 0, 1, 1, 1)};
+    const RenderResult r = splatthumb::render_splats(splats, c, {}, far_future());
+    ASSERT_EQ(r.status, Status::Ok);
+    EXPECT_EQ(r.splats_drawn, 1u);
 }
 
 TEST(Render, SplatsBehindOrOffScreenAreNothingToDraw) {
