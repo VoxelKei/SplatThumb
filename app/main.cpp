@@ -21,7 +21,8 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int show) {
     LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
     if (argv != nullptr && argc == 3 && std::wstring_view(argv[1]) == L"--view") {
         try {
-            code = run_viewer(std::filesystem::path(argv[2]), show);
+            // Windows' shell calls below need a full path.
+            code = run_viewer(std::filesystem::absolute(std::filesystem::path(argv[2])), show);
         } catch (...) {
             code = 1;
         }
