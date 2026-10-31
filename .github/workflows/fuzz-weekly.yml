@@ -1,0 +1,40 @@
+name: fuzz-weekly
+
+# Longer fuzzing run once a week (and on demand). The per-change run in build.yml is only
+# 60 seconds per fuzzer.
+on:
+  schedule:
+    - cron: '17 3 * * 1' # Mondays 03:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    name: fuzz (20 min each)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Build
+        run: |
+          cmake --preset linux-clang-fuzz
+          cmake --build --preset linux-clang-fuzz
+
+      - name: Fuzz
+        run: .github/scripts/run-fuzz.sh 1200
+
+      - name: Upload crashing input
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fuzz-crash
+          path: |
+            fuzz-out/crash-*
+            fuzz-out/timeout-*
+            fuzz-out/oom-*
+          if-no-files-found: ignore
