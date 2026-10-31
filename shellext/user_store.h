@@ -20,4 +20,7 @@ std::optional<std::filesystem::path> views_root() noexcept;
 // Settings from HKCU; missing or invalid values are the defaults.
 Settings read_settings() noexcept;
 
+// Writes all settings to HKCU, creating the key if needed. Returns false if any write failed.
+bool write_settings(const Settings& settings) noexcept;
+
 } // namespace splatthumb::shellext

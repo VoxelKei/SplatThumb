@@ -82,4 +82,34 @@ bool remove_view(const std::filesystem::path& root, const Fingerprint& fp) noexc
     }
 }
 
+std::size_t count_views(const std::filesystem::path& root, std::size_t limit) noexcept {
+    std::size_t n = 0;
+    try {
+        std::error_code ec;
+        for (auto it = std::filesystem::recursive_directory_iterator(root, ec);
+             !ec && it != std::filesystem::recursive_directory_iterator() && n < limit;
+             it.increment(ec)) {
+            if (it.depth() > 1) {
+                it.disable_recursion_pending();
+                continue;
+            }
+            if (it->path().extension() == ".view" && it->is_regular_file(ec)) {
+                ++n;
+            }
+        }
+    } catch (...) {
+    }
+    return n;
+}
+
+bool remove_all_views(const std::filesystem::path& root) noexcept {
+    try {
+        std::error_code ec;
+        std::filesystem::remove_all(root, ec);
+        return !ec && !std::filesystem::exists(root, ec);
+    } catch (...) {
+        return false;
+    }
+}
+
 } // namespace splatthumb
