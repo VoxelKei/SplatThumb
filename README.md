@@ -6,7 +6,7 @@ See your Gaussian splats in Explorer before you open them.
 ![Windows 10 / 11 x64](https://img.shields.io/badge/Windows_10_%2F_11-x64-0f766e?style=flat-square)
 ![Preview v0.3](https://img.shields.io/badge/preview-v0.3-64748b?style=flat-square)
 
-[Download](../../releases) | [Choosing the view](#choosing-the-view) | [Safety](#safety) |
+[Download](../../releases) | [Install](#install-and-uninstall) | [Choosing the view](#choosing-the-view) | [Safety](#safety) |
 [Build](#building-from-source) | [日本語](README.ja.md)
 
 <img src="docs/media/demo.webp" width="960" alt="Splat thumbnails appearing in Explorer, then choosing a file's view by turning it in the SplatThumb window">
@@ -25,34 +25,6 @@ never modified; there is no network access and no telemetry.
 - Uninstalls cleanly, restoring any thumbnail handler that was there before.
 - Also shows the preview saved in [Spatialograph Maker](https://www.spatialograph.app/)
   projects (`.spgm`).
-
-## Which files get a thumbnail
-
-| File | Thumbnail |
-| --- | --- |
-| 3D Gaussian Splatting PLY in the standard (INRIA) layout, binary little-endian, as written by most training tools | Yes |
-| The same with extra properties such as normals or `f_rest_*` | Yes (only the base color is drawn) |
-| PlayCanvas / SuperSplat compressed PLY (`.compressed.ply`) | Yes (only the base color is drawn) |
-| Meshes, point clouds, ASCII or big-endian PLY | No, Windows shows its usual icon |
-| Other splat formats (`.spz`, `.splat`, `.sog`, ...) | No |
-
-Large files are sampled: at most 200,000 splats are drawn (50,000 or 400,000 with the "Splats
-used for the thumbnail" setting). If a thumbnail cannot be made within 3 seconds, Windows shows its usual icon instead. The detection rules are in
-[docs/detection.md](docs/detection.md).
-
-## Safety
-
-- Files are opened read-only and never modified. Saved views and settings are kept in your user
-  profile, not in or next to the files.
-- Every size and count in a file is checked against fixed limits before it is used, so a broken
-  or malicious file is rejected instead of crashing anything. The parser and renderer are
-  fuzz-tested on every change.
-- The handler runs in Windows' separate thumbnail process, not inside Explorer itself.
-- No network access, no telemetry, no administrator rights.
-- Uninstalling removes everything the installer wrote, along with your saved views and settings,
-  and restores the previous thumbnail handlers, if there were any.
-
-Please report security problems privately; see [SECURITY.md](SECURITY.md).
 
 ## Install and uninstall
 
@@ -117,6 +89,20 @@ Open "SplatThumb" from the Start menu to:
 - remake the existing thumbnails in a folder and all folders inside it after changing a
   setting.
 
+## Which files get a thumbnail
+
+| File | Thumbnail |
+| --- | --- |
+| 3D Gaussian Splatting PLY in the standard (INRIA) layout, binary little-endian, as written by most training tools | Yes |
+| The same with extra properties such as normals or `f_rest_*` | Yes (only the base color is drawn) |
+| PlayCanvas / SuperSplat compressed PLY (`.compressed.ply`) | Yes (only the base color is drawn) |
+| Meshes, point clouds, ASCII or big-endian PLY | No, Windows shows its usual icon |
+| Other splat formats (`.spz`, `.splat`, `.sog`, ...) | No |
+
+Large files are sampled: at most 200,000 splats are drawn (50,000 or 400,000 with the "Splats
+used for the thumbnail" setting). If a thumbnail cannot be made within 3 seconds, Windows shows its usual icon instead. The detection rules are in
+[docs/detection.md](docs/detection.md).
+
 ## Troubleshooting
 
 **No thumbnails at all.** In Explorer, open "..." > Options > View and make sure "Always show
@@ -135,6 +121,20 @@ SplatThumb was installed, that app's handler is used instead.
 (see the table above), or be too slow to draw within 3 seconds. If you think it should work,
 please open an issue (without attaching the file if it is a real-world scan). If you build from
 source, `splatthumb-cli.exe info <file>` shows why.
+
+## Safety
+
+- Files are opened read-only and never modified. Saved views and settings are kept in your user
+  profile, not in or next to the files.
+- Every size and count in a file is checked against fixed limits before it is used, so a broken
+  or malicious file is rejected instead of crashing anything. The parser and renderer are
+  fuzz-tested on every change.
+- The handler runs in Windows' separate thumbnail process, not inside Explorer itself.
+- No network access, no telemetry, no administrator rights.
+- Uninstalling removes everything the installer wrote, along with your saved views and settings,
+  and restores the previous thumbnail handlers, if there were any.
+
+Please report security problems privately; see [SECURITY.md](SECURITY.md).
 
 ## Spatialograph Maker projects (.spgm)
 
