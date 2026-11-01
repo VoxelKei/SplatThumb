@@ -1,15 +1,30 @@
 # SplatThumb
 
-[日本語](README.ja.md)
+See your Gaussian splats in Explorer before you open them.
 
-Windows Explorer thumbnails for 3D Gaussian Splatting `.ply` files.
+[![MIT License](https://img.shields.io/badge/license-MIT-0f766e?style=flat-square)](LICENSE)
+![Windows 10 / 11 x64](https://img.shields.io/badge/Windows_10_%2F_11-x64-0f766e?style=flat-square)
+![Preview v0.3](https://img.shields.io/badge/preview-v0.3-64748b?style=flat-square)
 
-> **Status: early development (v0.3).** Download the installer from the
-> [Releases](../../releases) page, or build it from source (see below).
+[Download](../../releases) | [Choosing the view](#choosing-the-view) | [Safety](#safety) |
+[Build](#building-from-source) | [日本語](README.ja.md)
 
-SplatThumb only renders PLY files that are 3D Gaussian Splatting scenes, detected from the file
-header. Meshes and point clouds are left to Windows. It reads files and never modifies them, makes
-no network connections, and collects no telemetry.
+<!-- Demo: thumbnails appearing in Explorer (animated WebP in docs/media/). -->
+
+SplatThumb is a thumbnail handler for 3D Gaussian Splatting `.ply` files. It recognises splat
+scenes from the file header and leaves meshes and point clouds to Windows. Files are only read,
+never modified; there is no network access and no telemetry.
+
+- Previews standard (INRIA) and PlayCanvas / SuperSplat compressed PLY at every icon size.
+- Lets you pick the view for each file by turning it like a turntable. The view is stored in
+  your profile, keyed by the file's contents, and never written into the file.
+- Keeps big scenes quick by drawing a sample of 50,000 to 400,000 splats, chosen globally or
+  per file.
+- Treats every file as untrusted: fixed limits, a fuzz-tested parser and renderer, and Windows'
+  separate thumbnail process.
+- Uninstalls cleanly, restoring any thumbnail handler that was there before.
+- Also shows the preview saved in [Spatialograph Maker](https://www.spatialograph.app/)
+  projects (`.spgm`).
 
 ## Which files get a thumbnail
 
@@ -21,8 +36,8 @@ no network connections, and collects no telemetry.
 | Meshes, point clouds, ASCII or big-endian PLY | No, Windows shows its usual icon |
 | Other splat formats (`.spz`, `.splat`, `.sog`, ...) | No |
 
-Large files are sampled: at most 200,000 splats are drawn (50,000 or 400,000 with the quality
-setting). If a thumbnail cannot be made within 3 seconds, Windows shows its usual icon instead. The detection rules are in
+Large files are sampled: at most 200,000 splats are drawn (50,000 or 400,000 with the "Splats
+used for the thumbnail" setting). If a thumbnail cannot be made within 3 seconds, Windows shows its usual icon instead. The detection rules are in
 [docs/detection.md](docs/detection.md).
 
 ## Safety
@@ -49,8 +64,6 @@ administrator rights.
    "Run anyway", only if you got the file from this project.
 2. Open a folder with 3D Gaussian Splatting `.ply` files in Explorer and choose large icons.
 
-Installing a newer version over an older one keeps your saved views and settings.
-
 To uninstall, open Settings > Apps > Installed apps (on Windows 10, Settings > Apps > Apps &
 features), and choose Uninstall next to SplatThumb.
 Uninstalling removes the files and the registry entries the installer wrote, your saved views
@@ -60,6 +73,16 @@ before, if any.
 Windows keeps thumbnails it has already made in its thumbnail cache, so they can still show
 after uninstalling. To clear the cache, run Disk Cleanup, check only "Thumbnails", and choose
 OK.
+
+## Update
+
+Run the newer `SplatThumb-<version>-x64.msi` over the installed one. There is no need to
+uninstall first: the new version replaces the old one, and your saved views and settings are
+kept. Close the viewpoint and settings windows before installing.
+
+Thumbnails Windows already made stay as they were until they are made again. To bring a
+folder up to date with the new version, open "SplatThumb" from the Start menu and use "Remake
+all existing thumbnails...".
 
 ## Choosing the view
 
