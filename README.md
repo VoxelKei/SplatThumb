@@ -4,7 +4,7 @@ See your Gaussian splats in Explorer before you open them.
 
 [![MIT License](https://img.shields.io/badge/license-MIT-0f766e?style=flat-square)](LICENSE)
 ![Windows 10 / 11 x64](https://img.shields.io/badge/Windows_10_%2F_11-x64-0f766e?style=flat-square)
-![Preview v0.3](https://img.shields.io/badge/preview-v0.3-64748b?style=flat-square)
+![Preview v0.4](https://img.shields.io/badge/preview-v0.4-64748b?style=flat-square)
 
 [Download](../../releases) | [Install](#install-and-uninstall) | [Choosing the view](#choosing-the-view) | [Safety](#safety) |
 [Build](#building-from-source) | [日本語](README.ja.md)

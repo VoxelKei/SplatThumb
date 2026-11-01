@@ -4,7 +4,7 @@ Gaussian Splatting の中身を、開く前にエクスプローラーで。
 
 [![MIT License](https://img.shields.io/badge/license-MIT-0f766e?style=flat-square)](LICENSE)
 ![Windows 10 / 11 x64](https://img.shields.io/badge/Windows_10_%2F_11-x64-0f766e?style=flat-square)
-![Preview v0.3](https://img.shields.io/badge/preview-v0.3-64748b?style=flat-square)
+![Preview v0.4](https://img.shields.io/badge/preview-v0.4-64748b?style=flat-square)
 
 [ダウンロード](../../releases) | [インストール](#インストールとアンインストール) | [視点を決める](#視点を決める) | [安全性](#安全性) |
 [ビルド](#ソースからのビルド) | [English](README.md)
