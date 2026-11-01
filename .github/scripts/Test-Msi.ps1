@@ -128,6 +128,7 @@ function Assert-Installed([string] $Version) {
     $key = $hkcu.OpenSubKey($verbKey)
     Assert ($null -ne $key) 'right-click item not registered'
     Assert ($key.GetValue('MUIVerb') -eq "@$installedExe,-102") "MUIVerb is $($key.GetValue('MUIVerb'))"
+    Assert ($key.GetValue('Icon') -eq "$installedExe,-1") "right-click icon is $($key.GetValue('Icon'))"
     $key.Dispose()
     $key = $hkcu.OpenSubKey("$verbKey\command")
     $expected = "`"$installedExe`" --view `"%1`""
@@ -280,6 +281,7 @@ function Build-OtherVersion([string] $Version) {
             -d "AppExe=$(Join-Path (Split-Path (Resolve-Path $DllPath).ProviderPath) 'SplatThumb.exe')" `
             -d "CustomActionDll=$(Join-Path (Split-Path (Resolve-Path $DllPath).ProviderPath) 'splatthumb_ca.dll')" `
             -d "LicenseFile=$repo\LICENSE" `
+            -d "AppIcon=$repo\app\icon\splatthumb.ico" `
             -o $out installer\Package.wxs
         Assert ($LASTEXITCODE -eq 0) "wix build of $Version failed"
     } finally {

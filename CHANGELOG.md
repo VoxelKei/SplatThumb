@@ -5,6 +5,8 @@ All notable changes to SplatThumb. Versions follow [Semantic Versioning](https:/
 
 ## Unreleased
 
+- SplatThumb has its own icon (an orange square with a white splat), shown on its windows, the
+  taskbar, the Start menu, Settings > Apps and the .ply right-click item.
 - The settings window shows the version, copyright and license, with links to the GitHub
   repository and to Spatialograph Maker. Links open in the browser only when clicked.
 - The splat-count list in the viewpoint window is only as wide as its entries, followed by the

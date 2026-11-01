@@ -31,6 +31,8 @@ inline constexpr const wchar_t* kVerbCommandKey =
     L"Software\\Classes\\SystemFileAssociations\\.ply\\shell\\SplatThumb.SetView\\command";
 // The menu text, from SplatThumb.exe's string table (app/SplatThumb.rc, English and Japanese).
 inline constexpr int kVerbTextId = 102;
+// The menu icon, SplatThumb.exe's icon resource (IDI_SPLATTHUMB in app/resource.h).
+inline constexpr int kVerbIconId = 1;
 
 // What register_ply saved, for restore_ply. Under the key the MSI removes on uninstall.
 inline constexpr const wchar_t* kStateKey = L"Software\\SplatThumb\\Previous";

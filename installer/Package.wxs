@@ -9,6 +9,7 @@
     AppExe           the built SplatThumb.exe (settings and viewpoint windows)
     CustomActionDll  the built splatthumb_ca.dll
     LicenseFile      the repository's LICENSE
+    AppIcon          app/icon/splatthumb.ico
 -->
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <!-- The UpgradeCode never changes: it is how a new version finds and replaces an old one. -->
@@ -27,6 +28,10 @@
 
     <Property Id="ARPNOMODIFY" Value="1" />
     <Property Id="ARPURLINFOABOUT" Value="https://github.com/VoxelKei/SplatThumb" />
+    <!-- The icon in Settings > Apps. Windows Installer keeps its copy with the installed
+         product and removes it on uninstall. -->
+    <Icon Id="SplatThumb.ico" SourceFile="$(var.AppIcon)" />
+    <Property Id="ARPPRODUCTICON" Value="SplatThumb.ico" />
 
     <!-- %LOCALAPPDATA%\Programs\SplatThumb, the usual place for per-user programs. -->
     <StandardDirectory Id="LocalAppDataFolder">

@@ -35,6 +35,7 @@ add_custom_target(msi
         -d "AppExe=$<TARGET_FILE:SplatThumb>"
         -d "CustomActionDll=$<TARGET_FILE:splatthumb_ca>"
         -d "LicenseFile=${PROJECT_SOURCE_DIR}/LICENSE"
+        -d "AppIcon=${PROJECT_SOURCE_DIR}/app/icon/splatthumb.ico"
         -o "${CMAKE_BINARY_DIR}/msi/$<CONFIG>/${SPLATTHUMB_MSI_NAME}"
         "${CMAKE_CURRENT_SOURCE_DIR}/Package.wxs"
     # Windows Installer's own consistency checks (ICEs). ICE61 only warns that
