@@ -54,7 +54,8 @@ administrator rights.
 
 Installing a newer version over an older one keeps your saved views and settings.
 
-To uninstall, open Settings > Apps > Installed apps, and choose Uninstall next to SplatThumb.
+To uninstall, open Settings > Apps > Installed apps (on Windows 10, Settings > Apps > Apps &
+features), and choose Uninstall next to SplatThumb.
 Uninstalling removes the files and the registry entries the installer wrote, your saved views
 and settings, and puts back the `.ply` and `.spgm` thumbnail handlers that were registered
 before, if any.
@@ -84,6 +85,9 @@ made; uninstalling deletes it too. Details: [docs/views-and-settings.md](docs/vi
 
 ## Settings
 
+The settings and view windows are shown in Japanese or English, following the Windows display
+language.
+
 Open "SplatThumb" from the Start menu to:
 
 - turn SplatThumb's thumbnails off or on,
@@ -106,8 +110,9 @@ replaces it and puts it back when uninstalled. If an app registers its own handl
 SplatThumb was installed, that app's handler is used instead.
 
 **A splat file shows the usual icon.** The file may use a layout SplatThumb does not read yet
-(see the table above), or be too slow to draw within 3 seconds. To see why, run
-`splatthumb-cli.exe info <file>` from a source build.
+(see the table above), or be too slow to draw within 3 seconds. If you think it should work,
+please open an issue (without attaching the file if it is a real-world scan). If you build from
+source, `splatthumb-cli.exe info <file>` shows why.
 
 ## Building from source
 
@@ -140,6 +145,10 @@ The background is dark gray. Add `--background transparent` for a transparent on
 To try the Explorer thumbnail handler from a local build, see
 [docs/dev-registration.md](docs/dev-registration.md). To build the installer (MSI), see
 [installer/README.md](installer/README.md).
+
+## Changes
+
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

@@ -138,6 +138,8 @@ jobs:
           Check it in PowerShell with \`Get-FileHash .\\SplatThumb-$VERSION-x64.msi\`.
           The installer is not code-signed yet, so Windows SmartScreen may warn about an unknown
           publisher. See the README for installing, uninstalling and troubleshooting.
+
+          What's new: see [CHANGELOG.md](https://github.com/$REPO/blob/$TAG/CHANGELOG.md).
           NOTES
           gh release create "$TAG" --repo "$REPO" --verify-tag --title "SplatThumb $VERSION" \
             --notes-file notes.md "${prerelease[@]}" \

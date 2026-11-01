@@ -45,7 +45,7 @@ SplatThumb はファイルのヘッダーを見て、3D Gaussian Splatting の�
 
 古い版の上から新しい版をインストールしたときは、保存した視点と設定はそのまま残ります。
 
-アンインストールは、「設定」→「アプリ」→「インストールされているアプリ」で、SplatThumb の「アンインストール」を選びます。
+アンインストールは、「設定」→「アプリ」→「インストールされているアプリ」(Windows 10 では「設定」→「アプリ」→「アプリと機能」)で、SplatThumb の「アンインストール」を選びます。
 インストーラーが書いたファイルとレジストリ、保存した視点と設定を消し、インストール前に別の `.ply` や `.spgm` のサムネイルハンドラーが登録されていた場合は、それを元に戻します。
 
 Windows は、一度作ったサムネイルをキャッシュに保存しています。そのため、アンインストール後もしばらくサムネイルが表示されることがあります。
@@ -62,6 +62,8 @@ Windows は、一度作ったサムネイルをキャッシュに保存してい
 
 ## 設定
 
+設定画面と視点の画面は、Windows の表示言語に合わせて日本語または英語で表示されます。
+
 スタートメニューの「SplatThumb」から、次のことができます。
 
 - SplatThumb のサムネイルを表示するかどうかの切り替え
@@ -76,13 +78,13 @@ Windows は、一度作ったサムネイルをキャッシュに保存してい
 
 **ほかのアプリのサムネイルが出る。** `.ply`(と `.spgm`)のサムネイルハンドラーは、ユーザーごとに 1 つしか登録できません。SplatThumb より前にほかのアプリが登録していた場合は、SplatThumb が置き換え、アンインストール時に元に戻します。SplatThumb の後にほかのアプリが登録した場合は、そのアプリのサムネイルが使われます。
 
-**3DGS のファイルなのに通常のアイコンになる。** SplatThumb がまだ読めない形式か(上の表)、3 秒以内に描けなかった可能性があります。理由は、ソースからビルドした `splatthumb-cli.exe info <ファイル>` で確かめられます。
+**3DGS のファイルなのに通常のアイコンになる。** SplatThumb がまだ読めない形式か(上の表)、3 秒以内に描けなかった可能性があります。表示されるはずだと思われる場合は、Issue で報告してください(実際の場所や人が写ったファイルは添付しないでください)。ソースからビルドした場合は、`splatthumb-cli.exe info <ファイル>` で理由を確かめられます。
 
 ## ソースからのビルド
 
 必要なもの: Windows 10/11 x64、Visual Studio 2022(「C++ によるデスクトップ開発」。CMake 3.25 以上が含まれます)
 
-「Developer PowerShell for VS 2022」を開き、リポジトリのフォルダで次を実行します。
+「Developer PowerShell for VS 2022」を開き、リポジトリのフォルダーで次を実行します。
 
 ```powershell
 cmake --workflow --preset msvc-debug
@@ -105,7 +107,11 @@ build\msvc\bin\Release\splatthumb-cli.exe render path\to\scene.ply thumb.png --s
 
 背景は暗いグレーです。透過にしたいときは `--background transparent` を付けます。
 
-自分でビルドした DLL を Explorer で試す方法は [docs/dev-registration.md](docs/dev-registration.md)(英語)にあります。インストーラー(MSI)の作り方は [installer/README.md](installer/README.md)(英語)にあります。
+自分でビルドした DLL をエクスプローラーで試す方法は [docs/dev-registration.md](docs/dev-registration.md)(英語)にあります。インストーラー(MSI)の作り方は [installer/README.md](installer/README.md)(英語)にあります。
+
+## 変更履歴
+
+[CHANGELOG.md](CHANGELOG.md)(英語)にあります。
 
 ## ライセンス
 
