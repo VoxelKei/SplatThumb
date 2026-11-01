@@ -150,6 +150,11 @@ To try the Explorer thumbnail handler from a local build, see
 
 See [CHANGELOG.md](CHANGELOG.md).
 
+## Contributing
+
+Bug reports and ideas are welcome as [issues](../../issues). Pull requests are not accepted for
+now; see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## License
 
 [MIT](LICENSE)
