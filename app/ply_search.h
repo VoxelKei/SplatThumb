@@ -9,7 +9,8 @@
 namespace splatthumb::app {
 
 // Windows keeps no list of the files it has thumbnails for, and the thumbnail handler only
-// sees file contents, so "remake every thumbnail" means: find the .ply files, then remake
+// sees file contents, so "remake every thumbnail" means: find the files SplatThumb makes
+// thumbnails for (.ply and .spgm, below called "PLY files" for short), then remake
 // those that already have a thumbnail in the cache.
 
 struct PlySearch {
@@ -22,7 +23,7 @@ struct PlySearch {
     std::function<void(std::size_t)> progress;
 };
 
-// Finds .ply files (any case) under the roots. Never follows links or junctions, and skips
+// Finds .ply and .spgm files (any case) under the roots. Never follows links or junctions, and skips
 // "$Recycle.Bin", "System Volume Information" and the `skip` folders. Folders that cannot be
 // read are skipped. Never throws.
 std::vector<std::filesystem::path> find_ply_files(const PlySearch& search) noexcept;

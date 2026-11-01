@@ -3,7 +3,8 @@
 # Also covers installing twice, uninstalling twice, upgrading (keeping the user's settings
 # and saved views), refusing a downgrade, another application's handler and right-click
 # items being kept, rollback of a failed install or uninstall, and, with -PreviousMsiPath,
-# upgrading from the previous release.
+# upgrading from the previous release. .ply and .spgm (Spatialograph Maker projects) are
+# both registered; only .ply gets the right-click item.
 param(
     [Parameter(Mandatory)] [string] $MsiPath,
     [Parameter(Mandatory)] [string] $DllPath,
@@ -32,6 +33,10 @@ $dataDir = Join-Path $env:LOCALAPPDATA 'SplatThumb'
 $settingsKey = 'Software\SplatThumb\Settings'
 $associationsKey = 'Software\Classes\SystemFileAssociations'
 $verbKey = "$associationsKey\.ply\shell\SplatThumb.SetView"
+$spgmKeys = @('Software\Classes\.spgm', 'Software\Classes\.spgm\ShellEx',
+    "Software\Classes\.spgm\ShellEx\$ThumbnailHandlerShellEx", 'Software\SplatThumb\Previous.spgm',
+    "$associationsKey\.spgm", "$associationsKey\.spgm\shell",
+    "$associationsKey\.spgm\shell\SplatThumb.SetView")
 $work = Join-Path ([System.IO.Path]::GetTempPath()) "splatthumb-msi-ci-$PID"
 New-Item -ItemType Directory -Force -Path $work, $LogDir | Out-Null
 $MsiPath = (Resolve-Path $MsiPath).ProviderPath
@@ -48,7 +53,7 @@ function Get-State {
     $keys = $ManagedKeys + @('Software\SplatThumb', $settingsKey, 'Software\SplatThumb\Previous',
         $associationsKey, "$associationsKey\.ply", "$associationsKey\.ply\shell",
         "$associationsKey\.ply\shell\Other", "$associationsKey\.ply\shell\Other\command",
-        $verbKey, "$verbKey\command")
+        $verbKey, "$verbKey\command") + $spgmKeys
     $registry = @(foreach ($k in $keys) { Get-KeySnapshot $k })
     $folders = [pscustomobject]@{
         Programs = Test-Path -LiteralPath $programsDir
@@ -102,6 +107,10 @@ function Assert-Installed([string] $Version) {
     $key = $hkcu.OpenSubKey("Software\Classes\.ply\ShellEx\$ThumbnailHandlerShellEx")
     Assert ($null -ne $key -and $key.GetValue('') -eq $SplatThumbClsid) 'thumbnail handler not registered'
     $key.Dispose()
+    $key = $hkcu.OpenSubKey("Software\Classes\.spgm\ShellEx\$ThumbnailHandlerShellEx")
+    Assert ($null -ne $key -and $key.GetValue('') -eq $SplatThumbClsid) '.spgm thumbnail handler not registered'
+    $key.Dispose()
+    Assert ($null -eq $hkcu.OpenSubKey("$associationsKey\.spgm")) '.spgm got a right-click item'
     $key = $hkcu.OpenSubKey("Software\Classes\CLSID\$SplatThumbClsid")
     Assert ($key.GetValue('') -eq 'SplatThumb Thumbnail Handler') 'CLSID name not set'
     $key.Dispose()
@@ -176,6 +185,27 @@ function New-TestPly([string] $Path, [switch] $Mesh) {
     }
 }
 
+# A Spatialograph Maker project (.spgm). Version 3 carries a preview image (a 32 x 32 PNG
+# here); older versions carry none, so they get no thumbnail.
+function New-TestSpgm([string] $Path, [int] $Version = 3) {
+    $png = [Convert]::FromBase64String('iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAKklEQVR42mPQqDhBU8QwasGoBaMWjFowasGoBaMWjFowasGoBaMWDBULAIuXoExJIezsAAAAAElFTkSuQmCC')
+    $json = [System.Text.Encoding]::UTF8.GetBytes('{"version":' + $Version + ',"hasSplatData":false}')
+    $stream = [System.IO.File]::Create($Path)
+    $writer = New-Object System.IO.BinaryWriter $stream
+    try {
+        $writer.Write([System.Text.Encoding]::ASCII.GetBytes("SGP`0"))
+        $writer.Write([uint32] $Version)
+        if ($Version -ge 3) {
+            $writer.Write([uint32] $png.Length)
+            $writer.Write($png)
+        }
+        $writer.Write([uint32] $json.Length)
+        $writer.Write($json)
+    } finally {
+        $writer.Dispose()
+    }
+}
+
 # New files each time, so a thumbnail cached by an earlier round cannot hide a failure.
 # COM ignores per-user (HKCU) class registrations in elevated processes, and CI runs
 # elevated. So the check runs in a non-elevated "basic user" process, like Explorer.
@@ -209,6 +239,12 @@ function Test-Thumbnails {
     New-TestPly $meshPly -Mesh
     Assert (Get-ShellThumbnail $splatPly) 'no thumbnail for the 3DGS PLY'
     Assert (-not (Get-ShellThumbnail $meshPly)) 'the mesh PLY got a thumbnail'
+    $spgm = Join-Path $work "project-$id.spgm"
+    $oldSpgm = Join-Path $work "old-project-$id.spgm"
+    New-TestSpgm $spgm
+    New-TestSpgm $oldSpgm -Version 2
+    Assert (Get-ShellThumbnail $spgm) 'no thumbnail for the .spgm with a preview image'
+    Assert (-not (Get-ShellThumbnail $oldSpgm)) 'the .spgm without a preview image got a thumbnail'
 }
 
 # The shell keeps the handler loaded in dllhost.exe for a while after a thumbnail. Report
@@ -346,8 +382,8 @@ function Set-OtherVerb {
 }
 
 # Another application's handler, with values of several types.
-function Set-OtherHandler {
-    $key = $hkcu.CreateSubKey("Software\Classes\.ply\ShellEx\$ThumbnailHandlerShellEx")
+function Set-OtherHandler([string] $Extension = '.ply') {
+    $key = $hkcu.CreateSubKey("Software\Classes\$Extension\ShellEx\$ThumbnailHandlerShellEx")
     $key.SetValue('', '{11111111-2222-3333-4444-555555555555}')
     $key.SetValue('Number', 5, [Microsoft.Win32.RegistryValueKind]::DWord)
     $key.SetValue('Bytes', [byte[]] (1, 2, 3), [Microsoft.Win32.RegistryValueKind]::Binary)
@@ -357,14 +393,20 @@ function Set-OtherHandler {
 
 try {
     $plyExisted = $null -ne $hkcu.OpenSubKey('Software\Classes\.ply')
+    $spgmExisted = $null -ne $hkcu.OpenSubKey('Software\Classes\.spgm')
     if (-not $plyExisted) {
         Test-RoundTrip 'no .ply key'
         Assert ($null -eq $hkcu.OpenSubKey('Software\Classes\.ply')) '.ply key left behind'
         # An empty .ply key, as other applications often leave.
         $hkcu.CreateSubKey('Software\Classes\.ply').Dispose()
     }
+    if (-not $spgmExisted) {
+        Assert ($null -eq $hkcu.OpenSubKey('Software\Classes\.spgm')) '.spgm key left behind'
+        $hkcu.CreateSubKey('Software\Classes\.spgm').Dispose()
+    }
     Test-RoundTrip 'existing .ply key'
     Assert ($null -ne $hkcu.OpenSubKey('Software\Classes\.ply')) 'existing .ply key was removed'
+    Assert ($null -ne $hkcu.OpenSubKey('Software\Classes\.spgm')) 'existing .spgm key was removed'
     Test-Upgrade
     if ($PreviousMsiPath) {
         $PreviousMsiPath = (Resolve-Path $PreviousMsiPath).ProviderPath
@@ -373,11 +415,14 @@ try {
     Test-Rollback 'existing .ply key'
 
     Set-OtherHandler
+    Set-OtherHandler '.spgm'
     Set-OtherVerb
     Test-RoundTrip 'another handler'
-    $key = $hkcu.OpenSubKey("Software\Classes\.ply\ShellEx\$ThumbnailHandlerShellEx")
-    Assert ($key.GetValue('') -eq '{11111111-2222-3333-4444-555555555555}') 'another handler: not put back'
-    $key.Dispose()
+    foreach ($ext in '.ply', '.spgm') {
+        $key = $hkcu.OpenSubKey("Software\Classes\$ext\ShellEx\$ThumbnailHandlerShellEx")
+        Assert ($key.GetValue('') -eq '{11111111-2222-3333-4444-555555555555}') "another $ext handler: not put back"
+        $key.Dispose()
+    }
     $key = $hkcu.OpenSubKey("$associationsKey\.ply\shell\Other\command")
     Assert ($null -ne $key -and $key.GetValue('') -eq 'other.exe "%1"') 'another right-click item: not kept'
     $key.Dispose()
@@ -385,6 +430,8 @@ try {
 } finally {
     if (-not $plyExisted) { $hkcu.DeleteSubKeyTree('Software\Classes\.ply', $false) }
     else { $hkcu.DeleteSubKeyTree("Software\Classes\.ply\ShellEx\$ThumbnailHandlerShellEx", $false) }
+    if (-not $spgmExisted) { $hkcu.DeleteSubKeyTree('Software\Classes\.spgm', $false) }
+    else { $hkcu.DeleteSubKeyTree("Software\Classes\.spgm\ShellEx\$ThumbnailHandlerShellEx", $false) }
     $hkcu.DeleteSubKeyTree("$associationsKey\.ply\shell\Other", $false)
     Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 }

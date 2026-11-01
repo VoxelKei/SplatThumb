@@ -50,3 +50,32 @@ For a compressed splat, also:
 - When drawing, a chunk whose ranges are not finite, or a vertex whose position falls outside the
   coordinate limit, is skipped. Unpacked values always have a fixed size, so a small file cannot
   expand into a large amount of data.
+
+## Spatialograph Maker projects (.spgm)
+
+A `.spgm` file is a Spatialograph Maker project. From format version 3 the app saves a small
+preview image near the start of the file, and SplatThumb shows that image as it is. It does not
+read the project's settings or splat data, so the view and quality settings do not apply.
+
+The file starts with:
+
+| Bytes | Content |
+| --- | --- |
+| 0-3 | `SGP` followed by a zero byte |
+| 4-7 | Format version, 32-bit little-endian |
+| 8-11 | Image size in bytes, 32-bit little-endian (version 3) |
+| 12- | The image, PNG or JPEG |
+
+Checks, in order. Any failure means no thumbnail (Windows shows its usual icon):
+
+- The first 4 bytes are `SGP\0`. If not, the file is treated like any other file (a PLY check).
+- The version is exactly 3. Older projects carry no image; newer ones may store it differently.
+- The image size is not 0, at most 4 MiB, and the image ends within the file.
+- The image starts with the PNG signature (`89 50 4E 47 0D 0A 1A 0A`) or the JPEG start
+  (`FF D8 FF`).
+- Only those bytes are read. They are decoded by Windows' own PNG or JPEG decoder (WIC), the one
+  that matches the signature and no other installed codec.
+- Images wider or taller than 2048 pixels are refused before their pixels are decoded.
+
+The image is scaled down to the thumbnail size, keeping its shape (it is never enlarged), and
+any transparent parts are laid over the same dark gray as the PLY thumbnails.

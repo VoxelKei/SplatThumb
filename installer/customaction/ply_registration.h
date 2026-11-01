@@ -55,8 +55,11 @@ struct Extension {
 // .ply keeps the state key of v0.1 and v0.2, so an upgrade restores what they saved.
 inline constexpr Extension kPlyExtension{L".ply", kStateKey, true};
 
+// Spatialograph Maker projects: the preview image they carry. There is no view to set.
+inline constexpr Extension kSpgmExtension{L".spgm", L"Software\\SplatThumb\\Previous.spgm", false};
+
 // Every extension the installer registers, in order. Restoring goes in reverse order.
-inline constexpr Extension kExtensions[] = {kPlyExtension};
+inline constexpr Extension kExtensions[] = {kPlyExtension, kSpgmExtension};
 
 // Saves the current registration of `ext` and points its thumbnail handler at SplatThumb,
 // as register_ply below describes for .ply. The right-click item is added only when

@@ -49,6 +49,19 @@ class PlySearchTest : public ::testing::Test {
     fs::path root_;
 };
 
+TEST_F(PlySearchTest, FindsSpgmFilesToo) {
+    for (const char* f : {"p.SPGM", "sub/q.spgm", "spgm", ".spgm", "sub/r.spgm.bak"}) {
+        std::ofstream(root_ / f) << "x";
+    }
+    PlySearch s;
+    s.roots = {root_ / "sub"};
+    EXPECT_EQ(names(find_ply_files(s)),
+              (std::vector<std::string>{"sub/c.ply", "sub/deep/d.ply", "sub/q.spgm"}));
+    s.roots = {root_};
+    s.max_depth = 0;
+    EXPECT_EQ(names(find_ply_files(s)), (std::vector<std::string>{"B.PLY", "a.ply", "p.SPGM"}));
+}
+
 TEST_F(PlySearchTest, FindsPlyFilesInSubfolders) {
     PlySearch s;
     s.roots = {root_};

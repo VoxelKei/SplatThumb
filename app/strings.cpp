@@ -37,8 +37,7 @@ constexpr Entry kTexts[] = {
     {L"Right-click a .ply file in Explorer and choose \"SplatThumb: set thumbnail view\".",
      L"エクスプローラーで .ply ファイルを右クリックし、「SplatThumb で視点を設定」を選んでください。"},
     {L"SplatThumb - Settings", L"SplatThumb - 設定"},
-    {L"Show SplatThumb thumbnails for 3DGS PLY files",
-     L"3DGS の PLY ファイルに SplatThumb のサムネイルを表示する"},
+    {L"Show SplatThumb thumbnails", L"SplatThumb のサムネイルを表示する"},
     {L"Quality", L"品質"},
     {L"Fast (up to 50,000 splats)", L"速さ優先(最大 5 万個)"},
     {L"Standard (up to 200,000 splats)", L"標準(最大 20 万個)"},
@@ -50,11 +49,11 @@ constexpr Entry kTexts[] = {
     {L"Settings saved.", L"設定を保存しました。"},
     {L"The settings could not be saved.", L"設定を保存できませんでした。"},
     {L"Remake all existing thumbnails...", L"既存のサムネイルを全て再生成する..."},
-    {L"Looks for .ply files in the folder you choose and all folders inside it, and remakes those "
-     L"that already have a thumbnail. Choose a drive such as K:\\ to cover all of it.",
-     L"選んだフォルダーとその中のすべてのフォルダーから .ply ファイルを探し、すでにサムネイルが"
+    {L"Looks for .ply and .spgm files in the folder you choose and all folders inside it, and "
+     L"remakes those that already have a thumbnail. Choose a drive such as K:\\ to cover all of it.",
+     L"選んだフォルダーとその中のすべてのフォルダーから .ply と .spgm のファイルを探し、すでにサムネイルが"
      L"あるものを作り直します。K:\\ などのドライブを選ぶと、その全体が対象になります。"},
-    {L"Looking for .ply files... {n} found", L".ply ファイルを探しています... {n} 個見つかりました"},
+    {L"Looking for files... {n} found", L"ファイルを探しています... {n} 個見つかりました"},
     {L"Stop", L"中止"},
     {L"Remaking thumbnails...", L"サムネイルを作り直しています..."},
     {L"Remade the thumbnails of {n} files.", L"{n} 個のファイルのサムネイルを作り直しました。"},

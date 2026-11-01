@@ -36,6 +36,13 @@ inline constexpr std::size_t kFingerprintSampleBytes = 4 * 1024;
 // Saved view files larger than this are ignored.
 inline constexpr std::size_t kMaxViewFileBytes = 1024;
 
+// ---- Spatialograph Maker projects (.spgm) ----
+
+// Embedded preview images larger than this, in bytes or in pixels along either side, are
+// not shown.
+inline constexpr std::uint32_t kMaxEmbeddedImageBytes = 4 * 1024 * 1024;
+inline constexpr std::uint32_t kMaxEmbeddedImageSide = 2048;
+
 // ---- Rendering ----
 
 // At most this many splats are read and drawn; larger files are sampled. The quality

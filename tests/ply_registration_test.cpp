@@ -362,4 +362,27 @@ TEST(PlyRegistration, ExtensionListStartsWithPlyAndUsesDistinctStateKeys) {
     }
 }
 
+TEST(PlyRegistration, SpgmIsRegisteredWithoutTheRightClickItem) {
+    bool found = false;
+    for (const Extension& ext : kExtensions) {
+        if (std::wstring(ext.name) == L".spgm") {
+            found = true;
+            EXPECT_FALSE(ext.view_item);
+        }
+    }
+    EXPECT_TRUE(found);
+}
+
+TEST_F(PlyRegistrationTest, RegisterAllAddsNoSpgmRightClickItem) {
+    ASSERT_EQ(register_all(root_, kExe), ERROR_SUCCESS);
+    HKEY key = nullptr;
+    EXPECT_NE(RegOpenKeyExW(root_, L"Software\\Classes\\SystemFileAssociations\\.spgm", 0,
+                            KEY_READ, &key),
+              ERROR_SUCCESS);
+    if (key != nullptr) {
+        RegCloseKey(key);
+    }
+    ASSERT_EQ(restore_all(root_), ERROR_SUCCESS);
+}
+
 } // namespace
