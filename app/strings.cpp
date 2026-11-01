@@ -25,7 +25,6 @@ constexpr Entry kTexts[] = {
     {L"Use this view", L"この視点をサムネイルにする"},
     {L"Settings...", L"全体の設定..."},
     {L"Close", L"閉じる"},
-    {L"Saved. The thumbnail has been updated.", L"保存しました。サムネイルを作り直しました。"},
     {L"Back to the automatic view. The thumbnail has been updated.",
      L"自動の視点に戻しました。サムネイルを作り直しました。"},
     {L"This file is not a 3D Gaussian Splatting PLY, so SplatThumb does not draw it.",

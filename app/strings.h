@@ -15,7 +15,6 @@ enum class Text {
     Save,
     OpenSettings,
     Close,
-    Saved,
     ResetDone,
     NotSplat,
     CannotOpen,

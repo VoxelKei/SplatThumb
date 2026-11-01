@@ -626,7 +626,9 @@ void Viewer::save() noexcept {
     const HCURSOR old = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
     refresh_thumbnail(file_);
     SetCursor(old);
-    set_status(text(Text::Saved));
+    // Done: the thumbnail is remade, so the window closes. (If saving failed it stays open,
+    // with the message above.)
+    DestroyWindow(hwnd_);
 }
 
 void Viewer::reset() noexcept {

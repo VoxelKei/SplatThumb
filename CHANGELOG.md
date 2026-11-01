@@ -6,6 +6,7 @@ All notable changes to SplatThumb. Versions follow [Semantic Versioning](https:/
 ## Unreleased
 
 - The viewpoint window opens at the size it had when it was last closed.
+- "Use this view" closes the viewpoint window once the thumbnail is remade.
 - The viewpoint window's controls are centred, and its buttons read Reset, Settings..., Use this
   view, Close from left to right.
 - The viewpoint window opens next to the mouse pointer (on the same monitor) instead of at

@@ -78,7 +78,8 @@ SplatThumb" ("SplatThumb で視点を設定"); on Windows 11 it is under "Show m
 - "Splats used for the thumbnail" chooses the splat limit for this file (up to 50,000,
   200,000 or 400,000), or "Same as Settings". Changing
   it reloads the file at that quality; the choice is stored in the view file when saved.
-- "Use this view" saves the view and asks Windows to make the thumbnail again.
+- "Use this view" saves the view, asks Windows to make the thumbnail again, and closes the
+  window.
   "Reset" deletes the saved view (so also the file's quality) and does the same. "Settings..." opens the settings window
   (or brings an open one to the front).
 
