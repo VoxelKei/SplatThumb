@@ -80,11 +80,11 @@ constexpr std::array<std::optional<Quality>, 4> kQualityChoices = {
 
 Text quality_text(Quality q) noexcept {
     switch (q) {
-    case Quality::Fast: return Text::SplatsFast;
-    case Quality::Standard: return Text::SplatsStandard;
-    case Quality::High: return Text::SplatsHigh;
+    case Quality::Fast: return Text::QualityFast;
+    case Quality::Standard: return Text::QualityStandard;
+    case Quality::High: return Text::QualityHigh;
     }
-    return Text::SplatsStandard;
+    return Text::QualityStandard;
 }
 
 constexpr std::array kButtons = {
@@ -406,7 +406,7 @@ void Viewer::create_controls() noexcept {
                               0, 0, 10, 10, hwnd_,
                               reinterpret_cast<HMENU>(static_cast<INT_PTR>(kStatus)), inst, nullptr);
     quality_label_ = CreateWindowExW(
-        0, L"STATIC", text(Text::QualityThisFile),
+        0, L"STATIC", text(Text::QualityLabel),
         WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE, 0, 0, 10, 10, hwnd_,
         reinterpret_cast<HMENU>(static_cast<INT_PTR>(kQualityLabel)), inst, nullptr);
     quality_combo_ = CreateWindowExW(
@@ -462,7 +462,7 @@ void Viewer::layout() noexcept {
     const HDC dc = GetDC(hwnd_);
     const HGDIOBJ old = SelectObject(dc, font_);
     {
-        const wchar_t* label = text(Text::QualityThisFile);
+        const wchar_t* label = text(Text::QualityLabel);
         SIZE size{};
         GetTextExtentPoint32W(dc, label, static_cast<int>(wcslen(label)), &size);
         MoveWindow(quality_label_, scaled(kMargin), quality_top, size.cx + scaled(4),

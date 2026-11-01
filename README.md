@@ -90,7 +90,7 @@ language.
 Open "SplatThumb" from the Start menu to:
 
 - turn SplatThumb's thumbnails off or on,
-- choose the quality (how many splats are drawn),
+- choose "Splats used for the thumbnail" (up to 50,000, 200,000 or 400,000),
 - remake the existing thumbnails in a folder and all folders inside it after changing a
   setting.
 

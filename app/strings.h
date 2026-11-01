@@ -39,11 +39,7 @@ enum class Text {
     Remade,
     Stopped,
     NothingToRemake,
-    QualityThisFile,
     QualityFollowSettings,
-    SplatsFast,
-    SplatsStandard,
-    SplatsHigh,
     QualityChanged,
 };
 
