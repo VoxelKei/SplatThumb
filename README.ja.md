@@ -4,7 +4,7 @@
 
 3D Gaussian Splatting の `.ply` ファイルと Spatialograph Maker のプロジェクト(`.spgm`)に、Windows エクスプローラーでサムネイルを表示するツールです。
 
-> **現在は開発の初期段階(v0.2)です。** インストーラーは [Releases](../../releases) ページから入手できます。ソースから作ることもできます(下記)。
+> **現在は開発の初期段階(v0.3)です。** インストーラーは [Releases](../../releases) ページから入手できます。ソースから作ることもできます(下記)。
 
 SplatThumb はファイルのヘッダーを見て、3D Gaussian Splatting のシーンだけを描画します。
 メッシュや点群の PLY には手を出さず、Windows の標準の表示に任せます。
