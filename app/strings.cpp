@@ -25,7 +25,6 @@ constexpr Entry kTexts[] = {
     {L"Use this view", L"この視点をサムネイルにする"},
     {L"Settings...", L"全体の設定..."},
     {L"Close", L"閉じる"},
-    {L"Saved. The thumbnail has been updated.", L"保存しました。サムネイルを作り直しました。"},
     {L"Back to the automatic view. The thumbnail has been updated.",
      L"自動の視点に戻しました。サムネイルを作り直しました。"},
     {L"This file is not a 3D Gaussian Splatting PLY, so SplatThumb does not draw it.",
@@ -38,10 +37,10 @@ constexpr Entry kTexts[] = {
      L"エクスプローラーで .ply ファイルを右クリックし、「SplatThumb で視点を設定」を選んでください。"},
     {L"SplatThumb - Settings", L"SplatThumb - 設定"},
     {L"Show SplatThumb thumbnails", L"SplatThumb のサムネイルを表示する"},
-    {L"Quality", L"品質"},
-    {L"Fast (up to 50,000 splats)", L"速さ優先(最大 5 万個)"},
-    {L"Standard (up to 200,000 splats)", L"標準(最大 20 万個)"},
-    {L"High (up to 400,000 splats)", L"高品質(最大 40 万個)"},
+    {L"Splats used for the thumbnail", L"サムネイルに使用するsplats数"},
+    {L"Up to 50,000", L"最大 5 万個"},
+    {L"Up to 200,000", L"最大 20 万個"},
+    {L"Up to 400,000", L"最大 40 万個"},
     {L"Changes are saved right away and apply to thumbnails made from now on. To update a "
      L"folder that is already shown, use \"Remake all existing thumbnails\" below.",
      L"変更はすぐに保存され、これから作られるサムネイルに反映されます。表示済みのフォルダーは、"
@@ -59,10 +58,9 @@ constexpr Entry kTexts[] = {
     {L"Remade the thumbnails of {n} files.", L"{n} 個のファイルのサムネイルを作り直しました。"},
     {L"Stopped.", L"中止しました。"},
     {L"No thumbnails to remake were found.", L"作り直すサムネイルは見つかりませんでした。"},
-    {L"Quality of this file", L"このファイルの品質"},
-    {L"Same as Settings: ", L"全体の設定に従う: "},
-    {L"Quality changed. Click \"Use this view\" to use it for the thumbnail.",
-     L"品質を変えました。「この視点をサムネイルにする」を押すとサムネイルに反映されます。"},
+    {L"Same as Settings ({n})", L"全体の設定に従う({n})"},
+    {L"Splat count changed. Click \"Use this view\" to use it for the thumbnail.",
+     L"splats数を変えました。「この視点をサムネイルにする」を押すとサムネイルに反映されます。"},
 };
 
 static_assert(std::size(kTexts) == static_cast<std::size_t>(Text::QualityChanged) + 1);

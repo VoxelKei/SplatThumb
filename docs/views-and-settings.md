@@ -75,9 +75,11 @@ SplatThumb" ("SplatThumb で視点を設定"); on Windows 11 it is under "Show m
 - Drag to turn the subject like a turntable (left/right about the file's Y axis, up/down to
   look from higher or lower, stopping 5° short of straight above or below), right-drag (or
   Shift+drag) to move it, and use the wheel to zoom. The picture is never tilted.
-- "Quality of this file" chooses the splat limit for this file, or "Same as Settings". Changing
+- "Splats used for the thumbnail" chooses the splat limit for this file (up to 50,000,
+  200,000 or 400,000), or "Same as Settings". Changing
   it reloads the file at that quality; the choice is stored in the view file when saved.
-- "Use this view" saves the view and asks Windows to make the thumbnail again.
+- "Use this view" saves the view, asks Windows to make the thumbnail again, and closes the
+  window.
   "Reset" deletes the saved view (so also the file's quality) and does the same. "Settings..." opens the settings window
   (or brings an open one to the front).
 
@@ -109,6 +111,7 @@ out-of-range values use the default.
 | --- | --- | --- |
 | `Enabled` | 0 = off (Windows shows its usual icon), anything else = on | on |
 | `Quality` | Splats drawn at most: 0 = 50,000, 1 = 200,000, 2 = 400,000 | 1 |
+| `ViewerWidth`, `ViewerHeight` | Size of the viewpoint window when it was last resized and closed, in pixels at 100% scaling (480 x 420 up to 16384) | 760 x 820 |
 
 The background is always dark gray, so a thumbnail looks the same in light and dark Explorer
 themes. (A transparent background was tried during v0.2 and dropped.)

@@ -1,6 +1,8 @@
 #include "viewer_window.h"
 
 #include <windows.h>
+#include <commctrl.h>
+#include <objbase.h>
 #include <shellapi.h>
 #include <windowsx.h>
 
@@ -8,6 +10,7 @@
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <cstddef>
 #include <cstdint>
 #include <new>
@@ -48,6 +51,10 @@ constexpr auto kLoadTime = std::chrono::seconds(60);
 // After wheel or button changes, the full-quality picture follows this much later.
 constexpr UINT kSettleMs = 250;
 constexpr UINT_PTR kSettleTimer = 1;
+// From the thumbnail thread: wParam = sizes made, lParam = total.
+constexpr UINT kSaveStepMessage = WM_APP + 1;
+// From the thumbnail thread when it has finished.
+constexpr UINT kSaveDoneMessage = WM_APP + 2;
 
 // Layout in 96-DPI units.
 constexpr int kMargin = 8;
@@ -58,6 +65,10 @@ constexpr int kQualityRowHeight = 26;
 constexpr int kQualityComboWidth = 300;
 constexpr int kInitialWidth = 760;
 constexpr int kInitialHeight = 820;
+constexpr int kMinWidth = 480;
+constexpr int kMinHeight = 420;
+// A saved size larger than this is ignored as damaged.
+constexpr int kMaxSavedSize = 16384;
 
 enum Control : int {
     kAutomatic = 100,
@@ -67,7 +78,30 @@ enum Control : int {
     kStatus,
     kQualityLabel,
     kQualityCombo,
+    kSaveProgress,
 };
+
+// Remakes the thumbnail off the window's thread, so the progress bar can move.
+struct SaveJob {
+    HWND window = nullptr;
+    std::filesystem::path file;
+};
+
+void post_save_step(void* context, unsigned done, unsigned total) noexcept {
+    PostMessageW(static_cast<HWND>(context), kSaveStepMessage, done, static_cast<LPARAM>(total));
+}
+
+DWORD WINAPI save_thread(void* param) noexcept {
+    auto* job = static_cast<SaveJob*>(param);
+    const HRESULT com = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    refresh_thumbnail(job->file, &post_save_step, job->window);
+    if (SUCCEEDED(com)) {
+        CoUninitialize();
+    }
+    PostMessageW(job->window, kSaveDoneMessage, 0, 0);
+    delete job;
+    return 0;
+}
 
 // Entries of the quality list, in order. The first follows the global setting.
 constexpr std::array<std::optional<Quality>, 4> kQualityChoices = {
@@ -82,9 +116,11 @@ Text quality_text(Quality q) noexcept {
     return Text::QualityStandard;
 }
 
+// Left to right (and in tab order).
 constexpr std::array kButtons = {
     std::pair{kAutomatic, Text::Automatic},
-    std::pair{kSave, Text::Save},             std::pair{kSettings, Text::OpenSettings},
+    std::pair{kSettings, Text::OpenSettings},
+    std::pair{kSave, Text::Save},
     std::pair{kClose, Text::Close},
 };
 
@@ -127,6 +163,10 @@ private:
     HWND status_ = nullptr;
     HWND quality_label_ = nullptr;
     HWND quality_combo_ = nullptr;
+    HWND progress_ = nullptr;
+    // While the thumbnail is being remade after "Use this view": input is ignored and the
+    // window closes when it is done.
+    bool saving_ = false;
     std::array<HWND, kButtons.size()> buttons_{};
     HFONT font_ = nullptr;
     UINT dpi_ = 96;
@@ -141,6 +181,8 @@ private:
     // This file's own quality, as chosen in the window; nullopt follows the global setting.
     // view_.quality is kept empty; the choice is added only when saving.
     std::optional<Quality> quality_;
+    // Window size at opening, in 96-DPI pixels; saved on close only if it changed.
+    shellext::WindowSize opened_size_{};
 
     // Mouse dragging.
     bool dragging_ = false;
@@ -227,9 +269,12 @@ bool Viewer::create_window(int show) noexcept {
     if (hwnd_ == nullptr) {
         return false;
     }
-    // Resize for the monitor's DPI now that it is known.
+    // Resize for the monitor's DPI now that it is known, to the size it had when last closed.
     dpi_ = GetDpiForWindow(hwnd_);
-    SetWindowPos(hwnd_, nullptr, 0, 0, scaled(kInitialWidth), scaled(kInitialHeight),
+    opened_size_ = shellext::read_viewer_size({kMinWidth, kMinHeight},
+                                              {kMaxSavedSize, kMaxSavedSize})
+                       .value_or(shellext::WindowSize{kInitialWidth, kInitialHeight});
+    SetWindowPos(hwnd_, nullptr, 0, 0, scaled(opened_size_.width), scaled(opened_size_.height),
                  SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
     if (have_cursor) {
         place_near_cursor(hwnd_, cursor);
@@ -331,8 +376,12 @@ void Viewer::fill_quality_combo() noexcept {
             if (choice) {
                 label = text(quality_text(*choice));
             } else {
+                // "Same as Settings (Up to 200,000)": the {n} slot takes the current count.
                 label = text(Text::QualityFollowSettings);
-                label += text(quality_text(settings_.quality));
+                const std::wstring current = text(quality_text(settings_.quality));
+                if (const auto at = label.find(L"{n}"); at != std::wstring::npos) {
+                    label.replace(at, 3, current);
+                }
             }
         } catch (...) {
         }
@@ -388,11 +437,11 @@ void Viewer::create_controls() noexcept {
     }
     EnableWindow(GetDlgItem(hwnd_, kSettings), TRUE);
     EnableWindow(GetDlgItem(hwnd_, kClose), TRUE);
-    status_ = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOPREFIX,
+    status_ = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_CENTER | SS_NOPREFIX,
                               0, 0, 10, 10, hwnd_,
                               reinterpret_cast<HMENU>(static_cast<INT_PTR>(kStatus)), inst, nullptr);
     quality_label_ = CreateWindowExW(
-        0, L"STATIC", text(Text::QualityThisFile),
+        0, L"STATIC", text(Text::QualityLabel),
         WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE, 0, 0, 10, 10, hwnd_,
         reinterpret_cast<HMENU>(static_cast<INT_PTR>(kQualityLabel)), inst, nullptr);
     quality_combo_ = CreateWindowExW(
@@ -400,6 +449,12 @@ void Viewer::create_controls() noexcept {
         0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(kQualityCombo)), inst,
         nullptr);
     EnableWindow(quality_combo_, FALSE);
+    // Shown in place of the status text while the thumbnail is remade.
+    INITCOMMONCONTROLSEX icc{sizeof(icc), ICC_PROGRESS_CLASS};
+    InitCommonControlsEx(&icc);
+    progress_ = CreateWindowExW(0, PROGRESS_CLASSW, L"", WS_CHILD | PBS_SMOOTH, 0, 0, 10, 10,
+                                hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(kSaveProgress)),
+                                inst, nullptr);
     update_font();
     layout();
 }
@@ -444,27 +499,44 @@ void Viewer::layout() noexcept {
     const int status_top = quality_top - scaled(kMargin) - scaled(kStatusHeight);
     MoveWindow(status_, scaled(kMargin), status_top, rc.right - 2 * scaled(kMargin),
                scaled(kStatusHeight), TRUE);
+    {
+        // A slim bar in the middle of the status line.
+        const int w = std::min(scaled(320), static_cast<int>(rc.right) - 2 * scaled(kMargin));
+        const int h = scaled(8);
+        MoveWindow(progress_, (rc.right - w) / 2, status_top + (scaled(kStatusHeight) - h) / 2, w,
+                   h, TRUE);
+    }
 
     const HDC dc = GetDC(hwnd_);
     const HGDIOBJ old = SelectObject(dc, font_);
+    const auto text_width = [&](const wchar_t* s) {
+        SIZE size{};
+        GetTextExtentPoint32W(dc, s, static_cast<int>(wcslen(s)), &size);
+        return static_cast<int>(size.cx);
+    };
+    // Each row is centred in the window; if it is wider than the window it starts at the margin.
+    const auto row_left = [&](int row_width) {
+        return std::max(scaled(kMargin), static_cast<int>(rc.right - row_width) / 2);
+    };
     {
-        const wchar_t* label = text(Text::QualityThisFile);
-        SIZE size{};
-        GetTextExtentPoint32W(dc, label, static_cast<int>(wcslen(label)), &size);
-        MoveWindow(quality_label_, scaled(kMargin), quality_top, size.cx + scaled(4),
-                   scaled(kQualityRowHeight), TRUE);
+        const int label_w = text_width(text(Text::QualityLabel)) + scaled(4);
+        const int combo_w = scaled(kQualityComboWidth);
+        const int x = row_left(label_w + scaled(kMargin) + combo_w);
+        MoveWindow(quality_label_, x, quality_top, label_w, scaled(kQualityRowHeight), TRUE);
         // A drop-down list's height includes its open list.
-        MoveWindow(quality_combo_, scaled(kMargin) + size.cx + scaled(kMargin), quality_top,
-                   scaled(kQualityComboWidth), scaled(kQualityRowHeight) * 8, TRUE);
+        MoveWindow(quality_combo_, x + label_w + scaled(kMargin), quality_top, combo_w,
+                   scaled(kQualityRowHeight) * 8, TRUE);
     }
-    int x = scaled(kMargin);
+    std::array<int, kButtons.size()> widths{};
+    int total = 0;
     for (std::size_t i = 0; i < kButtons.size(); ++i) {
-        const wchar_t* label = text(kButtons[i].second);
-        SIZE size{};
-        GetTextExtentPoint32W(dc, label, static_cast<int>(wcslen(label)), &size);
-        const int width = size.cx + scaled(kButtonPadding);
-        MoveWindow(buttons_[i], x, buttons_top, width, scaled(kButtonHeight), TRUE);
-        x += width + scaled(kMargin) / 2;
+        widths[i] = text_width(text(kButtons[i].second)) + scaled(kButtonPadding);
+        total += widths[i] + (i > 0 ? scaled(kMargin) / 2 : 0);
+    }
+    int x = row_left(total);
+    for (std::size_t i = 0; i < kButtons.size(); ++i) {
+        MoveWindow(buttons_[i], x, buttons_top, widths[i], scaled(kButtonHeight), TRUE);
+        x += widths[i] + scaled(kMargin) / 2;
     }
     SelectObject(dc, old);
     ReleaseDC(hwnd_, dc);
@@ -597,10 +669,37 @@ void Viewer::save() noexcept {
         message(Text::CannotSave, MB_ICONERROR);
         return;
     }
-    const HCURSOR old = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
-    refresh_thumbnail(file_);
-    SetCursor(old);
-    set_status(text(Text::Saved));
+    // Remake the thumbnail on another thread with a progress bar; the window closes when it
+    // is done (kSaveDoneMessage). If the thread cannot start, do it here instead.
+    auto* job = new (std::nothrow) SaveJob{hwnd_, {}};
+    HANDLE thread = nullptr;
+    if (job != nullptr) {
+        try {
+            job->file = file_;
+            thread = CreateThread(nullptr, 0, &save_thread, job, 0, nullptr);
+        } catch (...) {
+        }
+        if (thread == nullptr) {
+            delete job;
+        }
+    }
+    if (thread == nullptr) {
+        const HCURSOR old = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
+        refresh_thumbnail(file_);
+        SetCursor(old);
+        DestroyWindow(hwnd_);
+        return;
+    }
+    CloseHandle(thread);
+    saving_ = true;
+    for (const HWND b : buttons_) {
+        EnableWindow(b, FALSE);
+    }
+    EnableWindow(quality_combo_, FALSE);
+    SendMessageW(progress_, PBM_SETRANGE32, 0, 1);
+    SendMessageW(progress_, PBM_SETPOS, 0, 0);
+    ShowWindow(status_, SW_HIDE);
+    ShowWindow(progress_, SW_SHOW);
 }
 
 void Viewer::reset() noexcept {
@@ -681,7 +780,7 @@ LRESULT Viewer::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
         return 0;
     case WM_GETMINMAXINFO: {
         auto* info = reinterpret_cast<MINMAXINFO*>(lp);
-        info->ptMinTrackSize = {scaled(480), scaled(420)};
+        info->ptMinTrackSize = {scaled(kMinWidth), scaled(kMinHeight)};
         return 0;
     }
     case WM_DPICHANGED: {
@@ -696,7 +795,7 @@ LRESULT Viewer::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
     }
     case WM_LBUTTONDOWN:
     case WM_RBUTTONDOWN: {
-        if (splats_.empty() || dragging_) {
+        if (splats_.empty() || dragging_ || saving_) {
             return 0;
         }
         const POINT pt{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
@@ -750,7 +849,7 @@ LRESULT Viewer::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
         }
         return 0;
     case WM_MOUSEWHEEL: {
-        if (splats_.empty()) {
+        if (splats_.empty() || saving_) {
             return 0;
         }
         const float notches = static_cast<float>(GET_WHEEL_DELTA_WPARAM(wp)) / WHEEL_DELTA;
@@ -765,7 +864,24 @@ LRESULT Viewer::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
             InvalidateRect(hwnd_, nullptr, FALSE);
         }
         return 0;
+    case kSaveStepMessage:
+        SendMessageW(progress_, PBM_SETRANGE32, 0, lp);
+        SendMessageW(progress_, PBM_SETPOS, wp, 0);
+        return 0;
+    case kSaveDoneMessage:
+        saving_ = false;
+        DestroyWindow(hwnd_);
+        return 0;
+    case WM_CLOSE:
+        // The thumbnail thread posts to this window; it closes itself when the thread is done.
+        if (saving_) {
+            return 0;
+        }
+        break;
     case WM_COMMAND:
+        if (saving_) {
+            return 0;
+        }
         switch (LOWORD(wp)) {
         case kAutomatic:
             reset();
@@ -792,13 +908,28 @@ LRESULT Viewer::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
             break;
         }
         break;
-    case WM_DESTROY:
+    case WM_DESTROY: {
+        // Remember the size for next time. The normal (not maximized or minimized) size is
+        // used, converted to 96-DPI pixels so it fits a monitor with another scale.
+        WINDOWPLACEMENT placement{};
+        placement.length = sizeof(placement);
+        if (GetWindowPlacement(hwnd_, &placement) && dpi_ > 0) {
+            const RECT& r = placement.rcNormalPosition;
+            const shellext::WindowSize size{MulDiv(r.right - r.left, 96, static_cast<int>(dpi_)),
+                                            MulDiv(r.bottom - r.top, 96, static_cast<int>(dpi_))};
+            // Rounding can move a size by a pixel; only a real change is written.
+            if (std::abs(size.width - opened_size_.width) > 1 ||
+                std::abs(size.height - opened_size_.height) > 1) {
+                shellext::write_viewer_size(size);
+            }
+        }
         if (font_ != nullptr) {
             DeleteObject(font_);
             font_ = nullptr;
         }
         PostQuitMessage(0);
         return 0;
+    }
     default:
         break;
     }

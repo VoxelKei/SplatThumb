@@ -5,9 +5,14 @@ All notable changes to SplatThumb. Versions follow [Semantic Versioning](https:/
 
 ## Unreleased
 
+- The viewpoint window opens at the size it had when it was last closed.
+- "Use this view" shows a slim progress bar while the thumbnail is remade (one step per
+  thumbnail size), then closes the viewpoint window.
+- The viewpoint window's controls are centred, and its buttons read Reset, Settings..., Use this
+  view, Close from left to right.
 - The viewpoint window opens next to the mouse pointer (on the same monitor) instead of at
   the default spot, and stays inside the screen.
-- Quality can be set per file in the viewpoint window ("Quality of this file"). It is saved
+- Quality can be set per file in the viewpoint window ("Splats used for the thumbnail"). It is saved
   with the view (optional `quality` line in the view file); older versions ignore it.
 - The automatic view looks straight from the front (same X as the subject, -Z side) and a
   little from above, instead of 45° to the side. Saved views are unchanged.

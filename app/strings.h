@@ -15,7 +15,6 @@ enum class Text {
     Save,
     OpenSettings,
     Close,
-    Saved,
     ResetDone,
     NotSplat,
     CannotOpen,
@@ -39,7 +38,6 @@ enum class Text {
     Remade,
     Stopped,
     NothingToRemake,
-    QualityThisFile,
     QualityFollowSettings,
     QualityChanged,
 };

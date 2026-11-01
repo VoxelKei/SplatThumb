@@ -238,7 +238,6 @@ void SettingsWindow::layout() noexcept {
     const int row = scaled(kRow);
     const int gap = scaled(kGap);
     const int inner = scaled(kWidth) - 2 * m;
-    const int label = scaled(kLabelWidth);
     const auto place = [&](int id, int x, int y, int w, int h) {
         MoveWindow(GetDlgItem(hwnd_, id), x, y, w, h, FALSE);
     };
@@ -253,6 +252,9 @@ void SettingsWindow::layout() noexcept {
         ReleaseDC(hwnd_, dc);
         return static_cast<int>(size.cx) + scaled(28);
     };
+
+    // The label column fits the quality label's text, at least kLabelWidth.
+    const int label = std::max(scaled(kLabelWidth), button_width(kQualityLabel) - scaled(28) + gap);
 
     int y = m;
     place(kEnabled, m, y, inner, row);

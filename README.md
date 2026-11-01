@@ -68,11 +68,11 @@ Windows 11, it is under "Show more options").
 
 - Drag to turn the subject around its vertical (Y) axis or look from higher or lower,
   right-drag to move it, and use the wheel to zoom.
-- "Quality of this file" picks how many splats this file's thumbnail draws; "Same as
-  Settings" follows the global quality.
-- "Use this view" saves the view (and the quality) and updates the thumbnail. "Reset" goes
-  back to the automatic view and the global quality. "Settings..." opens the settings window
-  described below.
+- "Splats used for the thumbnail" picks how many splats this file's thumbnail draws; "Same as
+  Settings" follows the settings window.
+- "Use this view" saves the view (and the splat count), updates the thumbnail and closes the
+  window. "Reset" goes back to the automatic view and the settings window's splat count.
+  "Settings..." opens the settings window described below.
 
 The view is remembered by the file's contents, so it stays when you move or rename the file on
 the same PC. It does not travel with a copy to another PC, and it is dropped if the file's
@@ -90,7 +90,7 @@ language.
 Open "SplatThumb" from the Start menu to:
 
 - turn SplatThumb's thumbnails off or on,
-- choose the quality (how many splats are drawn),
+- choose "Splats used for the thumbnail" (up to 50,000, 200,000 or 400,000),
 - remake the existing thumbnails in a folder and all folders inside it after changing a
   setting.
 
