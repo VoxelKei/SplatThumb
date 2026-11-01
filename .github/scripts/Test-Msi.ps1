@@ -281,6 +281,7 @@ function Build-OtherVersion([string] $Version) {
             -d "AppExe=$(Join-Path (Split-Path (Resolve-Path $DllPath).ProviderPath) 'SplatThumb.exe')" `
             -d "CustomActionDll=$(Join-Path (Split-Path (Resolve-Path $DllPath).ProviderPath) 'splatthumb_ca.dll')" `
             -d "LicenseFile=$repo\LICENSE" `
+            -d "AppIcon=$repo\app\icon\splatthumb.ico" `
             -o $out installer\Package.wxs
         Assert ($LASTEXITCODE -eq 0) "wix build of $Version failed"
     } finally {
