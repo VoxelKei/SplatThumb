@@ -5,7 +5,7 @@
 Windows Explorer thumbnails for 3D Gaussian Splatting `.ply` files, and for Spatialograph Maker
 projects (`.spgm`).
 
-> **Status: early development (v0.2).** Download the installer from the
+> **Status: early development (v0.3).** Download the installer from the
 > [Releases](../../releases) page, or build it from source (see below).
 
 SplatThumb only renders PLY files that are 3D Gaussian Splatting scenes, detected from the file
