@@ -113,6 +113,10 @@ build\msvc\bin\Release\splatthumb-cli.exe render path\to\scene.ply thumb.png --s
 
 [CHANGELOG.md](CHANGELOG.md)(英語)にあります。
 
+## 不具合の報告・要望
+
+不具合の報告や要望は [Issues](../../issues) にお願いします(日本語で大丈夫です)。プルリクエストは、今のところ受け付けていません。詳しくは [CONTRIBUTING.md](CONTRIBUTING.md)(英語)にあります。
+
 ## ライセンス
 
 [MIT](LICENSE)
