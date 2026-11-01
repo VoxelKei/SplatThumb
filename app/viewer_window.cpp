@@ -145,6 +145,30 @@ int Viewer::run(int show) noexcept {
     return 0;
 }
 
+namespace {
+
+// Centres the window on `cursor`, shrunk and shifted as needed so it fits inside the work
+// area (screen minus taskbar) of the monitor under the pointer.
+void place_near_cursor(HWND hwnd, POINT cursor) noexcept {
+    MONITORINFO info{};
+    info.cbSize = sizeof(info);
+    if (!GetMonitorInfoW(MonitorFromPoint(cursor, MONITOR_DEFAULTTONEAREST), &info)) {
+        return;
+    }
+    RECT window{};
+    if (!GetWindowRect(hwnd, &window)) {
+        return;
+    }
+    const RECT& work = info.rcWork;
+    const int width = std::min(window.right - window.left, work.right - work.left);
+    const int height = std::min(window.bottom - window.top, work.bottom - work.top);
+    const int x = std::clamp(cursor.x - width / 2, work.left, work.right - width);
+    const int y = std::clamp(cursor.y - height / 2, work.top, work.bottom - height);
+    SetWindowPos(hwnd, nullptr, x, y, width, height, SWP_NOZORDER | SWP_NOACTIVATE);
+}
+
+}  // namespace
+
 bool Viewer::create_window(int show) noexcept {
     WNDCLASSEXW wc{};
     wc.cbSize = sizeof(wc);
@@ -163,9 +187,15 @@ bool Viewer::create_window(int show) noexcept {
         title += file_.filename().wstring();
     } catch (...) {
     }
+    // Open near the mouse pointer, which is where the user just clicked the right-click
+    // menu. Creating the window at the pointer puts it on that monitor, so the DPI read
+    // below is the right one; place_near_cursor() then centres it and keeps it on screen.
+    POINT cursor{};
+    const bool have_cursor = GetCursorPos(&cursor) != FALSE;
     hwnd_ = CreateWindowExW(0, kClassName, title.c_str(), WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-                            CW_USEDEFAULT, CW_USEDEFAULT, kInitialWidth, kInitialHeight, nullptr,
-                            nullptr, wc.hInstance, this);
+                            have_cursor ? cursor.x : CW_USEDEFAULT,
+                            have_cursor ? cursor.y : CW_USEDEFAULT, kInitialWidth,
+                            kInitialHeight, nullptr, nullptr, wc.hInstance, this);
     if (hwnd_ == nullptr) {
         return false;
     }
@@ -173,6 +203,9 @@ bool Viewer::create_window(int show) noexcept {
     dpi_ = GetDpiForWindow(hwnd_);
     SetWindowPos(hwnd_, nullptr, 0, 0, scaled(kInitialWidth), scaled(kInitialHeight),
                  SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+    if (have_cursor) {
+        place_near_cursor(hwnd_, cursor);
+    }
     create_controls();
     set_status(text(Text::Loading));
     ShowWindow(hwnd_, show);

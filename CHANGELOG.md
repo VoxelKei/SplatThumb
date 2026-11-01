@@ -3,6 +3,11 @@
 All notable changes to SplatThumb. Versions follow [Semantic Versioning](https://semver.org/);
 0.x versions are previews.
 
+## Unreleased
+
+- The viewpoint window opens next to the mouse pointer (on the same monitor) instead of at
+  the default spot, and stays inside the screen.
+
 ## 0.3.0 - 2026-11-01
 
 - Spatialograph Maker projects (`.spgm`) show the preview image saved in the project (project
