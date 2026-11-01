@@ -19,8 +19,8 @@ constexpr Entry kTexts[] = {
     {L"SplatThumb", L"SplatThumb"},
     {L"SplatThumb - Thumbnail view", L"SplatThumb - サムネイルの視点"},
     {L"Loading...", L"読み込み中..."},
-    {L"Drag to turn, right-drag to move, Ctrl+drag to tilt, wheel to zoom.",
-     L"ドラッグで回転、右ドラッグで移動、Ctrl+ドラッグで傾き、ホイールで拡大と縮小。"},
+    {L"Drag to turn, right-drag to move, wheel to zoom.",
+     L"ドラッグで回転、右ドラッグで移動、ホイールで拡大と縮小。"},
     {L"Reset", L"リセット"},
     {L"Use this view", L"この視点をサムネイルにする"},
     {L"Settings...", L"全体の設定..."},
@@ -59,9 +59,13 @@ constexpr Entry kTexts[] = {
     {L"Remade the thumbnails of {n} files.", L"{n} 個のファイルのサムネイルを作り直しました。"},
     {L"Stopped.", L"中止しました。"},
     {L"No thumbnails to remake were found.", L"作り直すサムネイルは見つかりませんでした。"},
+    {L"Quality of this file", L"このファイルの品質"},
+    {L"Same as Settings: ", L"全体の設定に従う: "},
+    {L"Quality changed. Click \"Use this view\" to use it for the thumbnail.",
+     L"品質を変えました。「この視点をサムネイルにする」を押すとサムネイルに反映されます。"},
 };
 
-static_assert(std::size(kTexts) == static_cast<std::size_t>(Text::NothingToRemake) + 1);
+static_assert(std::size(kTexts) == static_cast<std::size_t>(Text::QualityChanged) + 1);
 
 bool japanese() noexcept {
     static const bool ja = PRIMARYLANGID(GetUserDefaultUILanguage()) == LANG_JAPANESE;

@@ -123,6 +123,30 @@ private:
     HANDLE thread_ = nullptr;
 };
 
+namespace {
+
+// Centres the window in the work area (screen minus taskbar) of the monitor containing
+// `point`, keeping it fully on screen.
+void center_on_monitor(HWND hwnd, POINT point) noexcept {
+    MONITORINFO info{};
+    info.cbSize = sizeof(info);
+    if (!GetMonitorInfoW(MonitorFromPoint(point, MONITOR_DEFAULTTOPRIMARY), &info)) {
+        return;
+    }
+    RECT window{};
+    if (!GetWindowRect(hwnd, &window)) {
+        return;
+    }
+    const RECT& work = info.rcWork;
+    const int width = window.right - window.left;
+    const int height = window.bottom - window.top;
+    const int x = std::max(work.left, work.left + (work.right - work.left - width) / 2);
+    const int y = std::max(work.top, work.top + (work.bottom - work.top - height) / 2);
+    SetWindowPos(hwnd, nullptr, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+}
+
+}  // namespace
+
 int SettingsWindow::run(int show) noexcept {
     WNDCLASSEXW wc{};
     wc.cbSize = sizeof(wc);
@@ -134,16 +158,22 @@ int SettingsWindow::run(int show) noexcept {
     wc.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
     RegisterClassExW(&wc);
 
+    // Create the window on the monitor under the mouse pointer (so the DPI read below is
+    // that monitor's), then centre it there once layout has fixed its size.
+    POINT cursor{};
+    const bool have_cursor = GetCursorPos(&cursor) != FALSE;
     hwnd_ = CreateWindowExW(0, kSettingsWindowClass, text(Text::SettingsTitle),
                             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX |
                                 WS_CLIPCHILDREN,
-                            CW_USEDEFAULT, CW_USEDEFAULT, kWidth, 400, nullptr, nullptr,
-                            wc.hInstance, this);
+                            have_cursor ? cursor.x : CW_USEDEFAULT,
+                            have_cursor ? cursor.y : CW_USEDEFAULT, kWidth, 400, nullptr,
+                            nullptr, wc.hInstance, this);
     if (hwnd_ == nullptr) {
         return 1;
     }
     dpi_ = GetDpiForWindow(hwnd_);
     create_controls();
+    center_on_monitor(hwnd_, have_cursor ? cursor : POINT{0, 0});
     load_settings();
     ShowWindow(hwnd_, show);
 

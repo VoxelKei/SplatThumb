@@ -26,8 +26,9 @@ qualify, all of them are used.) The target is the per-axis median of the core, a
 distance that 90% of the core lies within, so a scene that thins out far around its middle
 is not shrunk to a speck.
 
-The camera looks from the -Z side toward +Z, as COLMAP capture cameras face the subject, from
-45° azimuth and 20° elevation with a 45° field of view. Up is -Y, as in COLMAP-based
+The camera looks from the -Z side toward +Z, as COLMAP capture cameras face the subject,
+straight from the front (0° azimuth: same X as the target) and 20° above (toward -Y) with a
+45° field of view. Up is -Y, as in COLMAP-based
 training. Splats more than 1.5 radii in front of the target are left out, which removes
 foreground clutter in scenes and nothing on a single object.
 

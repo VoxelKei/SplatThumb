@@ -7,13 +7,13 @@ namespace splatthumb {
 // Mouse-style changes to a view, for the viewer window. Each returns the view unchanged
 // when the result would not make a valid camera (see camera_from_view).
 
-// Turns the camera around the target: yaw about the screen's up axis, then pitch about the
-// screen's right axis. There is no fixed world up, so the view can go over the top.
+// Turns the camera around the target like a turntable: yaw about the file's Y axis (through
+// the target), then pitch about the screen's right axis. Y stays fixed, so the picture does
+// not tilt while turning; pitch stops at kOrbitPitchLimitDeg above or below the horizontal.
+// The Y direction used is the one closer to the screen's up, so an older saved view that is
+// upside down still turns the way the mouse moves.
+inline constexpr float kOrbitPitchLimitDeg = 85.0f;
 View orbit(const View& view, float yaw_rad, float pitch_rad) noexcept;
-
-// Turns the picture on the screen (rotates up about the viewing direction). Positive turns
-// the picture counterclockwise.
-View roll(const View& view, float angle_rad) noexcept;
 
 // Moves toward (factor < 1) or away from (factor > 1) the target. The framed radius scales
 // with the distance so the near clip stays in front of the subject.

@@ -54,6 +54,8 @@ constexpr int kMargin = 8;
 constexpr int kButtonHeight = 30;
 constexpr int kStatusHeight = 22;
 constexpr int kButtonPadding = 24;
+constexpr int kQualityRowHeight = 26;
+constexpr int kQualityComboWidth = 300;
 constexpr int kInitialWidth = 760;
 constexpr int kInitialHeight = 820;
 
@@ -63,7 +65,22 @@ enum Control : int {
     kSettings,
     kClose,
     kStatus,
+    kQualityLabel,
+    kQualityCombo,
 };
+
+// Entries of the quality list, in order. The first follows the global setting.
+constexpr std::array<std::optional<Quality>, 4> kQualityChoices = {
+    std::nullopt, Quality::Fast, Quality::Standard, Quality::High};
+
+Text quality_text(Quality q) noexcept {
+    switch (q) {
+    case Quality::Fast: return Text::QualityFast;
+    case Quality::Standard: return Text::QualityStandard;
+    case Quality::High: return Text::QualityHigh;
+    }
+    return Text::QualityStandard;
+}
 
 constexpr std::array kButtons = {
     std::pair{kAutomatic, Text::Automatic},
@@ -98,10 +115,18 @@ private:
     void save() noexcept;
     void reset() noexcept;
     void message(Text t, UINT icon) const noexcept;
+    // Loads the splats again at quality, replacing splats_, preview_ and auto_view_.
+    bool load_splats_at(Quality quality) noexcept;
+    Quality effective_quality() const noexcept { return quality_.value_or(settings_.quality); }
+    void fill_quality_combo() noexcept;
+    void select_quality(const std::optional<Quality>& q) noexcept;
+    void change_quality(const std::optional<Quality>& q) noexcept;
 
     std::filesystem::path file_;
     HWND hwnd_ = nullptr;
     HWND status_ = nullptr;
+    HWND quality_label_ = nullptr;
+    HWND quality_combo_ = nullptr;
     std::array<HWND, kButtons.size()> buttons_{};
     HFONT font_ = nullptr;
     UINT dpi_ = 96;
@@ -113,6 +138,9 @@ private:
     std::optional<std::filesystem::path> views_root_;
     View view_{};
     View auto_view_{};
+    // This file's own quality, as chosen in the window; nullopt follows the global setting.
+    // view_.quality is kept empty; the choice is added only when saving.
+    std::optional<Quality> quality_;
 
     // Mouse dragging.
     bool dragging_ = false;
@@ -145,6 +173,30 @@ int Viewer::run(int show) noexcept {
     return 0;
 }
 
+namespace {
+
+// Centres the window on `cursor`, shrunk and shifted as needed so it fits inside the work
+// area (screen minus taskbar) of the monitor under the pointer.
+void place_near_cursor(HWND hwnd, POINT cursor) noexcept {
+    MONITORINFO info{};
+    info.cbSize = sizeof(info);
+    if (!GetMonitorInfoW(MonitorFromPoint(cursor, MONITOR_DEFAULTTONEAREST), &info)) {
+        return;
+    }
+    RECT window{};
+    if (!GetWindowRect(hwnd, &window)) {
+        return;
+    }
+    const RECT& work = info.rcWork;
+    const int width = std::min(window.right - window.left, work.right - work.left);
+    const int height = std::min(window.bottom - window.top, work.bottom - work.top);
+    const int x = std::clamp(cursor.x - width / 2, work.left, work.right - width);
+    const int y = std::clamp(cursor.y - height / 2, work.top, work.bottom - height);
+    SetWindowPos(hwnd, nullptr, x, y, width, height, SWP_NOZORDER | SWP_NOACTIVATE);
+}
+
+}  // namespace
+
 bool Viewer::create_window(int show) noexcept {
     WNDCLASSEXW wc{};
     wc.cbSize = sizeof(wc);
@@ -163,9 +215,15 @@ bool Viewer::create_window(int show) noexcept {
         title += file_.filename().wstring();
     } catch (...) {
     }
+    // Open near the mouse pointer, which is where the user just clicked the right-click
+    // menu. Creating the window at the pointer puts it on that monitor, so the DPI read
+    // below is the right one; place_near_cursor() then centres it and keeps it on screen.
+    POINT cursor{};
+    const bool have_cursor = GetCursorPos(&cursor) != FALSE;
     hwnd_ = CreateWindowExW(0, kClassName, title.c_str(), WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-                            CW_USEDEFAULT, CW_USEDEFAULT, kInitialWidth, kInitialHeight, nullptr,
-                            nullptr, wc.hInstance, this);
+                            have_cursor ? cursor.x : CW_USEDEFAULT,
+                            have_cursor ? cursor.y : CW_USEDEFAULT, kInitialWidth,
+                            kInitialHeight, nullptr, nullptr, wc.hInstance, this);
     if (hwnd_ == nullptr) {
         return false;
     }
@@ -173,6 +231,9 @@ bool Viewer::create_window(int show) noexcept {
     dpi_ = GetDpiForWindow(hwnd_);
     SetWindowPos(hwnd_, nullptr, 0, 0, scaled(kInitialWidth), scaled(kInitialHeight),
                  SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+    if (have_cursor) {
+        place_near_cursor(hwnd_, cursor);
+    }
     create_controls();
     set_status(text(Text::Loading));
     ShowWindow(hwnd_, show);
@@ -183,57 +244,135 @@ bool Viewer::create_window(int show) noexcept {
 std::optional<int> Viewer::load() noexcept {
     const HCURSOR old_cursor = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
     settings_ = shellext::read_settings();
-    FileByteSource source;
-    if (!source.open(file_)) {
-        SetCursor(old_cursor);
-        message(Text::CannotOpen, MB_ICONERROR);
-        return 1;
-    }
-    const Classification c = inspect(source);
-    if (c.kind == SplatKind::NotSplat) {
-        SetCursor(old_cursor);
-        message(Text::NotSplat, MB_ICONINFORMATION);
-        return 0;
-    }
-    LoadOptions load_options;
-    load_options.max_splats = max_splats_for(settings_.quality);
-    LoadResult loaded = load_splats(source, c, load_options, Deadline::after(kLoadTime));
-    const CameraResult automatic =
-        loaded.status == Status::Ok ? auto_camera(loaded.splats) : CameraResult{};
-    if (loaded.status != Status::Ok || automatic.status != Status::Ok) {
-        SetCursor(old_cursor);
-        message(Text::CannotLoad, MB_ICONERROR);
-        return 1;
-    }
-    try {
-        splats_ = std::move(loaded.splats);
-        const std::size_t step = splats_.size() / kPreviewSplats + 1;
-        preview_.reserve(splats_.size() / step + 1);
-        for (std::size_t i = 0; i < splats_.size(); i += step) {
-            preview_.push_back(splats_[i]);
+    {
+        FileByteSource source;
+        if (!source.open(file_)) {
+            SetCursor(old_cursor);
+            message(Text::CannotOpen, MB_ICONERROR);
+            return 1;
         }
-    } catch (const std::bad_alloc&) {
-        SetCursor(old_cursor);
-        message(Text::CannotLoad, MB_ICONERROR);
-        return 1;
+        if (inspect(source).kind == SplatKind::NotSplat) {
+            SetCursor(old_cursor);
+            message(Text::NotSplat, MB_ICONINFORMATION);
+            return 0;
+        }
+        fingerprint_ = fingerprint(source);
     }
-
-    auto_view_ = view_from_camera(automatic.camera);
-    view_ = auto_view_;
-    fingerprint_ = fingerprint(source);
+    // The saved view decides the quality, so it is read before the splats.
     views_root_ = shellext::views_root();
+    std::optional<View> saved;
     if (fingerprint_ && views_root_) {
-        if (const auto saved = load_view(*views_root_, *fingerprint_)) {
-            view_ = *saved;
-        }
+        saved = load_view(*views_root_, *fingerprint_);
     }
-    EnableWindow(GetDlgItem(hwnd_, kSave), fingerprint_ && views_root_);
-    EnableWindow(GetDlgItem(hwnd_, kAutomatic), fingerprint_ && views_root_);
+    if (saved) {
+        quality_ = saved->quality;
+        saved->quality.reset();
+    }
+    if (!load_splats_at(effective_quality())) {
+        SetCursor(old_cursor);
+        message(Text::CannotLoad, MB_ICONERROR);
+        return 1;
+    }
+    view_ = saved ? *saved : auto_view_;
+    fill_quality_combo();
+    const BOOL can_save = fingerprint_ && views_root_ ? TRUE : FALSE;
+    EnableWindow(GetDlgItem(hwnd_, kSave), can_save);
+    EnableWindow(GetDlgItem(hwnd_, kAutomatic), can_save);
+    EnableWindow(quality_combo_, can_save);
     SetCursor(old_cursor);
     set_status(text(Text::Hint));
     dirty_ = true;
     InvalidateRect(hwnd_, nullptr, FALSE);
     return std::nullopt;
+}
+
+bool Viewer::load_splats_at(Quality quality) noexcept {
+    FileByteSource source;
+    if (!source.open(file_)) {
+        return false;
+    }
+    const Classification c = inspect(source);
+    if (c.kind == SplatKind::NotSplat) {
+        return false;
+    }
+    LoadOptions load_options;
+    load_options.max_splats = max_splats_for(quality);
+    LoadResult loaded = load_splats(source, c, load_options, Deadline::after(kLoadTime));
+    if (loaded.status != Status::Ok) {
+        return false;
+    }
+    // The automatic view depends on which splats were read, as it does for the thumbnail.
+    const CameraResult automatic = auto_camera(loaded.splats);
+    if (automatic.status != Status::Ok) {
+        return false;
+    }
+    try {
+        std::vector<Splat> preview;
+        const std::size_t step = loaded.splats.size() / kPreviewSplats + 1;
+        preview.reserve(loaded.splats.size() / step + 1);
+        for (std::size_t i = 0; i < loaded.splats.size(); i += step) {
+            preview.push_back(loaded.splats[i]);
+        }
+        splats_ = std::move(loaded.splats);
+        preview_ = std::move(preview);
+    } catch (const std::bad_alloc&) {
+        return false;
+    }
+    auto_view_ = view_from_camera(automatic.camera);
+    dirty_ = true;
+    return true;
+}
+
+void Viewer::fill_quality_combo() noexcept {
+    SendMessageW(quality_combo_, CB_RESETCONTENT, 0, 0);
+    for (const auto& choice : kQualityChoices) {
+        std::wstring label;
+        try {
+            if (choice) {
+                label = text(quality_text(*choice));
+            } else {
+                label = text(Text::QualityFollowSettings);
+                label += text(quality_text(settings_.quality));
+            }
+        } catch (...) {
+        }
+        SendMessageW(quality_combo_, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(label.c_str()));
+    }
+    select_quality(quality_);
+}
+
+void Viewer::select_quality(const std::optional<Quality>& q) noexcept {
+    for (std::size_t i = 0; i < kQualityChoices.size(); ++i) {
+        if (kQualityChoices[i] == q) {
+            SendMessageW(quality_combo_, CB_SETCURSEL, i, 0);
+        }
+    }
+}
+
+void Viewer::change_quality(const std::optional<Quality>& q) noexcept {
+    if (q == quality_) {
+        return;
+    }
+    const Quality before = effective_quality();
+    const std::optional<Quality> old_choice = quality_;
+    quality_ = q;
+    if (effective_quality() != before) {
+        const bool was_automatic = view_ == auto_view_;
+        const HCURSOR old = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
+        const bool ok = load_splats_at(effective_quality());
+        SetCursor(old);
+        if (!ok) {
+            quality_ = old_choice;
+            select_quality(quality_);
+            message(Text::CannotLoad, MB_ICONERROR);
+            return;
+        }
+        if (was_automatic) {
+            view_ = auto_view_;
+        }
+        InvalidateRect(hwnd_, nullptr, FALSE);
+    }
+    set_status(text(Text::QualityChanged));
 }
 
 void Viewer::create_controls() noexcept {
@@ -252,6 +391,15 @@ void Viewer::create_controls() noexcept {
     status_ = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOPREFIX,
                               0, 0, 10, 10, hwnd_,
                               reinterpret_cast<HMENU>(static_cast<INT_PTR>(kStatus)), inst, nullptr);
+    quality_label_ = CreateWindowExW(
+        0, L"STATIC", text(Text::QualityThisFile),
+        WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE, 0, 0, 10, 10, hwnd_,
+        reinterpret_cast<HMENU>(static_cast<INT_PTR>(kQualityLabel)), inst, nullptr);
+    quality_combo_ = CreateWindowExW(
+        0, L"COMBOBOX", L"", WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST,
+        0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(kQualityCombo)), inst,
+        nullptr);
+    EnableWindow(quality_combo_, FALSE);
     update_font();
     layout();
 }
@@ -271,6 +419,8 @@ void Viewer::update_font() noexcept {
         SendMessageW(b, WM_SETFONT, reinterpret_cast<WPARAM>(font), FALSE);
     }
     SendMessageW(status_, WM_SETFONT, reinterpret_cast<WPARAM>(font), FALSE);
+    SendMessageW(quality_label_, WM_SETFONT, reinterpret_cast<WPARAM>(font), FALSE);
+    SendMessageW(quality_combo_, WM_SETFONT, reinterpret_cast<WPARAM>(font), FALSE);
     if (font_ != nullptr) {
         DeleteObject(font_);
     }
@@ -280,7 +430,8 @@ void Viewer::update_font() noexcept {
 RECT Viewer::picture_rect() const noexcept {
     RECT rc{};
     GetClientRect(hwnd_, &rc);
-    rc.bottom = std::max(rc.top, rc.bottom - scaled(kMargin * 3 + kButtonHeight + kStatusHeight));
+    rc.bottom = std::max(rc.top, rc.bottom - scaled(kMargin * 4 + kButtonHeight +
+                                                    kQualityRowHeight + kStatusHeight));
     return rc;
 }
 
@@ -289,12 +440,23 @@ void Viewer::layout() noexcept {
     GetClientRect(hwnd_, &rc);
     const int bottom = rc.bottom - scaled(kMargin);
     const int buttons_top = bottom - scaled(kButtonHeight);
-    const int status_top = buttons_top - scaled(kMargin) - scaled(kStatusHeight);
+    const int quality_top = buttons_top - scaled(kMargin) - scaled(kQualityRowHeight);
+    const int status_top = quality_top - scaled(kMargin) - scaled(kStatusHeight);
     MoveWindow(status_, scaled(kMargin), status_top, rc.right - 2 * scaled(kMargin),
                scaled(kStatusHeight), TRUE);
 
     const HDC dc = GetDC(hwnd_);
     const HGDIOBJ old = SelectObject(dc, font_);
+    {
+        const wchar_t* label = text(Text::QualityThisFile);
+        SIZE size{};
+        GetTextExtentPoint32W(dc, label, static_cast<int>(wcslen(label)), &size);
+        MoveWindow(quality_label_, scaled(kMargin), quality_top, size.cx + scaled(4),
+                   scaled(kQualityRowHeight), TRUE);
+        // A drop-down list's height includes its open list.
+        MoveWindow(quality_combo_, scaled(kMargin) + size.cx + scaled(kMargin), quality_top,
+                   scaled(kQualityComboWidth), scaled(kQualityRowHeight) * 8, TRUE);
+    }
     int x = scaled(kMargin);
     for (std::size_t i = 0; i < kButtons.size(); ++i) {
         const wchar_t* label = text(kButtons[i].second);
@@ -429,7 +591,9 @@ void Viewer::paint() noexcept {
 }
 
 void Viewer::save() noexcept {
-    if (!fingerprint_ || !views_root_ || !save_view(*views_root_, *fingerprint_, view_)) {
+    View saved = view_;
+    saved.quality = quality_;
+    if (!fingerprint_ || !views_root_ || !save_view(*views_root_, *fingerprint_, saved)) {
         message(Text::CannotSave, MB_ICONERROR);
         return;
     }
@@ -442,6 +606,20 @@ void Viewer::save() noexcept {
 void Viewer::reset() noexcept {
     if (fingerprint_ && views_root_) {
         remove_view(*views_root_, *fingerprint_);
+    }
+    // Back to the global quality too: the quality is stored in the view file.
+    if (quality_) {
+        const bool reload = effective_quality() != settings_.quality;
+        quality_.reset();
+        select_quality(quality_);
+        if (reload) {
+            const HCURSOR old = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
+            const bool ok = load_splats_at(settings_.quality);
+            SetCursor(old);
+            if (!ok) {
+                message(Text::CannotLoad, MB_ICONERROR);
+            }
+        }
     }
     set_view(auto_view_, false);
     const HCURSOR old = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
@@ -551,8 +729,6 @@ LRESULT Viewer::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
         if (drag_button_ == WM_RBUTTONDOWN || (wp & MK_SHIFT) != 0) {
             // The picture follows the mouse: half the picture height is about one radius.
             next = pan(view_, -dx * 2.2f, -dy * 2.2f);
-        } else if ((wp & MK_CONTROL) != 0) {
-            next = roll(view_, -dx * kPi);
         } else {
             // The subject turns with the mouse, as if grabbed.
             next = orbit(view_, -dx * kPi, dy * kPi);
@@ -593,6 +769,14 @@ LRESULT Viewer::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
         switch (LOWORD(wp)) {
         case kAutomatic:
             reset();
+            return 0;
+        case kQualityCombo:
+            if (HIWORD(wp) == CBN_SELCHANGE) {
+                const auto i = SendMessageW(quality_combo_, CB_GETCURSEL, 0, 0);
+                if (i >= 0 && static_cast<std::size_t>(i) < kQualityChoices.size()) {
+                    change_quality(kQualityChoices[static_cast<std::size_t>(i)]);
+                }
+            }
             return 0;
         case kSave:
             save();

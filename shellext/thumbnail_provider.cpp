@@ -153,7 +153,8 @@ IFACEMETHODIMP ThumbnailProvider::GetThumbnail(UINT cx, HBITMAP* bitmap,
     options.size = cx > static_cast<UINT>(INT_MAX) ? INT_MAX : static_cast<int>(cx);
     options.background = Background::Gray;
     LoadOptions load;
-    load.max_splats = max_splats_for(settings.quality);
+    // A quality saved with this file's view wins over the global setting.
+    load.max_splats = max_splats_for(view && view->quality ? *view->quality : settings.quality);
     const RenderResult result = render_thumbnail(source, options, load, deadline, nullptr,
                                                  view ? &*view : nullptr);
     switch (result.status) {

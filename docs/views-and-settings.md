@@ -53,13 +53,17 @@ target 0.125 0 3
 up 0 -1 0
 fov 40
 radius 2.5
+quality 2
 ```
 
 `eye`, `target` and `up` are in the PLY's own coordinates. `fov` is the vertical field of view
 in degrees, and `radius` is the size of the framed region, which also sets the near clip as for
 the automatic view. Files larger than 1 KiB, missing or repeated keys, numbers that are not
 finite or exceed the coordinate limit, and views that cannot make a camera are ignored, and
-the thumbnail uses the automatic view. Unknown keys are ignored. The parser is fuzzed by
+the thumbnail uses the automatic view. `quality` is optional: 0, 1 or 2 like the `Quality` setting below, used
+for this file instead of the global setting. A number other than 0 to 2 is ignored (the view
+is kept and the global quality applies); a `quality` that is not a plain number makes the file
+invalid like any other bad line. Unknown keys are ignored. The parser is fuzzed by
 `fuzz/fuzz_view.cpp`.
 
 ## The viewpoint window
@@ -68,10 +72,13 @@ the thumbnail uses the automatic view. Unknown keys are ignored. The parser is f
 look. The installer adds it to the right-click menu of `.ply` files as "Set view with
 SplatThumb" ("SplatThumb で視点を設定"); on Windows 11 it is under "Show more options".
 
-- Drag to turn the subject, right-drag (or Shift+drag) to move it, Ctrl+drag to turn the
-  picture (for example to stand up a file stored on its side), and use the wheel to zoom.
+- Drag to turn the subject like a turntable (left/right about the file's Y axis, up/down to
+  look from higher or lower, stopping 5° short of straight above or below), right-drag (or
+  Shift+drag) to move it, and use the wheel to zoom. The picture is never tilted.
+- "Quality of this file" chooses the splat limit for this file, or "Same as Settings". Changing
+  it reloads the file at that quality; the choice is stored in the view file when saved.
 - "Use this view" saves the view and asks Windows to make the thumbnail again.
-  "Reset" deletes the saved view and does the same. "Settings..." opens the settings window
+  "Reset" deletes the saved view (so also the file's quality) and does the same. "Settings..." opens the settings window
   (or brings an open one to the front).
 
 The window loads the file with the same limits and checks as the thumbnail handler. While

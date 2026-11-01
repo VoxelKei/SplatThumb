@@ -4,6 +4,7 @@
 #include <charconv>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <algorithm>
 #include <numbers>
 
@@ -65,6 +66,28 @@ void append_number(std::string& s, float v) {
     }
 }
 
+// Reads "<n>" for the quality key. A number this version does not know leaves quality
+// unset (the global setting applies) rather than rejecting the whole view.
+bool parse_quality(std::string_view rest, std::optional<Quality>& out) noexcept {
+    const std::string_view token = next_token(rest);
+    if (token.empty() || !next_token(rest).empty() || token.size() > 9) {
+        return false;
+    }
+    std::uint32_t n = 0;
+    const char* last = token.data() + token.size();
+    const auto [ptr, ec] = std::from_chars(token.data(), last, n);
+    if (ec != std::errc() || ptr != last) {
+        return false;
+    }
+    switch (n) {
+    case 0: out = Quality::Fast; break;
+    case 1: out = Quality::Standard; break;
+    case 2: out = Quality::High; break;
+    default: break;
+    }
+    return true;
+}
+
 } // namespace
 
 View view_from_camera(const Camera& camera) noexcept {
@@ -100,6 +123,15 @@ std::string format_view(const View& view) {
     s += "\nradius";
     append_number(s, view.radius);
     s += '\n';
+    if (view.quality) {
+        s += "quality ";
+        switch (*view.quality) {
+        case Quality::Fast: s += '0'; break;
+        case Quality::Standard: s += '1'; break;
+        case Quality::High: s += '2'; break;
+        }
+        s += '\n';
+    }
     return s;
 }
 
@@ -109,7 +141,7 @@ std::optional<View> parse_view(std::string_view text) noexcept {
     }
     View view;
     bool seen_magic = false, seen_eye = false, seen_target = false, seen_up = false,
-         seen_fov = false, seen_radius = false;
+         seen_fov = false, seen_radius = false, seen_quality = false;
     std::size_t lines = 0;
     while (!text.empty()) {
         if (++lines > kMaxLines) {
@@ -153,6 +185,8 @@ std::optional<View> parse_view(std::string_view text) noexcept {
             std::array<float, 1> v{};
             ok = once(seen_radius) && parse_floats(rest, v);
             view.radius = v[0];
+        } else if (key == "quality") {
+            ok = once(seen_quality) && parse_quality(rest, view.quality);
         }
         if (!ok) {
             return std::nullopt;

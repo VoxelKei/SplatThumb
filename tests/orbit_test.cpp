@@ -43,13 +43,6 @@ float distance(const View& v) {
     return std::sqrt(dot(d, d));
 }
 
-// Screen position of world point p: x to the right, y up.
-std::pair<float, float> screen(const View& v, const Vec3& p) {
-    const Camera c = cam(v);
-    const Vec3 d = sub(p, c.eye);
-    return {dot(d, c.right), dot(d, c.up)};
-}
-
 void expect_near(const Vec3& a, const Vec3& b, float tol = 1e-4f) {
     for (std::size_t i = 0; i < 3; ++i) {
         EXPECT_NEAR(a[i], b[i], tol) << i;
@@ -87,33 +80,52 @@ TEST(Orbit, PositiveYawMovesEyeRightAndPitchMovesItUp) {
     EXPECT_GT(dot(sub(pitched.eye, front().eye), c.up), 0.0f);
 }
 
-TEST(Orbit, CanGoOverTheTop) {
-    View v = front();
-    for (int i = 0; i < 4; ++i) {
-        v = splatthumb::orbit(v, 0, kPi / 4); // 180 degrees in total
+TEST(Orbit, YawTurnsAboutYAndKeepsThePictureLevel) {
+    View v = splatthumb::orbit(front(), 0, 0.4f); // look from a little above
+    const float height = v.eye[1];
+    for (int i = 0; i < 7; ++i) {
+        v = splatthumb::orbit(v, 0.9f, 0);
+        EXPECT_NEAR(v.eye[1], height, 1e-3f);
+        // Screen right stays horizontal: no tilt builds up.
+        EXPECT_NEAR(cam(v).right[1], 0.0f, 1e-4f);
     }
-    // Now behind and upside down relative to the start.
-    EXPECT_NEAR(v.eye[2], 10.0f, 1e-3f);
-    EXPECT_NEAR(v.up[1], 1.0f, 1e-3f);
 }
 
-TEST(Roll, PositiveTurnsThePictureCounterclockwise) {
-    const Vec3 top = {0, -1, 0}; // world point drawn above the target
-    const auto before = screen(front(), top);
-    EXPECT_GT(before.second, 0.5f);
-    const View rolled = splatthumb::roll(front(), kPi / 2);
-    const auto after = screen(rolled, top);
-    EXPECT_LT(after.first, -0.5f); // moved to the left
-    EXPECT_NEAR(after.second, 0.0f, 1e-4f);
-    expect_near(rolled.eye, front().eye);
+TEST(Orbit, MixedDragsDoNotTiltThePicture) {
+    View v = front();
+    for (int i = 0; i < 200; ++i) {
+        v = splatthumb::orbit(v, 0.37f * static_cast<float>((i % 3) - 1), 0.21f * static_cast<float>((i % 5) - 2));
+        EXPECT_NEAR(cam(v).right[1], 0.0f, 1e-3f) << i;
+    }
 }
 
-TEST(Roll, FourQuarterTurnsReturn) {
+TEST(Orbit, StopsShortOfTheTop) {
     View v = front();
-    for (int i = 0; i < 4; ++i) {
-        v = splatthumb::roll(v, kPi / 2);
+    for (int i = 0; i < 8; ++i) {
+        v = splatthumb::orbit(v, 0, kPi / 4); // asks for 360 degrees in total
     }
-    expect_near(v.up, front().up);
+    const Vec3 d = sub(v.eye, v.target);
+    const float height_deg = std::asin(-d[1] / distance(v)) * 180.0f / kPi;
+    EXPECT_NEAR(height_deg, splatthumb::kOrbitPitchLimitDeg, 1e-2f);
+    EXPECT_LT(v.eye[2], 0.0f); // still on the front side, not flipped over
+    EXPECT_LT(v.up[1], 0.0f);  // still upright
+    // And the same going down.
+    for (int i = 0; i < 8; ++i) {
+        v = splatthumb::orbit(v, 0, -kPi / 4);
+    }
+    const Vec3 d2 = sub(v.eye, v.target);
+    EXPECT_NEAR(std::asin(-d2[1] / distance(v)) * 180.0f / kPi, -splatthumb::kOrbitPitchLimitDeg,
+                1e-2f);
+}
+
+TEST(Orbit, UpsideDownViewStillFollowsTheMouse) {
+    View v = front();
+    v.up = {0, 1, 0};
+    const Camera c = cam(v);
+    const View yawed = splatthumb::orbit(v, 0.3f, 0);
+    EXPECT_GT(dot(sub(yawed.eye, v.eye), c.right), 0.0f);
+    const View pitched = splatthumb::orbit(v, 0, 0.3f);
+    EXPECT_GT(dot(sub(pitched.eye, v.eye), c.up), 0.0f);
 }
 
 TEST(Zoom, ScalesDistanceAndRadius) {
@@ -143,7 +155,6 @@ TEST(OrbitAll, BrokenViewsAreReturnedUnchanged) {
     View broken = front();
     broken.eye = broken.target;
     EXPECT_EQ(splatthumb::orbit(broken, 0.1f, 0.1f), broken);
-    EXPECT_EQ(splatthumb::roll(broken, 0.1f), broken);
     EXPECT_EQ(splatthumb::pan(broken, 0.1f, 0.1f), broken);
     EXPECT_EQ(splatthumb::pan(front(), 1e30f, 0.0f), front());
 }

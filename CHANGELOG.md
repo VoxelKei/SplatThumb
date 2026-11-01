@@ -3,6 +3,20 @@
 All notable changes to SplatThumb. Versions follow [Semantic Versioning](https://semver.org/);
 0.x versions are previews.
 
+## Unreleased
+
+- The viewpoint window opens next to the mouse pointer (on the same monitor) instead of at
+  the default spot, and stays inside the screen.
+- Quality can be set per file in the viewpoint window ("Quality of this file"). It is saved
+  with the view (optional `quality` line in the view file); older versions ignore it.
+- The automatic view looks straight from the front (same X as the subject, -Z side) and a
+  little from above, instead of 45° to the side. Saved views are unchanged.
+- Dragging in the viewpoint window turns the subject like a turntable: left/right turns about
+  the file's Y axis and up/down tilts the camera, so the picture no longer leans. The camera
+  stops just short of straight above or below. Ctrl+drag (tilting the picture) is removed.
+- The settings window opens in the centre of the screen (the monitor with the mouse pointer)
+  instead of near the top-left corner.
+
 ## 0.3.0 - 2026-11-01
 
 - Spatialograph Maker projects (`.spgm`) show the preview image saved in the project (project
