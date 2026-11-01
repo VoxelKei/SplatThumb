@@ -1,6 +1,8 @@
 #include "viewer_window.h"
 
 #include <windows.h>
+#include <commctrl.h>
+#include <objbase.h>
 #include <shellapi.h>
 #include <windowsx.h>
 
@@ -49,6 +51,10 @@ constexpr auto kLoadTime = std::chrono::seconds(60);
 // After wheel or button changes, the full-quality picture follows this much later.
 constexpr UINT kSettleMs = 250;
 constexpr UINT_PTR kSettleTimer = 1;
+// From the thumbnail thread: wParam = sizes made, lParam = total.
+constexpr UINT kSaveStepMessage = WM_APP + 1;
+// From the thumbnail thread when it has finished.
+constexpr UINT kSaveDoneMessage = WM_APP + 2;
 
 // Layout in 96-DPI units.
 constexpr int kMargin = 8;
@@ -72,7 +78,30 @@ enum Control : int {
     kStatus,
     kQualityLabel,
     kQualityCombo,
+    kSaveProgress,
 };
+
+// Remakes the thumbnail off the window's thread, so the progress bar can move.
+struct SaveJob {
+    HWND window = nullptr;
+    std::filesystem::path file;
+};
+
+void post_save_step(void* context, unsigned done, unsigned total) noexcept {
+    PostMessageW(static_cast<HWND>(context), kSaveStepMessage, done, static_cast<LPARAM>(total));
+}
+
+DWORD WINAPI save_thread(void* param) noexcept {
+    auto* job = static_cast<SaveJob*>(param);
+    const HRESULT com = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    refresh_thumbnail(job->file, &post_save_step, job->window);
+    if (SUCCEEDED(com)) {
+        CoUninitialize();
+    }
+    PostMessageW(job->window, kSaveDoneMessage, 0, 0);
+    delete job;
+    return 0;
+}
 
 // Entries of the quality list, in order. The first follows the global setting.
 constexpr std::array<std::optional<Quality>, 4> kQualityChoices = {
@@ -134,6 +163,10 @@ private:
     HWND status_ = nullptr;
     HWND quality_label_ = nullptr;
     HWND quality_combo_ = nullptr;
+    HWND progress_ = nullptr;
+    // While the thumbnail is being remade after "Use this view": input is ignored and the
+    // window closes when it is done.
+    bool saving_ = false;
     std::array<HWND, kButtons.size()> buttons_{};
     HFONT font_ = nullptr;
     UINT dpi_ = 96;
@@ -416,6 +449,12 @@ void Viewer::create_controls() noexcept {
         0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(kQualityCombo)), inst,
         nullptr);
     EnableWindow(quality_combo_, FALSE);
+    // Shown in place of the status text while the thumbnail is remade.
+    INITCOMMONCONTROLSEX icc{sizeof(icc), ICC_PROGRESS_CLASS};
+    InitCommonControlsEx(&icc);
+    progress_ = CreateWindowExW(0, PROGRESS_CLASSW, L"", WS_CHILD | PBS_SMOOTH, 0, 0, 10, 10,
+                                hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(kSaveProgress)),
+                                inst, nullptr);
     update_font();
     layout();
 }
@@ -460,6 +499,13 @@ void Viewer::layout() noexcept {
     const int status_top = quality_top - scaled(kMargin) - scaled(kStatusHeight);
     MoveWindow(status_, scaled(kMargin), status_top, rc.right - 2 * scaled(kMargin),
                scaled(kStatusHeight), TRUE);
+    {
+        // A slim bar in the middle of the status line.
+        const int w = std::min(scaled(320), static_cast<int>(rc.right) - 2 * scaled(kMargin));
+        const int h = scaled(8);
+        MoveWindow(progress_, (rc.right - w) / 2, status_top + (scaled(kStatusHeight) - h) / 2, w,
+                   h, TRUE);
+    }
 
     const HDC dc = GetDC(hwnd_);
     const HGDIOBJ old = SelectObject(dc, font_);
@@ -623,12 +669,37 @@ void Viewer::save() noexcept {
         message(Text::CannotSave, MB_ICONERROR);
         return;
     }
-    const HCURSOR old = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
-    refresh_thumbnail(file_);
-    SetCursor(old);
-    // Done: the thumbnail is remade, so the window closes. (If saving failed it stays open,
-    // with the message above.)
-    DestroyWindow(hwnd_);
+    // Remake the thumbnail on another thread with a progress bar; the window closes when it
+    // is done (kSaveDoneMessage). If the thread cannot start, do it here instead.
+    auto* job = new (std::nothrow) SaveJob{hwnd_, {}};
+    HANDLE thread = nullptr;
+    if (job != nullptr) {
+        try {
+            job->file = file_;
+            thread = CreateThread(nullptr, 0, &save_thread, job, 0, nullptr);
+        } catch (...) {
+        }
+        if (thread == nullptr) {
+            delete job;
+        }
+    }
+    if (thread == nullptr) {
+        const HCURSOR old = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
+        refresh_thumbnail(file_);
+        SetCursor(old);
+        DestroyWindow(hwnd_);
+        return;
+    }
+    CloseHandle(thread);
+    saving_ = true;
+    for (const HWND b : buttons_) {
+        EnableWindow(b, FALSE);
+    }
+    EnableWindow(quality_combo_, FALSE);
+    SendMessageW(progress_, PBM_SETRANGE32, 0, 1);
+    SendMessageW(progress_, PBM_SETPOS, 0, 0);
+    ShowWindow(status_, SW_HIDE);
+    ShowWindow(progress_, SW_SHOW);
 }
 
 void Viewer::reset() noexcept {
@@ -724,7 +795,7 @@ LRESULT Viewer::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
     }
     case WM_LBUTTONDOWN:
     case WM_RBUTTONDOWN: {
-        if (splats_.empty() || dragging_) {
+        if (splats_.empty() || dragging_ || saving_) {
             return 0;
         }
         const POINT pt{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
@@ -778,7 +849,7 @@ LRESULT Viewer::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
         }
         return 0;
     case WM_MOUSEWHEEL: {
-        if (splats_.empty()) {
+        if (splats_.empty() || saving_) {
             return 0;
         }
         const float notches = static_cast<float>(GET_WHEEL_DELTA_WPARAM(wp)) / WHEEL_DELTA;
@@ -793,7 +864,24 @@ LRESULT Viewer::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
             InvalidateRect(hwnd_, nullptr, FALSE);
         }
         return 0;
+    case kSaveStepMessage:
+        SendMessageW(progress_, PBM_SETRANGE32, 0, lp);
+        SendMessageW(progress_, PBM_SETPOS, wp, 0);
+        return 0;
+    case kSaveDoneMessage:
+        saving_ = false;
+        DestroyWindow(hwnd_);
+        return 0;
+    case WM_CLOSE:
+        // The thumbnail thread posts to this window; it closes itself when the thread is done.
+        if (saving_) {
+            return 0;
+        }
+        break;
     case WM_COMMAND:
+        if (saving_) {
+            return 0;
+        }
         switch (LOWORD(wp)) {
         case kAutomatic:
             reset();

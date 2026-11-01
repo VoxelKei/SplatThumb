@@ -5,6 +5,8 @@
 #include <shobjidl.h>
 #include <thumbcache.h>
 
+#include <iterator>
+
 namespace splatthumb::app {
 
 namespace {
@@ -18,7 +20,8 @@ constexpr UINT kSizes[] = {48, 96, 256, 768};
 
 } // namespace
 
-bool refresh_thumbnail(const std::filesystem::path& file) noexcept {
+bool refresh_thumbnail(const std::filesystem::path& file, RefreshStep on_step,
+                       void* context) noexcept {
     bool ok = false;
     IShellItem* item = nullptr;
     IThumbnailCache* cache = nullptr;
@@ -26,6 +29,7 @@ bool refresh_thumbnail(const std::filesystem::path& file) noexcept {
         SUCCEEDED(CoCreateInstance(kLocalThumbnailCache, nullptr, CLSCTX_INPROC_SERVER,
                                    IID_PPV_ARGS(&cache)))) {
         ok = true;
+        unsigned done = 0;
         for (const UINT size : kSizes) {
             ISharedBitmap* bitmap = nullptr;
             const HRESULT hr = cache->GetThumbnail(item, size, WTS_EXTRACT | WTS_FORCEEXTRACTION,
@@ -34,6 +38,9 @@ bool refresh_thumbnail(const std::filesystem::path& file) noexcept {
                 bitmap->Release();
             }
             ok = ok && SUCCEEDED(hr);
+            if (on_step != nullptr) {
+                on_step(context, ++done, static_cast<unsigned>(std::size(kSizes)));
+            }
         }
     }
     if (cache != nullptr) {
