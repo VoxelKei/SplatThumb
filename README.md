@@ -138,6 +138,8 @@ Please report security problems privately; see [SECURITY.md](SECURITY.md).
 
 ## Spatialograph Maker projects (.spgm)
 
+<a href="https://www.spatialograph.app/"><img src="docs/media/spatialograph-maker.jpg" width="400" alt="Spatialograph Maker editing a Gaussian splat scene"></a>
+
 SplatThumb also shows thumbnails for projects of [Spatialograph Maker](https://www.spatialograph.app/), a 3D
 Gaussian Splatting editor by the same author. It does not draw the splats: it shows the preview image that the app
 saves in the project file (project format version 3), as it is. The view and quality settings
