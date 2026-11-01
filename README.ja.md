@@ -1,36 +1,26 @@
-<div align="center">
-
 # SplatThumb
 
-**3D Gaussian Splatting の `.ply` に、Windows エクスプローラーでサムネイルを表示**
+Gaussian Splatting の中身を、開く前にエクスプローラーで。
 
-![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)&nbsp;
-![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011%20x64-blue)&nbsp;
-![Status](https://img.shields.io/badge/status-preview%20(v0.3)-orange)
+[![MIT License](https://img.shields.io/badge/license-MIT-0f766e?style=flat-square)](LICENSE)
+![Windows 10 / 11 x64](https://img.shields.io/badge/Windows_10_%2F_11-x64-0f766e?style=flat-square)
+![Preview v0.3](https://img.shields.io/badge/preview-v0.3-64748b?style=flat-square)
 
-[**ダウンロード**](../../releases) &#8226;
-[**視点を決める**](#視点を決める) &#8226;
-[**安全性**](#安全性) &#8226;
-[**ソースからのビルド**](#ソースからのビルド) &#8226;
-[**English**](README.md)
+[ダウンロード](../../releases) | [視点を決める](#視点を決める) | [安全性](#安全性) |
+[ビルド](#ソースからのビルド) | [English](README.md)
 
 <!-- デモ: エクスプローラーにサムネイルが出る様子(docs/media/ のアニメーション WebP)。 -->
 
-</div>
-
-ファイルを1つずつ開かなくても、エクスプローラーでスプラットの中身がひと目でわかります。
-SplatThumb はファイルのヘッダーを見て、3D Gaussian Splatting のシーンだけを描画します。
-メッシュや点群の PLY には手を出さず、Windows の標準の表示に任せます。
+SplatThumb は、3D Gaussian Splatting の `.ply` ファイルにサムネイルを表示する Windows の拡張機能です。
+ファイルのヘッダーを見てスプラットのシーンだけを描き、メッシュや点群の PLY は Windows の標準の表示に任せます。
 ファイルは読むだけで書き換えず、ネットワーク通信もテレメトリーもありません。
 
-## 特徴
-
-- **エクスプローラーにサムネイル** &ndash; 標準(INRIA 形式)と PlayCanvas / SuperSplat の圧縮 PLY に対応。どのアイコンの大きさでも表示
-- **ファイルごとに視点を決められる** &ndash; 右クリックからターンテーブルのように回して保存。視点はファイルの中身で覚え、ファイル自体には書き込みません
-- **大きなシーンも速い** &ndash; 大きなファイルは間引いて描画(5 万・20 万・40 万個から選択、ファイルごとにも設定可)。Windows の別プロセスで CPU 描画
-- **安全性を重視** &ndash; 厳しい大きさのチェック、ファジング済みの解析と描画、通信なし、管理者権限なし
-- **きれいにアンインストール** &ndash; 書いたものはすべて消し、前のサムネイルハンドラーがあれば元に戻します
-- **Spatialograph Maker のプロジェクト** &ndash; `.spgm` はアプリが保存したプレビュー画像を表示
+- 標準(INRIA 形式)と PlayCanvas / SuperSplat の圧縮 PLY を、どのアイコンの大きさでも表示します。
+- ファイルごとに、ターンテーブルのように回して視点を決められます。視点はファイルの中身をもとにユーザーのフォルダーに保存し、ファイル自体には書き込みません。
+- 大きなシーンは 5 万〜40 万個のスプラットに間引いて素早く描きます。数は全体でもファイルごとでも選べます。
+- どのファイルも信用しない前提で、決まった上限のチェック、ファジング済みの解析と描画、Windows の別プロセスでの実行で守ります。
+- アンインストールすると、前に登録されていたサムネイルハンドラーまで元に戻します。
+- [Spatialograph Maker](https://www.spatialograph.app/) のプロジェクト(`.spgm`)も、アプリが保存したプレビューを表示します。
 
 ## サムネイルが表示されるファイル
 
