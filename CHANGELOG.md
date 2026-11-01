@@ -9,8 +9,8 @@ All notable changes to SplatThumb. Versions follow [Semantic Versioning](https:/
   repository and to Spatialograph Maker. Links open in the browser only when clicked.
 - The splat-count list in the viewpoint window is only as wide as its entries, followed by the
   file's total (for example "/ 2,000,000 in the file"), read from the PLY header.
-- The viewpoint window draws the file's X (red), Y (green) and Z (blue) axes through the
-  origin. They are only a guide; thumbnails do not show them.
+- While you drag in the viewpoint window, the file's X (red), Y (green) and Z (blue) axes are
+  drawn through the origin as a guide. Thumbnails never show them.
 - The viewpoint window opens at the size it had when it was last closed.
 - "Use this view" shows a slim progress bar while the thumbnail is remade (one step per
   thumbnail size), then closes the viewpoint window.
