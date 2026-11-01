@@ -21,8 +21,6 @@ inline constexpr const wchar_t* kHandlerKey =
 // The right-click item: HKCU\Software\Classes\SystemFileAssociations\.ply\shell\<verb>.
 // SystemFileAssociations adds to whatever program opens .ply files instead of replacing it.
 inline constexpr const wchar_t* kAssociationsKey = L"Software\\Classes\\SystemFileAssociations";
-inline constexpr const wchar_t* kAssociationsPlyKey =
-    L"Software\\Classes\\SystemFileAssociations\\.ply";
 inline constexpr const wchar_t* kAssociationsShellKey =
     L"Software\\Classes\\SystemFileAssociations\\.ply\\shell";
 inline constexpr const wchar_t* kVerbKey =
@@ -36,7 +34,6 @@ inline constexpr int kVerbIconId = 1;
 
 // What register_ply saved, for restore_ply. Under the key the MSI removes on uninstall.
 inline constexpr const wchar_t* kStateKey = L"Software\\SplatThumb\\Previous";
-inline constexpr const wchar_t* kSavedHandlerKey = L"Software\\SplatThumb\\Previous\\Handler";
 
 // The user's settings, written by SplatThumb.exe (the same key as kSettingsKey in
 // shellext/user_store.h), and their parent, which the MSI also writes to.
