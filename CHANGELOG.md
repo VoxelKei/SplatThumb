@@ -3,7 +3,7 @@
 All notable changes to SplatThumb. Versions follow [Semantic Versioning](https://semver.org/);
 0.x versions are previews.
 
-## Unreleased
+## 0.4.0 - 2026-11-02
 
 - SplatThumb has its own icon (an orange square with a white splat), shown on its windows, the
   taskbar, the Start menu, Settings > Apps and the .ply right-click item.
