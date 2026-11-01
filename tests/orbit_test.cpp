@@ -43,13 +43,6 @@ float distance(const View& v) {
     return std::sqrt(dot(d, d));
 }
 
-// Screen position of world point p: x to the right, y up.
-std::pair<float, float> screen(const View& v, const Vec3& p) {
-    const Camera c = cam(v);
-    const Vec3 d = sub(p, c.eye);
-    return {dot(d, c.right), dot(d, c.up)};
-}
-
 void expect_near(const Vec3& a, const Vec3& b, float tol = 1e-4f) {
     for (std::size_t i = 0; i < 3; ++i) {
         EXPECT_NEAR(a[i], b[i], tol) << i;
@@ -135,25 +128,6 @@ TEST(Orbit, UpsideDownViewStillFollowsTheMouse) {
     EXPECT_GT(dot(sub(pitched.eye, v.eye), c.up), 0.0f);
 }
 
-TEST(Roll, PositiveTurnsThePictureCounterclockwise) {
-    const Vec3 top = {0, -1, 0}; // world point drawn above the target
-    const auto before = screen(front(), top);
-    EXPECT_GT(before.second, 0.5f);
-    const View rolled = splatthumb::roll(front(), kPi / 2);
-    const auto after = screen(rolled, top);
-    EXPECT_LT(after.first, -0.5f); // moved to the left
-    EXPECT_NEAR(after.second, 0.0f, 1e-4f);
-    expect_near(rolled.eye, front().eye);
-}
-
-TEST(Roll, FourQuarterTurnsReturn) {
-    View v = front();
-    for (int i = 0; i < 4; ++i) {
-        v = splatthumb::roll(v, kPi / 2);
-    }
-    expect_near(v.up, front().up);
-}
-
 TEST(Zoom, ScalesDistanceAndRadius) {
     const View v = splatthumb::zoom(front(), 0.5f);
     EXPECT_NEAR(distance(v), 5.0f, 1e-4f);
@@ -181,7 +155,6 @@ TEST(OrbitAll, BrokenViewsAreReturnedUnchanged) {
     View broken = front();
     broken.eye = broken.target;
     EXPECT_EQ(splatthumb::orbit(broken, 0.1f, 0.1f), broken);
-    EXPECT_EQ(splatthumb::roll(broken, 0.1f), broken);
     EXPECT_EQ(splatthumb::pan(broken, 0.1f, 0.1f), broken);
     EXPECT_EQ(splatthumb::pan(front(), 1e30f, 0.0f), front());
 }

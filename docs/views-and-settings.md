@@ -73,8 +73,8 @@ look. The installer adds it to the right-click menu of `.ply` files as "Set view
 SplatThumb" ("SplatThumb で視点を設定"); on Windows 11 it is under "Show more options".
 
 - Drag to turn the subject like a turntable (left/right about the file's Y axis, up/down to
-  look from higher or lower, stopping 5° short of straight above or below), right-drag (or Shift+drag) to move it, Ctrl+drag to turn the
-  picture (for example to stand up a file stored on its side), and use the wheel to zoom.
+  look from higher or lower, stopping 5° short of straight above or below), right-drag (or
+  Shift+drag) to move it, and use the wheel to zoom. The picture is never tilted.
 - "Quality of this file" chooses the splat limit for this file, or "Same as Settings". Changing
   it reloads the file at that quality; the choice is stored in the view file when saved.
 - "Use this view" saves the view and asks Windows to make the thumbnail again.

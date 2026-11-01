@@ -63,12 +63,11 @@ OK.
 
 ## Choosing the view
 
-Some files are stored on their side, or a scene is framed badly by the automatic view. To pick
-the view for one file, right-click it in Explorer and choose "Set view with SplatThumb" (on
+When the automatic view frames a file badly, you can pick the view for that file. To do so, right-click it in Explorer and choose "Set view with SplatThumb" (on
 Windows 11, it is under "Show more options").
 
-- Drag to turn the subject, right-drag to move it, use the wheel to zoom, and Ctrl+drag to
-  tilt the picture, for example to stand up a file stored on its side.
+- Drag to turn the subject around its vertical (Y) axis or look from higher or lower,
+  right-drag to move it, and use the wheel to zoom.
 - "Quality of this file" picks how many splats this file's thumbnail draws; "Same as
   Settings" follows the global quality.
 - "Use this view" saves the view (and the quality) and updates the thumbnail. "Reset" goes

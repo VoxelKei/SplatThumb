@@ -88,16 +88,6 @@ View orbit(const View& view, float yaw_rad, float pitch_rad) noexcept {
     return checked(out, view);
 }
 
-View roll(const View& view, float angle_rad) noexcept {
-    const CameraResult cam = camera_from_view(view);
-    if (cam.status != Status::Ok) {
-        return view;
-    }
-    View out = view;
-    out.up = rotate(cam.camera.up, cam.camera.forward, angle_rad);
-    return checked(out, view);
-}
-
 View zoom(const View& view, float factor) noexcept {
     if (!std::isfinite(factor) || !(factor > 0.0f)) {
         return view;

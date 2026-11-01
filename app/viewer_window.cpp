@@ -729,8 +729,6 @@ LRESULT Viewer::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
         if (drag_button_ == WM_RBUTTONDOWN || (wp & MK_SHIFT) != 0) {
             // The picture follows the mouse: half the picture height is about one radius.
             next = pan(view_, -dx * 2.2f, -dy * 2.2f);
-        } else if ((wp & MK_CONTROL) != 0) {
-            next = roll(view_, -dx * kPi);
         } else {
             // The subject turns with the mouse, as if grabbed.
             next = orbit(view_, -dx * kPi, dy * kPi);

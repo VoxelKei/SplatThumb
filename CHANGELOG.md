@@ -13,7 +13,7 @@ All notable changes to SplatThumb. Versions follow [Semantic Versioning](https:/
   little from above, instead of 45° to the side. Saved views are unchanged.
 - Dragging in the viewpoint window turns the subject like a turntable: left/right turns about
   the file's Y axis and up/down tilts the camera, so the picture no longer leans. The camera
-  stops just short of straight above or below.
+  stops just short of straight above or below. Ctrl+drag (tilting the picture) is removed.
 - The settings window opens in the centre of the screen (the monitor with the mouse pointer)
   instead of near the top-left corner.
 
