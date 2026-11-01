@@ -30,6 +30,7 @@
 #include "splatthumb/settings.h"
 #include "splatthumb/view.h"
 #include "splatthumb/view_store.h"
+#include "app_icon.h"
 #include "settings_window.h"
 #include "strings.h"
 #include "thumbnail_refresh.h"
@@ -252,7 +253,8 @@ bool Viewer::create_window(int show) noexcept {
     wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
     wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
     wc.lpszClassName = kClassName;
-    wc.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
+    wc.hIcon = app_icon(GetSystemMetrics(SM_CXICON));
+    wc.hIconSm = app_icon(GetSystemMetrics(SM_CXSMICON));
     RegisterClassExW(&wc);
 
     std::wstring title = text(Text::ViewerTitle);

@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 
+#include "app_icon.h"
 #include "ply_search.h"
 #include "splatthumb/settings.h"
 #include "splatthumb/version.h"
@@ -166,7 +167,8 @@ int SettingsWindow::run(int show) noexcept {
     wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
     wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
     wc.lpszClassName = kSettingsWindowClass;
-    wc.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
+    wc.hIcon = app_icon(GetSystemMetrics(SM_CXICON));
+    wc.hIconSm = app_icon(GetSystemMetrics(SM_CXSMICON));
     RegisterClassExW(&wc);
 
     // Create the window on the monitor under the mouse pointer (so the DPI read below is

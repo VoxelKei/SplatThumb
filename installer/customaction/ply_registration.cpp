@@ -134,7 +134,7 @@ LONG record_verb_parents(HKEY root, HKEY state, const Paths& p) noexcept {
 
 // The right-click item. MUIVerb names a string in the program, so Windows shows it in the
 // user's display language; the default value is the English text for anything that does
-// not read MUIVerb.
+// not read MUIVerb. Icon is the program's own icon. Uninstall deletes the whole verb key.
 LONG write_verb(HKEY root, const Paths& p, const wchar_t* exe) noexcept {
     try {
         const std::wstring path(exe);
@@ -142,6 +142,9 @@ LONG write_verb(HKEY root, const Paths& p, const wchar_t* exe) noexcept {
                                  L"@" + path + L",-" + std::to_wstring(kVerbTextId));
         if (status == ERROR_SUCCESS) {
             status = set_string(root, p.verb, nullptr, L"Set SplatThumb view");
+        }
+        if (status == ERROR_SUCCESS) {
+            status = set_string(root, p.verb, L"Icon", path + L",-" + std::to_wstring(kVerbIconId));
         }
         if (status == ERROR_SUCCESS) {
             status = set_string(root, p.verb_command, nullptr, L"\"" + path + L"\" --view \"%1\"");

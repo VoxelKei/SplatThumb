@@ -4,3 +4,4 @@
 *.ply binary
 fuzz/corpus*/** binary
 *.webp binary
+*.ico binary
