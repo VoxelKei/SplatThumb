@@ -727,14 +727,16 @@ void Viewer::draw_axes(HDC dc, int x0, int y0, int side) const noexcept {
         };
         return Vec3{dot(d, c.right), dot(d, c.up), dot(d, c.forward)};
     };
-    const auto to_screen = [&](const Vec3& q) {
-        const float half = static_cast<float>(side) * 0.5f;
-        // Far outside points are clamped so the GDI coordinates stay in range.
-        const float u = std::clamp(half + focal * q[0] / q[2], -1e5f, 1e5f);
-        const float v = std::clamp(half - focal * q[1] / q[2], -1e5f, 1e5f);
-        return POINT{x0 + static_cast<LONG>(std::lround(u)), y0 + static_cast<LONG>(std::lround(v))};
+    // Picture coordinates of a camera-space point in front of the camera. Kept in double: a
+    // point near the camera plane lands far off the picture, and is clipped below.
+    const auto to_picture = [&](const Vec3& q, double& u, double& v) {
+        const double half = static_cast<double>(side) * 0.5;
+        u = half + static_cast<double>(focal) * q[0] / q[2];
+        v = half - static_cast<double>(focal) * q[1] / q[2];
     };
-    // Draws a to b, cut at the near plane. Returns false if nothing is in front.
+    // Draws a to b: cut at the near plane, projected, then clipped as a 2D line to a band
+    // around the picture (Liang-Barsky) so the line keeps its direction when an end is far
+    // off screen. Returns false if nothing is left.
     const auto segment = [&](const Vec3& a_world, const Vec3& b_world, POINT& pa, POINT& pb) {
         Vec3 a = to_camera(a_world);
         Vec3 b = to_camera(b_world);
@@ -752,8 +754,39 @@ void Viewer::draw_axes(HDC dc, int x0, int y0, int side) const noexcept {
         } else if (b[2] < near_z) {
             cut(b, a);
         }
-        pa = to_screen(a);
-        pb = to_screen(b);
+        double u0 = 0, v0 = 0, u1 = 0, v1 = 0;
+        to_picture(a, u0, v0);
+        to_picture(b, u1, v1);
+        if (!std::isfinite(u0) || !std::isfinite(v0) || !std::isfinite(u1) || !std::isfinite(v1)) {
+            return false;
+        }
+        const double lo = -static_cast<double>(side);
+        const double hi = 2.0 * static_cast<double>(side);
+        const double du = u1 - u0;
+        const double dv = v1 - v0;
+        double t0 = 0.0, t1 = 1.0;
+        const auto clip = [&](double p, double q) {
+            if (p == 0.0) {
+                return q >= 0.0;
+            }
+            const double r = q / p;
+            if (p < 0.0) {
+                if (r > t1) return false;
+                t0 = std::max(t0, r);
+            } else {
+                if (r < t0) return false;
+                t1 = std::min(t1, r);
+            }
+            return true;
+        };
+        if (!clip(-du, u0 - lo) || !clip(du, hi - u0) || !clip(-dv, v0 - lo) ||
+            !clip(dv, hi - v0)) {
+            return false;
+        }
+        pa = POINT{x0 + static_cast<LONG>(std::lround(u0 + t0 * du)),
+                   y0 + static_cast<LONG>(std::lround(v0 + t0 * dv))};
+        pb = POINT{x0 + static_cast<LONG>(std::lround(u0 + t1 * du)),
+                   y0 + static_cast<LONG>(std::lround(v0 + t1 * dv))};
         return true;
     };
 
@@ -793,8 +826,13 @@ void Viewer::draw_axes(HDC dc, int x0, int y0, int side) const noexcept {
             DeleteObject(pen);
         }
         const Vec3 tip = to_camera(pos);
+        double tu = 0, tv = 0;
         if (tip[2] >= near_z) {
-            const POINT p = to_screen(tip);
+            to_picture(tip, tu, tv);
+        }
+        if (tip[2] >= near_z && tu > -side && tu < 2.0 * side && tv > -side && tv < 2.0 * side) {
+            const POINT p{x0 + static_cast<LONG>(std::lround(tu)),
+                          y0 + static_cast<LONG>(std::lround(tv))};
             SetTextColor(dc, axis.bright);
             TextOutW(dc, p.x + scaled(4), p.y - scaled(8), axis.label, 1);
         }
