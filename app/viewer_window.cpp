@@ -147,6 +147,7 @@ private:
     void set_view(const View& v, bool settle) noexcept;
     void render_if_needed(int side) noexcept;
     void paint() noexcept;
+    void draw_axes(HDC dc, int x0, int y0, int side) const noexcept;
     void set_status(const std::wstring& s) noexcept;
     void save() noexcept;
     void reset() noexcept;
@@ -653,6 +654,7 @@ void Viewer::paint() noexcept {
         SetBrushOrgEx(dc, 0, 0, nullptr);
         StretchDIBits(dc, x0, y0, side, side, 0, 0, image_size_, image_size_, bgra_.data(),
                       &info, DIB_RGB_COLORS, SRCCOPY);
+        draw_axes(dc, x0, y0, side);
     } else if (side > 0) {
         const HBRUSH bg = CreateSolidBrush(RGB(46, 46, 46));
         r = {x0, y0, x0 + side, y0 + side};
@@ -660,6 +662,104 @@ void Viewer::paint() noexcept {
         DeleteObject(bg);
     }
     EndPaint(hwnd_, &ps);
+}
+
+// Draws the file's X, Y and Z axes through the origin over the picture: X red, Y green,
+// Z blue, the negative halves dimmer, with a label at each positive end. Only this window
+// shows them; thumbnails never do. The projection matches render_splats.
+void Viewer::draw_axes(HDC dc, int x0, int y0, int side) const noexcept {
+    const CameraResult cam = camera_from_view(view_);
+    if (cam.status != Status::Ok || side <= 0) {
+        return;
+    }
+    const Camera& c = cam.camera;
+    const float focal = static_cast<float>(side) * 0.5f / std::tan(c.fov_y * 0.5f);
+    const float near_z = std::max(c.radius * 0.01f, 1e-6f);
+    const float length = auto_view_.radius; // about the size of the subject
+    if (!std::isfinite(focal) || !(length > 0.0f)) {
+        return;
+    }
+    // Camera-space point: x right, y up, z forward.
+    const auto to_camera = [&](const Vec3& p) {
+        const Vec3 d{p[0] - c.eye[0], p[1] - c.eye[1], p[2] - c.eye[2]};
+        const auto dot = [](const Vec3& a, const Vec3& b) {
+            return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+        };
+        return Vec3{dot(d, c.right), dot(d, c.up), dot(d, c.forward)};
+    };
+    const auto to_screen = [&](const Vec3& q) {
+        const float half = static_cast<float>(side) * 0.5f;
+        // Far outside points are clamped so the GDI coordinates stay in range.
+        const float u = std::clamp(half + focal * q[0] / q[2], -1e5f, 1e5f);
+        const float v = std::clamp(half - focal * q[1] / q[2], -1e5f, 1e5f);
+        return POINT{x0 + static_cast<LONG>(std::lround(u)), y0 + static_cast<LONG>(std::lround(v))};
+    };
+    // Draws a to b, cut at the near plane. Returns false if nothing is in front.
+    const auto segment = [&](const Vec3& a_world, const Vec3& b_world, POINT& pa, POINT& pb) {
+        Vec3 a = to_camera(a_world);
+        Vec3 b = to_camera(b_world);
+        if (a[2] < near_z && b[2] < near_z) {
+            return false;
+        }
+        const auto cut = [&](Vec3& behind, const Vec3& front) {
+            const float t = (near_z - behind[2]) / (front[2] - behind[2]);
+            for (std::size_t i = 0; i < 3; ++i) {
+                behind[i] += (front[i] - behind[i]) * t;
+            }
+        };
+        if (a[2] < near_z) {
+            cut(a, b);
+        } else if (b[2] < near_z) {
+            cut(b, a);
+        }
+        pa = to_screen(a);
+        pb = to_screen(b);
+        return true;
+    };
+
+    struct Axis {
+        Vec3 dir;
+        COLORREF bright;
+        COLORREF dim;
+        const wchar_t* label;
+    };
+    const Axis axes[] = {
+        {{1, 0, 0}, RGB(235, 70, 70), RGB(120, 45, 45), L"X"},
+        {{0, 1, 0}, RGB(80, 210, 80), RGB(45, 105, 45), L"Y"},
+        {{0, 0, 1}, RGB(80, 140, 255), RGB(45, 70, 130), L"Z"},
+    };
+    const int saved = SaveDC(dc);
+    IntersectClipRect(dc, x0, y0, x0 + side, y0 + side);
+    SetBkMode(dc, TRANSPARENT);
+    SelectObject(dc, font_);
+    const int width = std::max(1, scaled(2));
+    for (const Axis& axis : axes) {
+        const Vec3 pos{axis.dir[0] * length, axis.dir[1] * length, axis.dir[2] * length};
+        const Vec3 neg{-pos[0], -pos[1], -pos[2]};
+        const Vec3 origin{0, 0, 0};
+        for (const bool positive : {false, true}) {
+            POINT a{}, b{};
+            if (!segment(origin, positive ? pos : neg, a, b)) {
+                continue;
+            }
+            const HPEN pen = CreatePen(PS_SOLID, width, positive ? axis.bright : axis.dim);
+            if (pen == nullptr) {
+                continue;
+            }
+            const HGDIOBJ old = SelectObject(dc, pen);
+            MoveToEx(dc, a.x, a.y, nullptr);
+            LineTo(dc, b.x, b.y);
+            SelectObject(dc, old);
+            DeleteObject(pen);
+        }
+        const Vec3 tip = to_camera(pos);
+        if (tip[2] >= near_z) {
+            const POINT p = to_screen(tip);
+            SetTextColor(dc, axis.bright);
+            TextOutW(dc, p.x + scaled(4), p.y - scaled(8), axis.label, 1);
+        }
+    }
+    RestoreDC(dc, saved);
 }
 
 void Viewer::save() noexcept {

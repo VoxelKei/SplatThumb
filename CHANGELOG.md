@@ -5,6 +5,8 @@ All notable changes to SplatThumb. Versions follow [Semantic Versioning](https:/
 
 ## Unreleased
 
+- The viewpoint window draws the file's X (red), Y (green) and Z (blue) axes through the
+  origin. They are only a guide; thumbnails do not show them.
 - The viewpoint window opens at the size it had when it was last closed.
 - "Use this view" shows a slim progress bar while the thumbnail is remade (one step per
   thumbnail size), then closes the viewpoint window.

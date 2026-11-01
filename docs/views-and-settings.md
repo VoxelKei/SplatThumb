@@ -83,6 +83,9 @@ SplatThumb" ("SplatThumb で視点を設定"); on Windows 11 it is under "Show m
   "Reset" deletes the saved view (so also the file's quality) and does the same. "Settings..." opens the settings window
   (or brings an open one to the front).
 
+The file's X (red), Y (green) and Z (blue) axes are drawn through the origin as a guide, each
+about as long as the subject, the negative halves dimmer. They are not part of the thumbnail.
+
 The window loads the file with the same limits and checks as the thumbnail handler. While
 dragging it draws at most 30,000 splats at low resolution, then redraws at full quality.
 
