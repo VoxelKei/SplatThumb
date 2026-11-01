@@ -1,10 +1,10 @@
 #pragma once
 
-// The .ply part of the registration, done by the MSI's custom actions instead of its
-// Registry table: the thumbnail handler and the "set the view" right-click item. Windows
-// Installer deletes every key it leaves empty, up through the parents, so it would remove a
-// .ply key that existed (empty) before install. These functions record what was there and
-// put exactly that back.
+// The per-extension part of the registration (.ply and the other extensions in
+// kExtensions), done by the MSI's custom actions instead of its Registry table: the
+// thumbnail handler and the "set the view" right-click item. Windows Installer deletes every
+// key it leaves empty, up through the parents, so it would remove a .ply key that existed
+// (empty) before install. These functions record what was there and put exactly that back.
 //
 // All paths are relative to `root`, which is HKEY_CURRENT_USER in the installer and a
 // scratch key in the tests. Nothing here throws.
@@ -43,20 +43,55 @@ inline constexpr const wchar_t* kUserSettingsKey = L"Software\\SplatThumb\\Setti
 
 inline constexpr const wchar_t* kClsid = L"{09C68D16-D21F-4B95-97A1-29B45AEBF4CC}";
 
+// A file extension SplatThumb registers its thumbnail handler for. Every path above that
+// names .ply has the same shape for the other extensions, with the extension in place of
+// .ply; the state of each extension is saved under its own key.
+struct Extension {
+    const wchar_t* name;      // ".ply"
+    const wchar_t* state_key; // where register_extension saves what was there, relative to root
+    bool view_item;           // also add the "set the view" right-click item
+};
+
+// .ply keeps the state key of v0.1 and v0.2, so an upgrade restores what they saved.
+inline constexpr Extension kPlyExtension{L".ply", kStateKey, true};
+
+// Every extension the installer registers, in order. Restoring goes in reverse order.
+inline constexpr Extension kExtensions[] = {kPlyExtension};
+
+// Saves the current registration of `ext` and points its thumbnail handler at SplatThumb,
+// as register_ply below describes for .ply. The right-click item is added only when
+// ext.view_item is set and `exe` is given.
+LONG register_extension(HKEY root, const Extension& ext, const wchar_t* exe = nullptr) noexcept;
+
+// Puts back what register_extension saved for `ext`, as restore_ply below describes.
+LONG restore_extension(HKEY root, const Extension& ext) noexcept;
+
+// register_extension for every entry of kExtensions. Stops at the first error and returns it.
+LONG register_all(HKEY root, const wchar_t* exe) noexcept;
+
+// restore_extension for every entry of kExtensions, in reverse order. Goes on after an
+// error, so one broken extension does not keep the others registered, and returns the first
+// error.
+LONG restore_all(HKEY root) noexcept;
+
 // Saves the current .ply registration (whether .ply, .ply\ShellEx and the right-click
 // item's parent keys exist, and a full copy of the handler key if there is one), then points
 // the handler at SplatThumb. If `exe` is given (the full path of SplatThumb.exe), also adds
 // the right-click item that runs `"<exe>" --view "%1"`. If a saved state already exists
 // (repair, or a second run), keeps it and only makes sure the handler and the item are
 // set. Returns ERROR_SUCCESS or a Win32 error.
-LONG register_ply(HKEY root, const wchar_t* exe = nullptr) noexcept;
+inline LONG register_ply(HKEY root, const wchar_t* exe = nullptr) noexcept {
+    return register_extension(root, kPlyExtension, exe);
+}
 
 // Puts back what register_ply saved and deletes the saved state. Does nothing if there is
 // no saved state. Removes the right-click item. If the handler no longer points at
 // SplatThumb (another application took it over), leaves the handler alone. Keys that did
 // not exist before are removed only if they are empty. Returns ERROR_SUCCESS or a Win32
 // error.
-LONG restore_ply(HKEY root) noexcept;
+inline LONG restore_ply(HKEY root) noexcept {
+    return restore_extension(root, kPlyExtension);
+}
 
 // Deletes the user's settings, then Software\SplatThumb if nothing else is left in it.
 // Run only after a completed uninstall, not when an upgrade removes the older version.

@@ -63,15 +63,15 @@ extern "C" UINT __stdcall RegisterPly(MSIHANDLE install) noexcept {
         log_status(install, L"no path for SplatThumb.exe in CustomActionData", ERROR_INVALID_DATA);
         return ERROR_INSTALL_FAILURE;
     }
-    const LONG status = register_ply(HKEY_CURRENT_USER, exe.c_str());
-    log_status(install, L"register .ply thumbnail handler", status);
+    const LONG status = register_all(HKEY_CURRENT_USER, exe.c_str());
+    log_status(install, L"register thumbnail handler", status);
     notify_shell();
     return status == ERROR_SUCCESS ? ERROR_SUCCESS : ERROR_INSTALL_FAILURE;
 }
 
 extern "C" UINT __stdcall RestorePly(MSIHANDLE install) noexcept {
-    const LONG status = restore_ply(HKEY_CURRENT_USER);
-    log_status(install, L"restore previous .ply thumbnail handler", status);
+    const LONG status = restore_all(HKEY_CURRENT_USER);
+    log_status(install, L"restore previous thumbnail handlers", status);
     notify_shell();
     return status == ERROR_SUCCESS ? ERROR_SUCCESS : ERROR_INSTALL_FAILURE;
 }
