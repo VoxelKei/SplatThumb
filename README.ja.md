@@ -97,6 +97,8 @@ Windows は、一度作ったサムネイルをキャッシュに保存してい
 
 ## Spatialograph Maker のプロジェクト(.spgm)
 
+<a href="https://www.spatialograph.app/"><img src="docs/media/spatialograph-maker.jpg" width="400" alt="Spatialograph Maker で Gaussian Splatting のシーンを編集している画面"></a>
+
 SplatThumb は、同じ作者による 3D Gaussian Splatting の編集アプリ [Spatialograph Maker](https://www.spatialograph.app/) のプロジェクトにもサムネイルを表示します。スプラットは描かず、アプリがプロジェクトに保存したプレビュー画像(プロジェクト形式の版 3)をそのまま表示します。視点と splats 数の設定は効きません。古い版で保存したプロジェクトにはプレビュー画像がないため、通常のアイコンのままです。
 
 ## ソースからのビルド
