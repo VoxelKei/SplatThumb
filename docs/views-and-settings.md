@@ -105,6 +105,10 @@ window. It shows in Japanese or English, following the Windows display language.
   so searching is the only way to find them. This runs in the background and can be stopped;
   closing the window stops it after the current file.
 
+At the bottom the window shows the version, copyright and license, and links to the GitHub
+repository and to Spatialograph Maker. A link opens the browser only when clicked, and only
+one of those two fixed addresses; SplatThumb itself never connects to the network.
+
 ## Settings
 
 Settings are DWORD values under `HKCU\Software\SplatThumb\Settings`. Missing or

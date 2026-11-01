@@ -40,6 +40,7 @@ enum class Text {
     NothingToRemake,
     QualityFollowSettings,
     TotalSplats,
+    AppLinkNote,
     QualityChanged,
 };
 

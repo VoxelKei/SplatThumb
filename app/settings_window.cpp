@@ -2,6 +2,7 @@
 
 #include <windows.h>
 #include <commctrl.h>
+#include <shellapi.h>
 #include <shobjidl.h>
 
 #include <algorithm>
@@ -15,6 +16,7 @@
 
 #include "ply_search.h"
 #include "splatthumb/settings.h"
+#include "splatthumb/version.h"
 #include "strings.h"
 #include "thumbnail_refresh.h"
 #include "user_store.h"
@@ -47,7 +49,16 @@ enum Control : int {
     kProgress,
     kClose,
     kQualityLabel,
+    kAboutRule,
+    kAbout,
+    kRepoLink,
+    kAppLink,
 };
+
+// The only pages the links may open. Clicking is the only time anything is opened; the app
+// never connects to the network itself.
+constexpr wchar_t kRepoUrl[] = L"https://github.com/VoxelKei/SplatThumb";
+constexpr wchar_t kAppUrl[] = L"https://www.spatialograph.app/";
 
 // Work for the remake thread. Owned by the window; the thread only reads it, except for the
 // stop flag.
@@ -207,6 +218,27 @@ void SettingsWindow::create_controls() noexcept {
     EnableWindow(stop, FALSE);
     add(L"STATIC", text(Text::RemakeAllNote), SS_LEFT, kRemakeNote);
     add(L"STATIC", L"", SS_LEFT | SS_NOPREFIX, kProgress);
+    add(L"STATIC", L"", SS_ETCHEDHORZ, kAboutRule);
+    try {
+        // "SplatThumb 0.3.0 · © 2026 VoxelKei · MIT License"
+        const std::string_view v = version();
+        std::wstring about = L"SplatThumb ";
+        about.append(v.begin(), v.end());
+        about += L"  \u00B7  \u00A9 2026 VoxelKei  \u00B7  MIT License";
+        add(L"STATIC", about.c_str(), SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE, kAbout);
+        INITCOMMONCONTROLSEX icc{sizeof(icc), ICC_LINK_CLASS};
+        InitCommonControlsEx(&icc);
+        std::wstring repo = L"GitHub: <a href=\"";
+        repo += kRepoUrl;
+        repo += L"\">github.com/VoxelKei/SplatThumb</a>";
+        add(WC_LINK, repo.c_str(), WS_TABSTOP, kRepoLink);
+        std::wstring app = L"<a href=\"";
+        app += kAppUrl;
+        app += L"\">Spatialograph Maker</a>";
+        app += text(Text::AppLinkNote);
+        add(WC_LINK, app.c_str(), WS_TABSTOP, kAppLink);
+    } catch (...) {
+    }
     add(L"BUTTON", text(Text::Close), WS_TABSTOP | BS_PUSHBUTTON, kClose);
     update_font();
     layout();
@@ -276,6 +308,14 @@ void SettingsWindow::layout() noexcept {
     y += row * 2;
     place(kProgress, m, y, inner, row);
     y += row + gap * 2;
+    place(kAboutRule, m, y, inner, 2);
+    y += gap;
+    place(kAbout, m, y, inner, row);
+    y += row;
+    place(kRepoLink, m, y, inner, row);
+    y += row;
+    place(kAppLink, m, y, inner, row);
+    y += row + gap;
     const int close_w = std::max(button_width(kClose), scaled(90));
     place(kClose, m + inner - close_w, y, close_w, row + scaled(4));
     y += row + scaled(4) + m;
@@ -403,6 +443,17 @@ LRESULT SettingsWindow::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
         update_font();
         layout();
         return 0;
+    }
+    case WM_NOTIFY: {
+        const auto* hdr = reinterpret_cast<const NMHDR*>(lp);
+        if ((hdr->idFrom == kRepoLink || hdr->idFrom == kAppLink) &&
+            (hdr->code == NM_CLICK || hdr->code == NM_RETURN)) {
+            // Open only one of the two fixed pages, whatever the control reports.
+            const wchar_t* url = hdr->idFrom == kRepoLink ? kRepoUrl : kAppUrl;
+            ShellExecuteW(hwnd_, L"open", url, nullptr, nullptr, SW_SHOWNORMAL);
+            return 0;
+        }
+        break;
     }
     case WM_COMMAND:
         switch (LOWORD(wp)) {
