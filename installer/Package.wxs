@@ -77,7 +77,9 @@
          custom action saves what is there (to HKCU\Software\SplatThumb\Previous), points the
          handler at SplatThumb and adds the item, and another puts back exactly what was
          saved. Each has a rollback twin that undoes it if the install or uninstall fails later. Both also tell the shell
-         that file associations changed. See customaction/ply_registration.h. -->
+         that file associations changed. The same is done for every extension in kExtensions
+         (customaction/ply_registration.h), each with its own saved state; the names say
+         "Ply" because .ply came first. -->
     <Binary Id="CustomActions" SourceFile="$(var.CustomActionDll)" />
     <CustomAction Id="RegisterPly" BinaryRef="CustomActions" DllEntry="RegisterPly"
                   Execute="deferred" Impersonate="yes" Return="check" />

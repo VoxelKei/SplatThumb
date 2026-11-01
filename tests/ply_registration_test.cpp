@@ -2,6 +2,8 @@
 
 #include <windows.h>
 
+#include <cstddef>
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -14,7 +16,7 @@ using namespace splatthumb::installer;
 // A fresh key under HKCU\Software\SplatThumbTests that stands in for HKEY_CURRENT_USER,
 // deleted again after each test.
 class PlyRegistrationTest : public ::testing::Test {
-protected:
+  protected:
     void SetUp() override {
         path_ = L"Software\\SplatThumbTests\\" + std::to_wstring(GetCurrentProcessId()) + L"-" +
                 std::to_wstring(GetTickCount64());
@@ -33,9 +35,9 @@ protected:
 
     HKEY create(const wchar_t* path) {
         HKEY key = nullptr;
-        EXPECT_EQ(RegCreateKeyExW(root_, path, 0, nullptr, 0, KEY_ALL_ACCESS, nullptr, &key,
-                                  nullptr),
-                  ERROR_SUCCESS);
+        EXPECT_EQ(
+            RegCreateKeyExW(root_, path, 0, nullptr, 0, KEY_ALL_ACCESS, nullptr, &key, nullptr),
+            ERROR_SUCCESS);
         return key;
     }
 
@@ -73,7 +75,9 @@ protected:
     }
 
     // Everything under root, as text: key paths, value names, types and bytes.
-    std::wstring dump() const { return dump_key(root_, L""); }
+    std::wstring dump() const {
+        return dump_key(root_, L"");
+    }
 
     static std::wstring dump_key(HKEY key, const std::wstring& path) {
         std::wstring out = L"[" + path + L"]\n";
@@ -202,7 +206,8 @@ TEST_F(PlyRegistrationTest, InterruptedStateIsDiscarded) {
     EXPECT_TRUE(exists(kPlyKey)); // it existed before this register
 }
 
-constexpr const wchar_t* kExe = L"C:\\Users\\Test User\\AppData\\Local\\Programs\\SplatThumb\\SplatThumb.exe";
+constexpr const wchar_t* kExe =
+    L"C:\\Users\\Test User\\AppData\\Local\\Programs\\SplatThumb\\SplatThumb.exe";
 
 TEST_F(PlyRegistrationTest, AddsAndRemovesTheRightClickItem) {
     RegCloseKey(create(L"Software\\Classes")); // always there in a real HKEY_CURRENT_USER
@@ -227,8 +232,8 @@ TEST_F(PlyRegistrationTest, AddsAndRemovesTheRightClickItem) {
 }
 
 TEST_F(PlyRegistrationTest, KeepsOtherRightClickItemsAndEmptyParents) {
-    set_string(L"Software\\Classes\\SystemFileAssociations\\.ply\\shell\\Other\\command",
-               nullptr, L"other.exe \"%1\"");
+    set_string(L"Software\\Classes\\SystemFileAssociations\\.ply\\shell\\Other\\command", nullptr,
+               L"other.exe \"%1\"");
     RegCloseKey(create(L"Software\\Classes\\SystemFileAssociations\\.jpg"));
     const std::wstring before = dump();
     ASSERT_EQ(register_ply(root_, kExe), ERROR_SUCCESS);
@@ -281,6 +286,80 @@ TEST_F(PlyRegistrationTest, RemovesUserSettingsAndTheEmptyParent) {
     ASSERT_EQ(remove_user_settings(root_), ERROR_SUCCESS);
     EXPECT_FALSE(exists(kUserSettingsKey));
     EXPECT_TRUE(exists(kUserKey)); // not empty, so left for its owner
+}
+
+// A second extension, registered without the right-click item, with its own saved state.
+constexpr Extension kOther{L".spgmtest", L"Software\\SplatThumb\\Previous.spgmtest", false};
+constexpr const wchar_t* kOtherHandlerKey =
+    L"Software\\Classes\\.spgmtest\\ShellEx\\{e357fccd-a995-4576-b01f-234630154e96}";
+
+TEST_F(PlyRegistrationTest, SecondExtensionGetsTheHandlerButNoRightClickItem) {
+    RegCloseKey(create(L"Software\\Classes"));
+    const std::wstring before = dump();
+    ASSERT_EQ(register_ply(root_, kExe), ERROR_SUCCESS);
+    ASSERT_EQ(register_extension(root_, kOther, kExe), ERROR_SUCCESS);
+
+    wchar_t value[128] = {};
+    DWORD size = sizeof value - sizeof(wchar_t);
+    ASSERT_EQ(RegGetValueW(root_, kOtherHandlerKey, nullptr, RRF_RT_REG_SZ, nullptr, value, &size),
+              ERROR_SUCCESS);
+    EXPECT_EQ(std::wstring(value), kClsid);
+    EXPECT_FALSE(exists(L"Software\\Classes\\SystemFileAssociations\\.spgmtest"));
+    EXPECT_TRUE(exists(kVerbKey));
+
+    ASSERT_EQ(restore_extension(root_, kOther), ERROR_SUCCESS);
+    EXPECT_FALSE(exists(L"Software\\Classes\\.spgmtest"));
+    EXPECT_EQ(handler(), kClsid); // .ply is untouched
+    ASSERT_EQ(restore_ply(root_), ERROR_SUCCESS);
+    RegDeleteKeyW(root_, L"Software\\SplatThumb");
+    EXPECT_EQ(dump(), before);
+}
+
+TEST_F(PlyRegistrationTest, EachExtensionRestoresItsOwnHandlerInAnyOrder) {
+    set_string(kHandlerKey, nullptr, L"{11111111-2222-3333-4444-555555555555}");
+    set_string(kOtherHandlerKey, nullptr, L"{AAAAAAAA-2222-3333-4444-555555555555}");
+    set_raw(kOtherHandlerKey, L"Number", REG_DWORD, {7, 0, 0, 0});
+    set_string(L"Software\\Classes\\.spgmtest", nullptr, L"SomeApp.Project");
+    const std::wstring before = dump();
+
+    ASSERT_EQ(register_extension(root_, kOther), ERROR_SUCCESS);
+    ASSERT_EQ(register_ply(root_), ERROR_SUCCESS);
+    ASSERT_EQ(restore_ply(root_), ERROR_SUCCESS); // .ply first this time
+    ASSERT_EQ(restore_extension(root_, kOther), ERROR_SUCCESS);
+    RegDeleteKeyW(root_, L"Software\\SplatThumb");
+    EXPECT_EQ(dump(), before);
+}
+
+TEST_F(PlyRegistrationTest, RegisterAllAndRestoreAllRoundTrip) {
+    RegCloseKey(create(L"Software\\Classes"));
+    set_string(kHandlerKey, nullptr, L"{11111111-2222-3333-4444-555555555555}");
+    const std::wstring before = dump();
+    ASSERT_EQ(register_all(root_, kExe), ERROR_SUCCESS);
+    for (const Extension& ext : kExtensions) {
+        const std::wstring key = std::wstring(L"Software\\Classes\\") + ext.name +
+                                 L"\\ShellEx\\{e357fccd-a995-4576-b01f-234630154e96}";
+        wchar_t value[128] = {};
+        DWORD size = sizeof value - sizeof(wchar_t);
+        ASSERT_EQ(RegGetValueW(root_, key.c_str(), nullptr, RRF_RT_REG_SZ, nullptr, value, &size),
+                  ERROR_SUCCESS);
+        EXPECT_EQ(std::wstring(value), kClsid) << ext.name;
+    }
+    ASSERT_EQ(register_all(root_, kExe), ERROR_SUCCESS); // repair
+    ASSERT_EQ(restore_all(root_), ERROR_SUCCESS);
+    RegDeleteKeyW(root_, L"Software\\SplatThumb");
+    EXPECT_EQ(dump(), before);
+}
+
+TEST(PlyRegistration, ExtensionListStartsWithPlyAndUsesDistinctStateKeys) {
+    ASSERT_GE(std::size(kExtensions), 1u);
+    EXPECT_STREQ(kExtensions[0].name, L".ply");
+    EXPECT_STREQ(kExtensions[0].state_key, kStateKey);
+    for (std::size_t i = 0; i < std::size(kExtensions); ++i) {
+        for (std::size_t j = i + 1; j < std::size(kExtensions); ++j) {
+            EXPECT_STRNE(kExtensions[i].name, kExtensions[j].name);
+            EXPECT_STRNE(kExtensions[i].state_key, kExtensions[j].state_key);
+        }
+    }
 }
 
 } // namespace

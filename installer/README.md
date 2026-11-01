@@ -37,7 +37,9 @@ the parents, so on its own it would also remove a `.ply` key that existed before
 custom action saves what was there, including another application's thumbnail handler,
 and on uninstall puts exactly that back. If another application has taken over the handler
 since, it is left alone. Both steps undo themselves if the install or uninstall fails, and
-both tell Windows that file associations changed.
+both tell Windows that file associations changed. The custom action works through a list of
+extensions (`kExtensions` in `customaction/ply_registration.h`, only `.ply` for now), and
+saves the state of each one under its own key.
 
 Uninstalling also deletes what `SplatThumb.exe` saved for the user: the settings
 (`HKEY_CURRENT_USER\Software\SplatThumb\Settings`) and the saved views
