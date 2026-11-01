@@ -109,6 +109,7 @@ out-of-range values use the default.
 | --- | --- | --- |
 | `Enabled` | 0 = off (Windows shows its usual icon), anything else = on | on |
 | `Quality` | Splats drawn at most: 0 = 50,000, 1 = 200,000, 2 = 400,000 | 1 |
+| `ViewerWidth`, `ViewerHeight` | Size of the viewpoint window when it was last resized and closed, in pixels at 100% scaling (480 x 420 up to 16384) | 760 x 820 |
 
 The background is always dark gray, so a thumbnail looks the same in light and dark Explorer
 themes. (A transparent background was tried during v0.2 and dropped.)

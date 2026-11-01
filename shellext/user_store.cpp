@@ -58,4 +58,27 @@ bool write_settings(const Settings& settings) noexcept {
     return ok;
 }
 
+std::optional<WindowSize> read_viewer_size(WindowSize min, WindowSize max) noexcept {
+    const auto w = read_dword(kViewerWidthValue);
+    const auto h = read_dword(kViewerHeightValue);
+    if (!w || !h) {
+        return std::nullopt;
+    }
+    // Compare as unsigned before converting, so huge stored values cannot wrap.
+    if (*w < static_cast<std::uint32_t>(min.width) || *w > static_cast<std::uint32_t>(max.width) ||
+        *h < static_cast<std::uint32_t>(min.height) || *h > static_cast<std::uint32_t>(max.height)) {
+        return std::nullopt;
+    }
+    return WindowSize{static_cast<int>(*w), static_cast<int>(*h)};
+}
+
+bool write_viewer_size(WindowSize size) noexcept {
+    if (size.width <= 0 || size.height <= 0) {
+        return false;
+    }
+    bool ok = write_dword(kViewerWidthValue, static_cast<std::uint32_t>(size.width));
+    ok = write_dword(kViewerHeightValue, static_cast<std::uint32_t>(size.height)) && ok;
+    return ok;
+}
+
 } // namespace splatthumb::shellext

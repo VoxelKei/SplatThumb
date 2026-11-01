@@ -8,6 +8,7 @@
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <cstddef>
 #include <cstdint>
 #include <new>
@@ -58,6 +59,10 @@ constexpr int kQualityRowHeight = 26;
 constexpr int kQualityComboWidth = 300;
 constexpr int kInitialWidth = 760;
 constexpr int kInitialHeight = 820;
+constexpr int kMinWidth = 480;
+constexpr int kMinHeight = 420;
+// A saved size larger than this is ignored as damaged.
+constexpr int kMaxSavedSize = 16384;
 
 enum Control : int {
     kAutomatic = 100,
@@ -141,6 +146,8 @@ private:
     // This file's own quality, as chosen in the window; nullopt follows the global setting.
     // view_.quality is kept empty; the choice is added only when saving.
     std::optional<Quality> quality_;
+    // Window size at opening, in 96-DPI pixels; saved on close only if it changed.
+    shellext::WindowSize opened_size_{};
 
     // Mouse dragging.
     bool dragging_ = false;
@@ -227,9 +234,12 @@ bool Viewer::create_window(int show) noexcept {
     if (hwnd_ == nullptr) {
         return false;
     }
-    // Resize for the monitor's DPI now that it is known.
+    // Resize for the monitor's DPI now that it is known, to the size it had when last closed.
     dpi_ = GetDpiForWindow(hwnd_);
-    SetWindowPos(hwnd_, nullptr, 0, 0, scaled(kInitialWidth), scaled(kInitialHeight),
+    opened_size_ = shellext::read_viewer_size({kMinWidth, kMinHeight},
+                                              {kMaxSavedSize, kMaxSavedSize})
+                       .value_or(shellext::WindowSize{kInitialWidth, kInitialHeight});
+    SetWindowPos(hwnd_, nullptr, 0, 0, scaled(opened_size_.width), scaled(opened_size_.height),
                  SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
     if (have_cursor) {
         place_near_cursor(hwnd_, cursor);
@@ -681,7 +691,7 @@ LRESULT Viewer::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
         return 0;
     case WM_GETMINMAXINFO: {
         auto* info = reinterpret_cast<MINMAXINFO*>(lp);
-        info->ptMinTrackSize = {scaled(480), scaled(420)};
+        info->ptMinTrackSize = {scaled(kMinWidth), scaled(kMinHeight)};
         return 0;
     }
     case WM_DPICHANGED: {
@@ -792,13 +802,28 @@ LRESULT Viewer::handle(UINT msg, WPARAM wp, LPARAM lp) noexcept {
             break;
         }
         break;
-    case WM_DESTROY:
+    case WM_DESTROY: {
+        // Remember the size for next time. The normal (not maximized or minimized) size is
+        // used, converted to 96-DPI pixels so it fits a monitor with another scale.
+        WINDOWPLACEMENT placement{};
+        placement.length = sizeof(placement);
+        if (GetWindowPlacement(hwnd_, &placement) && dpi_ > 0) {
+            const RECT& r = placement.rcNormalPosition;
+            const shellext::WindowSize size{MulDiv(r.right - r.left, 96, static_cast<int>(dpi_)),
+                                            MulDiv(r.bottom - r.top, 96, static_cast<int>(dpi_))};
+            // Rounding can move a size by a pixel; only a real change is written.
+            if (std::abs(size.width - opened_size_.width) > 1 ||
+                std::abs(size.height - opened_size_.height) > 1) {
+                shellext::write_viewer_size(size);
+            }
+        }
         if (font_ != nullptr) {
             DeleteObject(font_);
             font_ = nullptr;
         }
         PostQuitMessage(0);
         return 0;
+    }
     default:
         break;
     }
