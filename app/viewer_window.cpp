@@ -87,9 +87,11 @@ Text quality_text(Quality q) noexcept {
     return Text::QualityStandard;
 }
 
+// Left to right (and in tab order).
 constexpr std::array kButtons = {
     std::pair{kAutomatic, Text::Automatic},
-    std::pair{kSave, Text::Save},             std::pair{kSettings, Text::OpenSettings},
+    std::pair{kSettings, Text::OpenSettings},
+    std::pair{kSave, Text::Save},
     std::pair{kClose, Text::Close},
 };
 
@@ -402,7 +404,7 @@ void Viewer::create_controls() noexcept {
     }
     EnableWindow(GetDlgItem(hwnd_, kSettings), TRUE);
     EnableWindow(GetDlgItem(hwnd_, kClose), TRUE);
-    status_ = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOPREFIX,
+    status_ = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_CENTER | SS_NOPREFIX,
                               0, 0, 10, 10, hwnd_,
                               reinterpret_cast<HMENU>(static_cast<INT_PTR>(kStatus)), inst, nullptr);
     quality_label_ = CreateWindowExW(
@@ -461,24 +463,34 @@ void Viewer::layout() noexcept {
 
     const HDC dc = GetDC(hwnd_);
     const HGDIOBJ old = SelectObject(dc, font_);
+    const auto text_width = [&](const wchar_t* s) {
+        SIZE size{};
+        GetTextExtentPoint32W(dc, s, static_cast<int>(wcslen(s)), &size);
+        return static_cast<int>(size.cx);
+    };
+    // Each row is centred in the window; if it is wider than the window it starts at the margin.
+    const auto row_left = [&](int row_width) {
+        return std::max(scaled(kMargin), static_cast<int>(rc.right - row_width) / 2);
+    };
     {
-        const wchar_t* label = text(Text::QualityLabel);
-        SIZE size{};
-        GetTextExtentPoint32W(dc, label, static_cast<int>(wcslen(label)), &size);
-        MoveWindow(quality_label_, scaled(kMargin), quality_top, size.cx + scaled(4),
-                   scaled(kQualityRowHeight), TRUE);
+        const int label_w = text_width(text(Text::QualityLabel)) + scaled(4);
+        const int combo_w = scaled(kQualityComboWidth);
+        const int x = row_left(label_w + scaled(kMargin) + combo_w);
+        MoveWindow(quality_label_, x, quality_top, label_w, scaled(kQualityRowHeight), TRUE);
         // A drop-down list's height includes its open list.
-        MoveWindow(quality_combo_, scaled(kMargin) + size.cx + scaled(kMargin), quality_top,
-                   scaled(kQualityComboWidth), scaled(kQualityRowHeight) * 8, TRUE);
+        MoveWindow(quality_combo_, x + label_w + scaled(kMargin), quality_top, combo_w,
+                   scaled(kQualityRowHeight) * 8, TRUE);
     }
-    int x = scaled(kMargin);
+    std::array<int, kButtons.size()> widths{};
+    int total = 0;
     for (std::size_t i = 0; i < kButtons.size(); ++i) {
-        const wchar_t* label = text(kButtons[i].second);
-        SIZE size{};
-        GetTextExtentPoint32W(dc, label, static_cast<int>(wcslen(label)), &size);
-        const int width = size.cx + scaled(kButtonPadding);
-        MoveWindow(buttons_[i], x, buttons_top, width, scaled(kButtonHeight), TRUE);
-        x += width + scaled(kMargin) / 2;
+        widths[i] = text_width(text(kButtons[i].second)) + scaled(kButtonPadding);
+        total += widths[i] + (i > 0 ? scaled(kMargin) / 2 : 0);
+    }
+    int x = row_left(total);
+    for (std::size_t i = 0; i < kButtons.size(); ++i) {
+        MoveWindow(buttons_[i], x, buttons_top, widths[i], scaled(kButtonHeight), TRUE);
+        x += widths[i] + scaled(kMargin) / 2;
     }
     SelectObject(dc, old);
     ReleaseDC(hwnd_, dc);
