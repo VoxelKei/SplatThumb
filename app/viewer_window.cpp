@@ -694,7 +694,10 @@ void Viewer::paint() noexcept {
         SetBrushOrgEx(dc, 0, 0, nullptr);
         StretchDIBits(dc, x0, y0, side, side, 0, 0, image_size_, image_size_, bgra_.data(),
                       &info, DIB_RGB_COLORS, SRCCOPY);
-        draw_axes(dc, x0, y0, side);
+        // Axes only while the quick (thinned-out) picture is shown, i.e. while moving.
+        if (shows_preview_) {
+            draw_axes(dc, x0, y0, side);
+        }
     } else if (side > 0) {
         const HBRUSH bg = CreateSolidBrush(RGB(46, 46, 46));
         r = {x0, y0, x0 + side, y0 + side};
