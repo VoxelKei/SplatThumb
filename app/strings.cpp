@@ -59,6 +59,7 @@ constexpr Entry kTexts[] = {
     {L"Stopped.", L"中止しました。"},
     {L"No thumbnails to remake were found.", L"作り直すサムネイルは見つかりませんでした。"},
     {L"Same as Settings ({n})", L"全体の設定に従う({n})"},
+    {L"/ {n} in the file", L"/ 全体 {n} 個"},
     {L"Splat count changed. Click \"Use this view\" to use it for the thumbnail.",
      L"splats数を変えました。「この視点をサムネイルにする」を押すとサムネイルに反映されます。"},
 };

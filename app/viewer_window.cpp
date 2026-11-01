@@ -62,7 +62,7 @@ constexpr int kButtonHeight = 30;
 constexpr int kStatusHeight = 22;
 constexpr int kButtonPadding = 24;
 constexpr int kQualityRowHeight = 26;
-constexpr int kQualityComboWidth = 300;
+constexpr int kQualityComboMinWidth = 120;
 constexpr int kInitialWidth = 760;
 constexpr int kInitialHeight = 820;
 constexpr int kMinWidth = 480;
@@ -164,6 +164,9 @@ private:
     HWND status_ = nullptr;
     HWND quality_label_ = nullptr;
     HWND quality_combo_ = nullptr;
+    HWND total_label_ = nullptr; // "/ N in file", right of the list
+    // Splats in the file, from its header (no extra reading).
+    std::uint64_t total_splats_ = 0;
     HWND progress_ = nullptr;
     // While the thumbnail is being remade after "Use this view": input is ignored and the
     // window closes when it is done.
@@ -297,11 +300,13 @@ std::optional<int> Viewer::load() noexcept {
             message(Text::CannotOpen, MB_ICONERROR);
             return 1;
         }
-        if (inspect(source).kind == SplatKind::NotSplat) {
+        const Classification c = inspect(source);
+        if (c.kind == SplatKind::NotSplat) {
             SetCursor(old_cursor);
             message(Text::NotSplat, MB_ICONINFORMATION);
             return 0;
         }
+        total_splats_ = c.vertex_count;
         fingerprint_ = fingerprint(source);
     }
     // The saved view decides the quality, so it is read before the splats.
@@ -321,6 +326,20 @@ std::optional<int> Viewer::load() noexcept {
     }
     view_ = saved ? *saved : auto_view_;
     fill_quality_combo();
+    try {
+        // Digits grouped by three: "/ 2,000,000 in file".
+        std::wstring digits = std::to_wstring(total_splats_);
+        for (std::size_t i = digits.size(); i > 3; i -= 3) {
+            digits.insert(i - 3, L",");
+        }
+        std::wstring label = text(Text::TotalSplats);
+        if (const auto at = label.find(L"{n}"); at != std::wstring::npos) {
+            label.replace(at, 3, digits);
+        }
+        SetWindowTextW(total_label_, label.c_str());
+    } catch (...) {
+    }
+    layout();
     const BOOL can_save = fingerprint_ && views_root_ ? TRUE : FALSE;
     EnableWindow(GetDlgItem(hwnd_, kSave), can_save);
     EnableWindow(GetDlgItem(hwnd_, kAutomatic), can_save);
@@ -450,6 +469,9 @@ void Viewer::create_controls() noexcept {
         0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(kQualityCombo)), inst,
         nullptr);
     EnableWindow(quality_combo_, FALSE);
+    total_label_ = CreateWindowExW(
+        0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE, 0, 0,
+        10, 10, hwnd_, nullptr, inst, nullptr);
     // Shown in place of the status text while the thumbnail is remade.
     INITCOMMONCONTROLSEX icc{sizeof(icc), ICC_PROGRESS_CLASS};
     InitCommonControlsEx(&icc);
@@ -477,6 +499,7 @@ void Viewer::update_font() noexcept {
     SendMessageW(status_, WM_SETFONT, reinterpret_cast<WPARAM>(font), FALSE);
     SendMessageW(quality_label_, WM_SETFONT, reinterpret_cast<WPARAM>(font), FALSE);
     SendMessageW(quality_combo_, WM_SETFONT, reinterpret_cast<WPARAM>(font), FALSE);
+    SendMessageW(total_label_, WM_SETFONT, reinterpret_cast<WPARAM>(font), FALSE);
     if (font_ != nullptr) {
         DeleteObject(font_);
     }
@@ -521,12 +544,29 @@ void Viewer::layout() noexcept {
     };
     {
         const int label_w = text_width(text(Text::QualityLabel)) + scaled(4);
-        const int combo_w = scaled(kQualityComboWidth);
-        const int x = row_left(label_w + scaled(kMargin) + combo_w);
+        // The list is as wide as its longest entry plus the drop-down arrow.
+        int combo_w = scaled(kQualityComboMinWidth);
+        const auto count = SendMessageW(quality_combo_, CB_GETCOUNT, 0, 0);
+        for (LRESULT i = 0; i < count; ++i) {
+            wchar_t item[128] = {};
+            const auto len = SendMessageW(quality_combo_, CB_GETLBTEXTLEN, static_cast<WPARAM>(i), 0);
+            if (len > 0 && len < static_cast<LRESULT>(std::size(item))) {
+                SendMessageW(quality_combo_, CB_GETLBTEXT, static_cast<WPARAM>(i),
+                             reinterpret_cast<LPARAM>(item));
+                combo_w = std::max(combo_w, text_width(item) + GetSystemMetricsForDpi(SM_CXVSCROLL, dpi_) + scaled(16));
+            }
+        }
+        wchar_t total[64] = {};
+        GetWindowTextW(total_label_, total, static_cast<int>(std::size(total)));
+        const int total_w = total[0] != L'\0' ? text_width(total) + scaled(4) : 0;
+        const int gap = scaled(kMargin);
+        const int x = row_left(label_w + gap + combo_w + (total_w > 0 ? gap + total_w : 0));
         MoveWindow(quality_label_, x, quality_top, label_w, scaled(kQualityRowHeight), TRUE);
         // A drop-down list's height includes its open list.
-        MoveWindow(quality_combo_, x + label_w + scaled(kMargin), quality_top, combo_w,
+        MoveWindow(quality_combo_, x + label_w + gap, quality_top, combo_w,
                    scaled(kQualityRowHeight) * 8, TRUE);
+        MoveWindow(total_label_, x + label_w + gap + combo_w + gap, quality_top, total_w,
+                   scaled(kQualityRowHeight), TRUE);
     }
     std::array<int, kButtons.size()> widths{};
     int total = 0;

@@ -39,6 +39,7 @@ enum class Text {
     Stopped,
     NothingToRemake,
     QualityFollowSettings,
+    TotalSplats,
     QualityChanged,
 };
 

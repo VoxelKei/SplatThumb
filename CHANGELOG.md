@@ -5,6 +5,8 @@ All notable changes to SplatThumb. Versions follow [Semantic Versioning](https:/
 
 ## Unreleased
 
+- The splat-count list in the viewpoint window is only as wide as its entries, followed by the
+  file's total (for example "/ 2,000,000 in the file"), read from the PLY header.
 - The viewpoint window draws the file's X (red), Y (green) and Z (blue) axes through the
   origin. They are only a guide; thumbnails do not show them.
 - The viewpoint window opens at the size it had when it was last closed.
