@@ -1,4 +1,4 @@
-# SplatThumb
+# <img src="app/icon/splatthumb.svg" width="40" height="40" alt=""> SplatThumb
 
 See your Gaussian splats in Explorer before you open them.
 

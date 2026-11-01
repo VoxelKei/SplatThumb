@@ -1,4 +1,4 @@
-# SplatThumb
+# <img src="app/icon/splatthumb.svg" width="40" height="40" alt=""> SplatThumb
 
 Gaussian Splatting の中身を、開く前にエクスプローラーで。
 
