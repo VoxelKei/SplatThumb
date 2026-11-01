@@ -1,15 +1,41 @@
+<div align="center">
+
 # SplatThumb
 
-[日本語](README.ja.md)
+**Windows Explorer thumbnails for 3D Gaussian Splatting `.ply` files**
 
-Windows Explorer thumbnails for 3D Gaussian Splatting `.ply` files.
+![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)&nbsp;
+![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011%20x64-blue)&nbsp;
+![Status](https://img.shields.io/badge/status-preview%20(v0.3)-orange)
 
-> **Status: early development (v0.3).** Download the installer from the
-> [Releases](../../releases) page, or build it from source (see below).
+[**Download**](../../releases) &#8226;
+[**Choosing the view**](#choosing-the-view) &#8226;
+[**Safety**](#safety) &#8226;
+[**Build from source**](#building-from-source) &#8226;
+[**日本語**](README.ja.md)
 
-SplatThumb only renders PLY files that are 3D Gaussian Splatting scenes, detected from the file
-header. Meshes and point clouds are left to Windows. It reads files and never modifies them, makes
-no network connections, and collects no telemetry.
+<!-- Demo: thumbnails appearing in Explorer (animated WebP in docs/media/). -->
+
+</div>
+
+SplatThumb shows a real preview of your splats in Explorer, so you can find the scan you want at
+a glance instead of opening each file. It only renders PLY files that are 3D Gaussian Splatting
+scenes, detected from the file header; meshes and point clouds are left to Windows. It reads
+files and never modifies them, makes no network connections, and collects no telemetry.
+
+## Features
+
+- **Thumbnails in Explorer** &ndash; Standard (INRIA) and PlayCanvas / SuperSplat compressed PLY,
+  at every icon size
+- **Pick the view per file** &ndash; Right-click a file, turn it like a turntable, and save; the
+  view is remembered by the file's contents, never written into it
+- **Fast on big scenes** &ndash; Large files are sampled (up to 50,000, 200,000 or 400,000 splats,
+  per file if you like) and drawn on the CPU in Windows' separate thumbnail process
+- **Safe by design** &ndash; Strict size checks, fuzz-tested parser and renderer, no network, no
+  administrator rights
+- **Clean uninstall** &ndash; Removes everything it wrote and puts back any previous thumbnail
+  handler
+- **Spatialograph Maker projects** &ndash; `.spgm` files show the preview the app saved
 
 ## Which files get a thumbnail
 
@@ -21,8 +47,8 @@ no network connections, and collects no telemetry.
 | Meshes, point clouds, ASCII or big-endian PLY | No, Windows shows its usual icon |
 | Other splat formats (`.spz`, `.splat`, `.sog`, ...) | No |
 
-Large files are sampled: at most 200,000 splats are drawn (50,000 or 400,000 with the quality
-setting). If a thumbnail cannot be made within 3 seconds, Windows shows its usual icon instead. The detection rules are in
+Large files are sampled: at most 200,000 splats are drawn (50,000 or 400,000 with the "Splats
+used for the thumbnail" setting). If a thumbnail cannot be made within 3 seconds, Windows shows its usual icon instead. The detection rules are in
 [docs/detection.md](docs/detection.md).
 
 ## Safety

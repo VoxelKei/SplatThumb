@@ -1,14 +1,36 @@
+<div align="center">
+
 # SplatThumb
 
-[English](README.md)
+**3D Gaussian Splatting の `.ply` に、Windows エクスプローラーでサムネイルを表示**
 
-3D Gaussian Splatting の `.ply` ファイルに、Windows エクスプローラーでサムネイルを表示するツールです。
+![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)&nbsp;
+![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011%20x64-blue)&nbsp;
+![Status](https://img.shields.io/badge/status-preview%20(v0.3)-orange)
 
-> **現在は開発の初期段階(v0.3)です。** インストーラーは [Releases](../../releases) ページから入手できます。ソースから作ることもできます(下記)。
+[**ダウンロード**](../../releases) &#8226;
+[**視点を決める**](#視点を決める) &#8226;
+[**安全性**](#安全性) &#8226;
+[**ソースからのビルド**](#ソースからのビルド) &#8226;
+[**English**](README.md)
 
+<!-- デモ: エクスプローラーにサムネイルが出る様子(docs/media/ のアニメーション WebP)。 -->
+
+</div>
+
+ファイルを1つずつ開かなくても、エクスプローラーでスプラットの中身がひと目でわかります。
 SplatThumb はファイルのヘッダーを見て、3D Gaussian Splatting のシーンだけを描画します。
 メッシュや点群の PLY には手を出さず、Windows の標準の表示に任せます。
 ファイルは読むだけで書き換えず、ネットワーク通信もテレメトリーもありません。
+
+## 特徴
+
+- **エクスプローラーにサムネイル** &ndash; 標準(INRIA 形式)と PlayCanvas / SuperSplat の圧縮 PLY に対応。どのアイコンの大きさでも表示
+- **ファイルごとに視点を決められる** &ndash; 右クリックからターンテーブルのように回して保存。視点はファイルの中身で覚え、ファイル自体には書き込みません
+- **大きなシーンも速い** &ndash; 大きなファイルは間引いて描画(5 万・20 万・40 万個から選択、ファイルごとにも設定可)。Windows の別プロセスで CPU 描画
+- **安全性を重視** &ndash; 厳しい大きさのチェック、ファジング済みの解析と描画、通信なし、管理者権限なし
+- **きれいにアンインストール** &ndash; 書いたものはすべて消し、前のサムネイルハンドラーがあれば元に戻します
+- **Spatialograph Maker のプロジェクト** &ndash; `.spgm` はアプリが保存したプレビュー画像を表示
 
 ## サムネイルが表示されるファイル
 
