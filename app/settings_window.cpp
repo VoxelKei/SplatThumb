@@ -212,12 +212,13 @@ void SettingsWindow::create_controls() noexcept {
         SendMessageW(q, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(text(t)));
     }
     add(L"STATIC", text(Text::SettingsNote), SS_LEFT, kNote);
-    add(L"STATIC", L"", SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX, kSavedStatus);
+    add(L"STATIC", L"", SS_RIGHT | SS_CENTERIMAGE | SS_NOPREFIX, kSavedStatus);
     add(L"BUTTON", text(Text::RemakeAll), WS_TABSTOP | BS_PUSHBUTTON, kRemake);
     const HWND stop = add(L"BUTTON", text(Text::Stop), WS_TABSTOP | BS_PUSHBUTTON, kStop);
     EnableWindow(stop, FALSE);
     add(L"STATIC", text(Text::RemakeAllNote), SS_LEFT, kRemakeNote);
-    add(L"STATIC", L"", SS_LEFT | SS_NOPREFIX, kProgress);
+    add(L"STATIC", L"", SS_LEFTNOWORDWRAP | SS_CENTERIMAGE | SS_ENDELLIPSIS | SS_NOPREFIX,
+        kProgress);
     add(L"STATIC", L"", SS_ETCHEDHORZ, kAboutRule);
     try {
         // "SplatThumb 0.3.0 · © 2026 VoxelKei · MIT License"
@@ -288,26 +289,28 @@ void SettingsWindow::layout() noexcept {
     // The label column fits the quality label's text, at least kLabelWidth.
     const int label = std::max(scaled(kLabelWidth), button_width(kQualityLabel) - scaled(28) + gap);
 
+    // No rows are kept empty for messages: "Settings saved." sits at the right of the first
+    // row, and the remake progress to the right of the Stop button.
     int y = m;
-    place(kEnabled, m, y, inner, row);
+    const int enabled_w = std::min(inner, button_width(kEnabled));
+    place(kEnabled, m, y, enabled_w, row);
+    place(kSavedStatus, m + enabled_w + gap, y, std::max(0, inner - enabled_w - gap), row);
     y += row + gap;
     place(kQualityLabel, m, y, label, row);
     place(kQuality, m + label, y, scaled(kComboWidth), row * 6);
     y += row + gap;
     place(kNote, m, y, inner, row * 2);
-    y += row * 2 + gap;
-    place(kSavedStatus, m, y, inner, row);
-    y += row + gap * 2;
+    y += row * 2 + gap * 2;
 
     const int remake_w = button_width(kRemake);
     const int stop_w = button_width(kStop);
     place(kRemake, m, y, remake_w, row + scaled(4));
     place(kStop, m + remake_w + gap, y, stop_w, row + scaled(4));
+    const int progress_x = m + remake_w + gap + stop_w + gap;
+    place(kProgress, progress_x, y, std::max(0, m + inner - progress_x), row + scaled(4));
     y += row + scaled(4) + gap;
     place(kRemakeNote, m, y, inner, row * 2);
-    y += row * 2;
-    place(kProgress, m, y, inner, row);
-    y += row + gap * 2;
+    y += row * 2 + gap * 2;
     place(kAboutRule, m, y, inner, 2);
     y += gap;
     place(kAbout, m, y, inner, row);
