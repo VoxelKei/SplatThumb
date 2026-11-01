@@ -9,7 +9,7 @@ Gaussian Splatting の中身を、開く前にエクスプローラーで。
 [ダウンロード](../../releases) | [視点を決める](#視点を決める) | [安全性](#安全性) |
 [ビルド](#ソースからのビルド) | [English](README.md)
 
-<!-- デモ: エクスプローラーにサムネイルが出る様子(docs/media/ のアニメーション WebP)。 -->
+<img src="docs/media/demo.webp" width="960" alt="エクスプローラーにスプラットのサムネイルが並び、SplatThumb のウインドウで回して視点を決める様子">
 
 SplatThumb は、3D Gaussian Splatting の `.ply` ファイルにサムネイルを表示する Windows の拡張機能です。
 ファイルのヘッダーを見てスプラットのシーンだけを描き、メッシュや点群の PLY は Windows の標準の表示に任せます。

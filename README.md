@@ -9,7 +9,7 @@ See your Gaussian splats in Explorer before you open them.
 [Download](../../releases) | [Choosing the view](#choosing-the-view) | [Safety](#safety) |
 [Build](#building-from-source) | [日本語](README.ja.md)
 
-<!-- Demo: thumbnails appearing in Explorer (animated WebP in docs/media/). -->
+<img src="docs/media/demo.webp" width="960" alt="Splat thumbnails appearing in Explorer, then choosing a file's view by turning it in the SplatThumb window">
 
 SplatThumb is a thumbnail handler for 3D Gaussian Splatting `.ply` files. It recognises splat
 scenes from the file header and leaves meshes and point clouds to Windows. Files are only read,
