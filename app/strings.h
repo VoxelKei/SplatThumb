@@ -39,6 +39,9 @@ enum class Text {
     Remade,
     Stopped,
     NothingToRemake,
+    QualityThisFile,
+    QualityFollowSettings,
+    QualityChanged,
 };
 
 const wchar_t* text(Text id) noexcept;

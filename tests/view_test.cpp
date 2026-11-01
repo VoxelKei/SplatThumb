@@ -52,6 +52,29 @@ TEST(View, FormatThenParseIsExact) {
     EXPECT_EQ(*parsed, v);
 }
 
+TEST(View, QualityRoundTripsAndIsOptional) {
+    EXPECT_FALSE(splatthumb::parse_view(kGood)->quality.has_value());
+    EXPECT_EQ(splatthumb::format_view(sample_view()).find("quality"), std::string::npos);
+    for (const auto q : {splatthumb::Quality::Fast, splatthumb::Quality::Standard,
+                         splatthumb::Quality::High}) {
+        View v = sample_view();
+        v.quality = q;
+        const auto parsed = splatthumb::parse_view(splatthumb::format_view(v));
+        ASSERT_TRUE(parsed.has_value());
+        EXPECT_EQ(*parsed, v);
+    }
+    const auto high = splatthumb::parse_view(kGood + "quality 2\n");
+    ASSERT_TRUE(high.has_value());
+    EXPECT_EQ(high->quality, splatthumb::Quality::High);
+}
+
+TEST(View, UnknownQualityNumberKeepsTheView) {
+    // A later version may add levels; this one keeps the view and uses the global quality.
+    const auto v = splatthumb::parse_view(kGood + "quality 7\n");
+    ASSERT_TRUE(v.has_value());
+    EXPECT_FALSE(v->quality.has_value());
+}
+
 TEST(View, ParsesGoodText) {
     const auto v = splatthumb::parse_view(kGood);
     ASSERT_TRUE(v.has_value());
@@ -96,6 +119,13 @@ TEST(View, RejectsBrokenText) {
     bad(replace("fov 45", "fov 171"));
     bad(replace("radius 2", "radius 0"));
     bad(replace("radius 2", "radius -1"));
+    bad(kGood + "quality\n");                          // quality without a number
+    bad(kGood + "quality x\n");
+    bad(kGood + "quality -1\n");
+    bad(kGood + "quality 1.5\n");
+    bad(kGood + "quality 1 2\n");
+    bad(kGood + "quality 99999999999999999999\n");
+    bad(kGood + "quality 1\nquality 2\n");           // repeated
     bad(kGood + std::string(splatthumb::limits::kMaxViewFileBytes, ' '));
     std::string many = kGood;
     for (int i = 0; i < 40; ++i) {

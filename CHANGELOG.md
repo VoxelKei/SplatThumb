@@ -7,6 +7,8 @@ All notable changes to SplatThumb. Versions follow [Semantic Versioning](https:/
 
 - The viewpoint window opens next to the mouse pointer (on the same monitor) instead of at
   the default spot, and stays inside the screen.
+- Quality can be set per file in the viewpoint window ("Quality of this file"). It is saved
+  with the view (optional `quality` line in the view file); older versions ignore it.
 - The settings window opens in the centre of the screen (the monitor with the mouse pointer)
   instead of near the top-left corner.
 

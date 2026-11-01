@@ -69,8 +69,11 @@ Windows 11, it is under "Show more options").
 
 - Drag to turn the subject, right-drag to move it, use the wheel to zoom, and Ctrl+drag to
   tilt the picture, for example to stand up a file stored on its side.
-- "Use this view" saves the view and updates the thumbnail. "Reset" goes back to the
-  automatic view. "Settings..." opens the settings window described below.
+- "Quality of this file" picks how many splats this file's thumbnail draws; "Same as
+  Settings" follows the global quality.
+- "Use this view" saves the view (and the quality) and updates the thumbnail. "Reset" goes
+  back to the automatic view and the global quality. "Settings..." opens the settings window
+  described below.
 
 The view is remembered by the file's contents, so it stays when you move or rename the file on
 the same PC. It does not travel with a copy to another PC, and it is dropped if the file's
