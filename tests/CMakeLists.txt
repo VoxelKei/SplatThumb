@@ -22,12 +22,14 @@ add_executable(splatthumb_tests
     render_test.cpp
     sha256_test.cpp
     splat_test.cpp
+    spgm_test.cpp
     version_test.cpp
     view_test.cpp)
 target_link_libraries(splatthumb_tests PRIVATE splatthumb_core splatthumb_warnings GTest::gtest_main)
 
 if(WIN32)
     target_sources(splatthumb_tests PRIVATE ply_registration_test.cpp shellext_test.cpp
+        embedded_image_test.cpp
         ply_search_test.cpp ${PROJECT_SOURCE_DIR}/app/ply_search.cpp)
     target_include_directories(splatthumb_tests PRIVATE ${PROJECT_SOURCE_DIR}/app)
     target_link_libraries(splatthumb_tests PRIVATE splatthumb_ca_lib splatthumb_shellext_lib shlwapi)

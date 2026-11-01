@@ -9,3 +9,7 @@ target_link_options(fuzz_splats PRIVATE -fsanitize=fuzzer)
 add_executable(fuzz_view fuzz_view.cpp)
 target_link_libraries(fuzz_view PRIVATE splatthumb_core splatthumb_warnings)
 target_link_options(fuzz_view PRIVATE -fsanitize=fuzzer)
+
+add_executable(fuzz_spgm fuzz_spgm.cpp)
+target_link_libraries(fuzz_spgm PRIVATE splatthumb_core splatthumb_warnings)
+target_link_options(fuzz_spgm PRIVATE -fsanitize=fuzzer)

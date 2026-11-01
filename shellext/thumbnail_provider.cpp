@@ -8,6 +8,7 @@
 #include <system_error>
 
 #include "bitmap.h"
+#include "embedded_image.h"
 #include "module.h"
 #include "splatthumb/deadline.h"
 #include "splatthumb/fingerprint.h"
@@ -15,6 +16,7 @@
 #include "splatthumb/loader.h"
 #include "splatthumb/render.h"
 #include "splatthumb/settings.h"
+#include "splatthumb/spgm.h"
 #include "splatthumb/view_store.h"
 #include "stream_byte_source.h"
 #include "user_store.h"
@@ -108,6 +110,30 @@ IFACEMETHODIMP ThumbnailProvider::GetThumbnail(UINT cx, HBITMAP* bitmap,
     if (!settings.enabled) {
         // Turned off in the settings: Windows shows its own icon.
         return E_FAIL;
+    }
+
+    // A Spatialograph Maker project (.spgm) carries its own preview image; show that and
+    // read nothing else. Projects without one get Windows' own icon.
+    if (const SpgmResult spgm = probe_spgm(source); spgm.probe != SpgmProbe::NotSpgm) {
+        if (spgm.probe != SpgmProbe::Ok) {
+            return E_FAIL;
+        }
+        const auto image = read_spgm_image(source, spgm.image);
+        if (!image) {
+            return E_FAIL;
+        }
+        const UINT side =
+            cx < static_cast<UINT>(limits::kMinThumbnailSize)   ? limits::kMinThumbnailSize
+            : cx > static_cast<UINT>(limits::kMaxThumbnailSize) ? limits::kMaxThumbnailSize
+                                                                : cx;
+        HBITMAP made = nullptr;
+        const HRESULT hr = decode_embedded_image(*image, spgm.image.format, side, &made);
+        if (FAILED(hr)) {
+            return hr == E_OUTOFMEMORY ? E_OUTOFMEMORY : E_FAIL;
+        }
+        *bitmap = made;
+        *alpha = WTSAT_RGB; // laid over the gray background, so opaque
+        return S_OK;
     }
 
     // A saved view is looked up by the file's fingerprint. Without a views folder nothing

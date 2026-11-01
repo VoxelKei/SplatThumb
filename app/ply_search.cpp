@@ -23,8 +23,15 @@ bool equal_ignoring_case(std::wstring_view a, std::wstring_view b) noexcept {
     return true;
 }
 
-bool is_ply_name(std::wstring_view name) noexcept {
-    return name.size() > 4 && equal_ignoring_case(name.substr(name.size() - 4), L".ply");
+bool ends_with(std::wstring_view name, std::wstring_view ext) noexcept {
+    return name.size() > ext.size() &&
+           equal_ignoring_case(name.substr(name.size() - ext.size()), ext);
+}
+
+// The extensions the thumbnail handler is registered for (kExtensions in
+// installer/customaction/ply_registration.h).
+bool is_handled_name(std::wstring_view name) noexcept {
+    return ends_with(name, L".ply") || ends_with(name, L".spgm");
 }
 
 std::wstring without_trailing_slash(std::wstring s) {
@@ -91,7 +98,7 @@ std::vector<std::filesystem::path> find_ply_files(const PlySearch& search) noexc
                     if (!skipped) {
                         subfolders.push_back(std::move(path));
                     }
-                } else if (is_ply_name(name) && found.size() < search.max_files) {
+                } else if (is_handled_name(name) && found.size() < search.max_files) {
                     found.emplace_back(prefix + std::wstring(name));
                 }
             } while (FindNextFileW(h, &data));

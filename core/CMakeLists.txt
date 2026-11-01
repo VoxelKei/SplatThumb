@@ -12,6 +12,7 @@ add_library(splatthumb_core STATIC
     src/settings.cpp
     src/sha256.cpp
     src/splat.cpp
+    src/spgm.cpp
     src/status.cpp
     src/version.cpp
     src/view.cpp

@@ -2,7 +2,8 @@
 
 [日本語](README.ja.md)
 
-Windows Explorer thumbnails for 3D Gaussian Splatting `.ply` files.
+Windows Explorer thumbnails for 3D Gaussian Splatting `.ply` files, and for Spatialograph Maker
+projects (`.spgm`).
 
 > **Status: early development (v0.2).** Download the installer from the
 > [Releases](../../releases) page, or build it from source (see below).
@@ -19,6 +20,8 @@ no network connections, and collects no telemetry.
 | The same with extra properties such as normals or `f_rest_*` | Yes (only the base color is drawn) |
 | PlayCanvas / SuperSplat compressed PLY (`.compressed.ply`) | Yes (only the base color is drawn) |
 | Meshes, point clouds, ASCII or big-endian PLY | No, Windows shows its usual icon |
+| Spatialograph Maker project (`.spgm`) saved with a preview image (project format version 3) | Yes (the preview image saved in the project is shown as it is; the view and quality settings do not apply) |
+| Spatialograph Maker project from an older version, without a preview image | No |
 | Other splat formats (`.spz`, `.splat`, `.sog`, ...) | No |
 
 Large files are sampled: at most 200,000 splats are drawn (50,000 or 400,000 with the quality
@@ -35,7 +38,7 @@ setting). If a thumbnail cannot be made within 3 seconds, Windows shows its usua
 - The handler runs in Windows' separate thumbnail process, not inside Explorer itself.
 - No network access, no telemetry, no administrator rights.
 - Uninstalling removes everything the installer wrote, along with your saved views and settings,
-  and restores the previous `.ply` thumbnail handler, if there was one.
+  and restores the previous `.ply` and `.spgm` thumbnail handlers, if there were any.
 
 Please report security problems privately; see [SECURITY.md](SECURITY.md).
 
@@ -53,7 +56,8 @@ Installing a newer version over an older one keeps your saved views and settings
 
 To uninstall, open Settings > Apps > Installed apps, and choose Uninstall next to SplatThumb.
 Uninstalling removes the files and the registry entries the installer wrote, your saved views
-and settings, and puts back the `.ply` thumbnail handler that was registered before, if any.
+and settings, and puts back the `.ply` and `.spgm` thumbnail handlers that were registered
+before, if any.
 
 Windows keeps thumbnails it has already made in its thumbnail cache, so they can still show
 after uninstalling. To clear the cache, run Disk Cleanup, check only "Thumbnails", and choose
@@ -97,7 +101,7 @@ Use "Remake all existing thumbnails" in the settings, or clear the cache with Di
 ("Thumbnails" only).
 
 **Another app's thumbnail shows instead.** Only one thumbnail handler can be registered for
-`.ply` per user. If another app registered one before SplatThumb was installed, SplatThumb
+`.ply` (or `.spgm`) per user. If another app registered one before SplatThumb was installed, SplatThumb
 replaces it and puts it back when uninstalled. If an app registers its own handler after
 SplatThumb was installed, that app's handler is used instead.
 

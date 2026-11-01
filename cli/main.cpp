@@ -11,6 +11,7 @@
 #include "splatthumb/fingerprint.h"
 #include "splatthumb/limits.h"
 #include "splatthumb/render.h"
+#include "splatthumb/spgm.h"
 #include "splatthumb/version.h"
 #include "splatthumb/view_store.h"
 
@@ -25,7 +26,7 @@ constexpr int kExitRenderFailed = 4;
 
 void print_usage() {
     std::puts("usage: splatthumb-cli --version\n"
-              "       splatthumb-cli info <file.ply>\n"
+              "       splatthumb-cli info <file.ply|file.spgm>\n"
               "       splatthumb-cli fingerprint <file.ply>\n"
               "       splatthumb-cli render <file.ply> <out.png> [--size N]\n"
               "                     [--background gray|transparent]\n"
@@ -64,6 +65,23 @@ int run_info(const std::filesystem::path& path) {
     if (!source.open(path)) {
         std::fputs("error: cannot open file\n", stderr);
         return kExitCannotOpen;
+    }
+    // A Spatialograph Maker project: only its embedded preview image is looked at.
+    if (const splatthumb::SpgmResult spgm = splatthumb::probe_spgm(source);
+        spgm.probe != splatthumb::SpgmProbe::NotSpgm) {
+        print("kind:", "Spatialograph Maker project");
+        if (spgm.probe != splatthumb::SpgmProbe::ReadError) {
+            print("version:", spgm.image.version);
+        }
+        print("file size:", source.size());
+        if (spgm.probe != splatthumb::SpgmProbe::Ok) {
+            print("reason:", splatthumb::to_string(spgm.probe));
+            return kExitNotSplat;
+        }
+        print("image:", spgm.image.format == splatthumb::EmbeddedImageFormat::Png ? "PNG" : "JPEG");
+        print("image size:", spgm.image.size);
+        print("offset:", spgm.image.offset);
+        return kExitSplat;
     }
     const splatthumb::Classification c = splatthumb::inspect(source);
     print("kind:", kind_name(c.kind));
