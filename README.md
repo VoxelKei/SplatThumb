@@ -49,8 +49,6 @@ administrator rights.
    "Run anyway", only if you got the file from this project.
 2. Open a folder with 3D Gaussian Splatting `.ply` files in Explorer and choose large icons.
 
-Installing a newer version over an older one keeps your saved views and settings.
-
 To uninstall, open Settings > Apps > Installed apps (on Windows 10, Settings > Apps > Apps &
 features), and choose Uninstall next to SplatThumb.
 Uninstalling removes the files and the registry entries the installer wrote, your saved views
@@ -60,6 +58,16 @@ before, if any.
 Windows keeps thumbnails it has already made in its thumbnail cache, so they can still show
 after uninstalling. To clear the cache, run Disk Cleanup, check only "Thumbnails", and choose
 OK.
+
+## Update
+
+Run the newer `SplatThumb-<version>-x64.msi` over the installed one. There is no need to
+uninstall first: the new version replaces the old one, and your saved views and settings are
+kept. Close the viewpoint and settings windows before installing.
+
+Thumbnails Windows already made stay as they were until they are made again. To bring a
+folder up to date with the new version, open "SplatThumb" from the Start menu and use "Remake
+all existing thumbnails...".
 
 ## Choosing the view
 
