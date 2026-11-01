@@ -2,8 +2,7 @@
 
 [日本語](README.ja.md)
 
-Windows Explorer thumbnails for 3D Gaussian Splatting `.ply` files, and for Spatialograph Maker
-projects (`.spgm`).
+Windows Explorer thumbnails for 3D Gaussian Splatting `.ply` files.
 
 > **Status: early development (v0.3).** Download the installer from the
 > [Releases](../../releases) page, or build it from source (see below).
@@ -20,8 +19,6 @@ no network connections, and collects no telemetry.
 | The same with extra properties such as normals or `f_rest_*` | Yes (only the base color is drawn) |
 | PlayCanvas / SuperSplat compressed PLY (`.compressed.ply`) | Yes (only the base color is drawn) |
 | Meshes, point clouds, ASCII or big-endian PLY | No, Windows shows its usual icon |
-| Spatialograph Maker project (`.spgm`) saved with a preview image (project format version 3) | Yes (the preview image saved in the project is shown as it is; the view and quality settings do not apply) |
-| Spatialograph Maker project from an older version, without a preview image | No |
 | Other splat formats (`.spz`, `.splat`, `.sog`, ...) | No |
 
 Large files are sampled: at most 200,000 splats are drawn (50,000 or 400,000 with the quality
@@ -38,7 +35,7 @@ setting). If a thumbnail cannot be made within 3 seconds, Windows shows its usua
 - The handler runs in Windows' separate thumbnail process, not inside Explorer itself.
 - No network access, no telemetry, no administrator rights.
 - Uninstalling removes everything the installer wrote, along with your saved views and settings,
-  and restores the previous `.ply` and `.spgm` thumbnail handlers, if there were any.
+  and restores the previous thumbnail handlers, if there were any.
 
 Please report security problems privately; see [SECURITY.md](SECURITY.md).
 
@@ -113,6 +110,13 @@ SplatThumb was installed, that app's handler is used instead.
 (see the table above), or be too slow to draw within 3 seconds. If you think it should work,
 please open an issue (without attaching the file if it is a real-world scan). If you build from
 source, `splatthumb-cli.exe info <file>` shows why.
+
+## Spatialograph Maker projects (.spgm)
+
+SplatThumb also shows thumbnails for projects of Spatialograph Maker, a 3D Gaussian Splatting
+editor by the same author. It does not draw the splats: it shows the preview image that the app
+saves in the project file (project format version 3), as it is. The view and quality settings
+do not apply. Projects saved by older versions have no preview image and keep the usual icon.
 
 ## Building from source
 
