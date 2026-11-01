@@ -257,10 +257,19 @@ TEST_F(EmbeddedImage, RefusesBrokenAndMislabelledData) {
     // A PNG handed to the JPEG decoder.
     EXPECT_TRUE(FAILED(decode_embedded_image(png, EmbeddedImageFormat::Jpeg, 256, &bitmap)));
     EXPECT_EQ(bitmap, nullptr);
-    // Only the first half of the PNG.
+    // Only the first half of the PNG. Windows' decoder fills in the missing rows and Wine's
+    // refuses it; either is fine, as long as a result has the image's full size.
     const std::span<const std::byte> half(png.data(), png.size() / 2);
-    EXPECT_TRUE(FAILED(decode_embedded_image(half, EmbeddedImageFormat::Png, 256, &bitmap)));
-    EXPECT_EQ(bitmap, nullptr);
+    if (SUCCEEDED(decode_embedded_image(half, EmbeddedImageFormat::Png, 256, &bitmap))) {
+        const auto pixels = read_bitmap(bitmap);
+        DeleteObject(bitmap);
+        ASSERT_TRUE(pixels);
+        EXPECT_EQ(pixels->width, 64);
+        EXPECT_EQ(pixels->height, 64);
+    } else {
+        EXPECT_EQ(bitmap, nullptr);
+    }
+    bitmap = nullptr;
     // Noise after the signature.
     std::vector<std::byte> noise(png.begin(), png.begin() + 8);
     for (int i = 0; i < 500; ++i) {
@@ -354,8 +363,11 @@ TEST_F(EmbeddedImage, HandlerClampsTheSize) {
 
 TEST_F(EmbeddedImage, HandlerFailsWithoutAUsableImage) {
     const auto png = encode(64, 64, {0, 0, 255, 255}, EmbeddedImageFormat::Png);
-    std::vector<std::byte> broken = png;
-    broken.resize(broken.size() / 2);
+    // The PNG signature followed by noise.
+    std::vector<std::byte> broken(png.begin(), png.begin() + 8);
+    for (int i = 0; i < 500; ++i) {
+        broken.push_back(static_cast<std::byte>(i * 37 + 11));
+    }
     std::vector<std::byte> cut = make_spgm(3, png);
     cut.resize(20);
     const std::vector<std::vector<std::byte>> files = {
