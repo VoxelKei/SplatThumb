@@ -34,7 +34,7 @@ constexpr Entry kTexts[] = {
     {L"The file could not be read, or it has nothing to draw.",
      L"ファイルを読み込めないか、描くものがありません。"},
     {L"The view could not be saved.", L"視点を保存できませんでした。"},
-    {L"Right-click a .ply file in Explorer and choose \"SplatThumb: set thumbnail view\".",
+    {L"Right-click a .ply file in Explorer and choose \"Set view with SplatThumb\".",
      L"エクスプローラーで .ply ファイルを右クリックし、「SplatThumb で視点を設定」を選んでください。"},
     {L"SplatThumb - Settings", L"SplatThumb - 設定"},
     {L"Show SplatThumb thumbnails", L"SplatThumb のサムネイルを表示する"},
