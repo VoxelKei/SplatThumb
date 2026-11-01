@@ -7,6 +7,8 @@ All notable changes to SplatThumb. Versions follow [Semantic Versioning](https:/
 
 - The viewpoint window opens next to the mouse pointer (on the same monitor) instead of at
   the default spot, and stays inside the screen.
+- The settings window opens in the centre of the screen (the monitor with the mouse pointer)
+  instead of near the top-left corner.
 
 ## 0.3.0 - 2026-11-01
 
