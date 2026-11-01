@@ -83,6 +83,9 @@ SplatThumb" ("SplatThumb で視点を設定"); on Windows 11 it is under "Show m
   "Reset" deletes the saved view (so also the file's quality) and does the same. "Settings..." opens the settings window
   (or brings an open one to the front).
 
+The file's X (red), Y (green) and Z (blue) axes are drawn through the origin as a guide, each
+about as long as the subject, the negative halves dimmer. They are not part of the thumbnail.
+
 The window loads the file with the same limits and checks as the thumbnail handler. While
 dragging it draws at most 30,000 splats at low resolution, then redraws at full quality.
 
@@ -101,6 +104,10 @@ window. It shows in Japanese or English, following the Windows display language.
   `.ply` files or 64 folder levels. Windows keeps no list of the files it has thumbnails for,
   so searching is the only way to find them. This runs in the background and can be stopped;
   closing the window stops it after the current file.
+
+At the bottom the window shows the version, copyright and license, and links to the GitHub
+repository and to Spatialograph Maker. A link opens the browser only when clicked, and only
+one of those two fixed addresses; SplatThumb itself never connects to the network.
 
 ## Settings
 

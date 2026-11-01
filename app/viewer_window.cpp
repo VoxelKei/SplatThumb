@@ -62,7 +62,7 @@ constexpr int kButtonHeight = 30;
 constexpr int kStatusHeight = 22;
 constexpr int kButtonPadding = 24;
 constexpr int kQualityRowHeight = 26;
-constexpr int kQualityComboWidth = 300;
+constexpr int kQualityComboMinWidth = 120;
 constexpr int kInitialWidth = 760;
 constexpr int kInitialHeight = 820;
 constexpr int kMinWidth = 480;
@@ -147,6 +147,7 @@ private:
     void set_view(const View& v, bool settle) noexcept;
     void render_if_needed(int side) noexcept;
     void paint() noexcept;
+    void draw_axes(HDC dc, int x0, int y0, int side) const noexcept;
     void set_status(const std::wstring& s) noexcept;
     void save() noexcept;
     void reset() noexcept;
@@ -163,6 +164,9 @@ private:
     HWND status_ = nullptr;
     HWND quality_label_ = nullptr;
     HWND quality_combo_ = nullptr;
+    HWND total_label_ = nullptr; // "/ N in file", right of the list
+    // Splats in the file, from its header (no extra reading).
+    std::uint64_t total_splats_ = 0;
     HWND progress_ = nullptr;
     // While the thumbnail is being remade after "Use this view": input is ignored and the
     // window closes when it is done.
@@ -296,11 +300,13 @@ std::optional<int> Viewer::load() noexcept {
             message(Text::CannotOpen, MB_ICONERROR);
             return 1;
         }
-        if (inspect(source).kind == SplatKind::NotSplat) {
+        const Classification c = inspect(source);
+        if (c.kind == SplatKind::NotSplat) {
             SetCursor(old_cursor);
             message(Text::NotSplat, MB_ICONINFORMATION);
             return 0;
         }
+        total_splats_ = c.vertex_count;
         fingerprint_ = fingerprint(source);
     }
     // The saved view decides the quality, so it is read before the splats.
@@ -320,6 +326,20 @@ std::optional<int> Viewer::load() noexcept {
     }
     view_ = saved ? *saved : auto_view_;
     fill_quality_combo();
+    try {
+        // Digits grouped by three: "/ 2,000,000 in file".
+        std::wstring digits = std::to_wstring(total_splats_);
+        for (std::size_t i = digits.size(); i > 3; i -= 3) {
+            digits.insert(i - 3, L",");
+        }
+        std::wstring label = text(Text::TotalSplats);
+        if (const auto at = label.find(L"{n}"); at != std::wstring::npos) {
+            label.replace(at, 3, digits);
+        }
+        SetWindowTextW(total_label_, label.c_str());
+    } catch (...) {
+    }
+    layout();
     const BOOL can_save = fingerprint_ && views_root_ ? TRUE : FALSE;
     EnableWindow(GetDlgItem(hwnd_, kSave), can_save);
     EnableWindow(GetDlgItem(hwnd_, kAutomatic), can_save);
@@ -449,6 +469,9 @@ void Viewer::create_controls() noexcept {
         0, 0, 10, 10, hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(kQualityCombo)), inst,
         nullptr);
     EnableWindow(quality_combo_, FALSE);
+    total_label_ = CreateWindowExW(
+        0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE, 0, 0,
+        10, 10, hwnd_, nullptr, inst, nullptr);
     // Shown in place of the status text while the thumbnail is remade.
     INITCOMMONCONTROLSEX icc{sizeof(icc), ICC_PROGRESS_CLASS};
     InitCommonControlsEx(&icc);
@@ -476,6 +499,7 @@ void Viewer::update_font() noexcept {
     SendMessageW(status_, WM_SETFONT, reinterpret_cast<WPARAM>(font), FALSE);
     SendMessageW(quality_label_, WM_SETFONT, reinterpret_cast<WPARAM>(font), FALSE);
     SendMessageW(quality_combo_, WM_SETFONT, reinterpret_cast<WPARAM>(font), FALSE);
+    SendMessageW(total_label_, WM_SETFONT, reinterpret_cast<WPARAM>(font), FALSE);
     if (font_ != nullptr) {
         DeleteObject(font_);
     }
@@ -520,12 +544,29 @@ void Viewer::layout() noexcept {
     };
     {
         const int label_w = text_width(text(Text::QualityLabel)) + scaled(4);
-        const int combo_w = scaled(kQualityComboWidth);
-        const int x = row_left(label_w + scaled(kMargin) + combo_w);
+        // The list is as wide as its longest entry plus the drop-down arrow.
+        int combo_w = scaled(kQualityComboMinWidth);
+        const auto count = SendMessageW(quality_combo_, CB_GETCOUNT, 0, 0);
+        for (LRESULT i = 0; i < count; ++i) {
+            wchar_t item[128] = {};
+            const auto len = SendMessageW(quality_combo_, CB_GETLBTEXTLEN, static_cast<WPARAM>(i), 0);
+            if (len > 0 && len < static_cast<LRESULT>(std::size(item))) {
+                SendMessageW(quality_combo_, CB_GETLBTEXT, static_cast<WPARAM>(i),
+                             reinterpret_cast<LPARAM>(item));
+                combo_w = std::max(combo_w, text_width(item) + GetSystemMetricsForDpi(SM_CXVSCROLL, dpi_) + scaled(16));
+            }
+        }
+        wchar_t total[64] = {};
+        GetWindowTextW(total_label_, total, static_cast<int>(std::size(total)));
+        const int total_w = total[0] != L'\0' ? text_width(total) + scaled(4) : 0;
+        const int gap = scaled(kMargin);
+        const int x = row_left(label_w + gap + combo_w + (total_w > 0 ? gap + total_w : 0));
         MoveWindow(quality_label_, x, quality_top, label_w, scaled(kQualityRowHeight), TRUE);
         // A drop-down list's height includes its open list.
-        MoveWindow(quality_combo_, x + label_w + scaled(kMargin), quality_top, combo_w,
+        MoveWindow(quality_combo_, x + label_w + gap, quality_top, combo_w,
                    scaled(kQualityRowHeight) * 8, TRUE);
+        MoveWindow(total_label_, x + label_w + gap + combo_w + gap, quality_top, total_w,
+                   scaled(kQualityRowHeight), TRUE);
     }
     std::array<int, kButtons.size()> widths{};
     int total = 0;
@@ -653,6 +694,7 @@ void Viewer::paint() noexcept {
         SetBrushOrgEx(dc, 0, 0, nullptr);
         StretchDIBits(dc, x0, y0, side, side, 0, 0, image_size_, image_size_, bgra_.data(),
                       &info, DIB_RGB_COLORS, SRCCOPY);
+        draw_axes(dc, x0, y0, side);
     } else if (side > 0) {
         const HBRUSH bg = CreateSolidBrush(RGB(46, 46, 46));
         r = {x0, y0, x0 + side, y0 + side};
@@ -660,6 +702,104 @@ void Viewer::paint() noexcept {
         DeleteObject(bg);
     }
     EndPaint(hwnd_, &ps);
+}
+
+// Draws the file's X, Y and Z axes through the origin over the picture: X red, Y green,
+// Z blue, the negative halves dimmer, with a label at each positive end. Only this window
+// shows them; thumbnails never do. The projection matches render_splats.
+void Viewer::draw_axes(HDC dc, int x0, int y0, int side) const noexcept {
+    const CameraResult cam = camera_from_view(view_);
+    if (cam.status != Status::Ok || side <= 0) {
+        return;
+    }
+    const Camera& c = cam.camera;
+    const float focal = static_cast<float>(side) * 0.5f / std::tan(c.fov_y * 0.5f);
+    const float near_z = std::max(c.radius * 0.01f, 1e-6f);
+    const float length = auto_view_.radius; // about the size of the subject
+    if (!std::isfinite(focal) || !(length > 0.0f)) {
+        return;
+    }
+    // Camera-space point: x right, y up, z forward.
+    const auto to_camera = [&](const Vec3& p) {
+        const Vec3 d{p[0] - c.eye[0], p[1] - c.eye[1], p[2] - c.eye[2]};
+        const auto dot = [](const Vec3& a, const Vec3& b) {
+            return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+        };
+        return Vec3{dot(d, c.right), dot(d, c.up), dot(d, c.forward)};
+    };
+    const auto to_screen = [&](const Vec3& q) {
+        const float half = static_cast<float>(side) * 0.5f;
+        // Far outside points are clamped so the GDI coordinates stay in range.
+        const float u = std::clamp(half + focal * q[0] / q[2], -1e5f, 1e5f);
+        const float v = std::clamp(half - focal * q[1] / q[2], -1e5f, 1e5f);
+        return POINT{x0 + static_cast<LONG>(std::lround(u)), y0 + static_cast<LONG>(std::lround(v))};
+    };
+    // Draws a to b, cut at the near plane. Returns false if nothing is in front.
+    const auto segment = [&](const Vec3& a_world, const Vec3& b_world, POINT& pa, POINT& pb) {
+        Vec3 a = to_camera(a_world);
+        Vec3 b = to_camera(b_world);
+        if (a[2] < near_z && b[2] < near_z) {
+            return false;
+        }
+        const auto cut = [&](Vec3& behind, const Vec3& front) {
+            const float t = (near_z - behind[2]) / (front[2] - behind[2]);
+            for (std::size_t i = 0; i < 3; ++i) {
+                behind[i] += (front[i] - behind[i]) * t;
+            }
+        };
+        if (a[2] < near_z) {
+            cut(a, b);
+        } else if (b[2] < near_z) {
+            cut(b, a);
+        }
+        pa = to_screen(a);
+        pb = to_screen(b);
+        return true;
+    };
+
+    struct Axis {
+        Vec3 dir;
+        COLORREF bright;
+        COLORREF dim;
+        const wchar_t* label;
+    };
+    const Axis axes[] = {
+        {{1, 0, 0}, RGB(235, 70, 70), RGB(120, 45, 45), L"X"},
+        {{0, 1, 0}, RGB(80, 210, 80), RGB(45, 105, 45), L"Y"},
+        {{0, 0, 1}, RGB(80, 140, 255), RGB(45, 70, 130), L"Z"},
+    };
+    const int saved = SaveDC(dc);
+    IntersectClipRect(dc, x0, y0, x0 + side, y0 + side);
+    SetBkMode(dc, TRANSPARENT);
+    SelectObject(dc, font_);
+    const int width = std::max(1, scaled(2));
+    for (const Axis& axis : axes) {
+        const Vec3 pos{axis.dir[0] * length, axis.dir[1] * length, axis.dir[2] * length};
+        const Vec3 neg{-pos[0], -pos[1], -pos[2]};
+        const Vec3 origin{0, 0, 0};
+        for (const bool positive : {false, true}) {
+            POINT a{}, b{};
+            if (!segment(origin, positive ? pos : neg, a, b)) {
+                continue;
+            }
+            const HPEN pen = CreatePen(PS_SOLID, width, positive ? axis.bright : axis.dim);
+            if (pen == nullptr) {
+                continue;
+            }
+            const HGDIOBJ old = SelectObject(dc, pen);
+            MoveToEx(dc, a.x, a.y, nullptr);
+            LineTo(dc, b.x, b.y);
+            SelectObject(dc, old);
+            DeleteObject(pen);
+        }
+        const Vec3 tip = to_camera(pos);
+        if (tip[2] >= near_z) {
+            const POINT p = to_screen(tip);
+            SetTextColor(dc, axis.bright);
+            TextOutW(dc, p.x + scaled(4), p.y - scaled(8), axis.label, 1);
+        }
+    }
+    RestoreDC(dc, saved);
 }
 
 void Viewer::save() noexcept {
