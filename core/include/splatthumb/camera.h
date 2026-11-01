@@ -32,7 +32,7 @@ struct CameraResult {
 
 // View settings for the automatic camera.
 struct AutoCameraOptions {
-    float azimuth_deg = 45.0f;
+    float azimuth_deg = 0.0f; // straight in front (eye on the -Z side, x = target x)
     float elevation_deg = 20.0f;
     float fov_y_deg = 45.0f;
     // Positions outside these percentiles (per axis) are ignored as floaters.
