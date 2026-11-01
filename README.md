@@ -68,7 +68,7 @@ Windows 11, it is under "Show more options").
 
 - Drag to turn the subject around its vertical (Y) axis or look from higher or lower,
   right-drag to move it, and use the wheel to zoom.
-- "Quality of this file" picks how many splats this file's thumbnail draws; "Same as
+- "Splats used for the thumbnail" picks how many splats this file's thumbnail draws; "Same as
   Settings" follows the global quality.
 - "Use this view" saves the view (and the quality) and updates the thumbnail. "Reset" goes
   back to the automatic view and the global quality. "Settings..." opens the settings window

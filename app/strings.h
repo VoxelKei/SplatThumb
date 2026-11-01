@@ -41,6 +41,9 @@ enum class Text {
     NothingToRemake,
     QualityThisFile,
     QualityFollowSettings,
+    SplatsFast,
+    SplatsStandard,
+    SplatsHigh,
     QualityChanged,
 };
 

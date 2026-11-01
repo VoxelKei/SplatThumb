@@ -59,10 +59,13 @@ constexpr Entry kTexts[] = {
     {L"Remade the thumbnails of {n} files.", L"{n} 個のファイルのサムネイルを作り直しました。"},
     {L"Stopped.", L"中止しました。"},
     {L"No thumbnails to remake were found.", L"作り直すサムネイルは見つかりませんでした。"},
-    {L"Quality of this file", L"このファイルの品質"},
-    {L"Same as Settings: ", L"全体の設定に従う: "},
-    {L"Quality changed. Click \"Use this view\" to use it for the thumbnail.",
-     L"品質を変えました。「この視点をサムネイルにする」を押すとサムネイルに反映されます。"},
+    {L"Splats used for the thumbnail", L"サムネイルに使用するsplats数"},
+    {L"Same as Settings ({n})", L"全体の設定に従う({n})"},
+    {L"Up to 50,000", L"最大 5 万個"},
+    {L"Up to 200,000", L"最大 20 万個"},
+    {L"Up to 400,000", L"最大 40 万個"},
+    {L"Splat count changed. Click \"Use this view\" to use it for the thumbnail.",
+     L"splats数を変えました。「この視点をサムネイルにする」を押すとサムネイルに反映されます。"},
 };
 
 static_assert(std::size(kTexts) == static_cast<std::size_t>(Text::QualityChanged) + 1);

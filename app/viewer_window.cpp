@@ -80,11 +80,11 @@ constexpr std::array<std::optional<Quality>, 4> kQualityChoices = {
 
 Text quality_text(Quality q) noexcept {
     switch (q) {
-    case Quality::Fast: return Text::QualityFast;
-    case Quality::Standard: return Text::QualityStandard;
-    case Quality::High: return Text::QualityHigh;
+    case Quality::Fast: return Text::SplatsFast;
+    case Quality::Standard: return Text::SplatsStandard;
+    case Quality::High: return Text::SplatsHigh;
     }
-    return Text::QualityStandard;
+    return Text::SplatsStandard;
 }
 
 constexpr std::array kButtons = {
@@ -341,8 +341,12 @@ void Viewer::fill_quality_combo() noexcept {
             if (choice) {
                 label = text(quality_text(*choice));
             } else {
+                // "Same as Settings (Up to 200,000)": the {n} slot takes the current count.
                 label = text(Text::QualityFollowSettings);
-                label += text(quality_text(settings_.quality));
+                const std::wstring current = text(quality_text(settings_.quality));
+                if (const auto at = label.find(L"{n}"); at != std::wstring::npos) {
+                    label.replace(at, 3, current);
+                }
             }
         } catch (...) {
         }
