@@ -1,6 +1,8 @@
 #include "splatthumb/orbit.h"
 
+#include <algorithm>
 #include <cmath>
+#include <numbers>
 
 #include "splatthumb/limits.h"
 
@@ -54,19 +56,32 @@ View checked(const View& candidate, const View& fallback) noexcept {
 
 View orbit(const View& view, float yaw_rad, float pitch_rad) noexcept {
     const CameraResult cam = camera_from_view(view);
-    if (cam.status != Status::Ok) {
+    if (cam.status != Status::Ok || !std::isfinite(yaw_rad) || !std::isfinite(pitch_rad)) {
         return view;
     }
     const Camera& c = cam.camera;
-    // Yaw about screen up, then pitch about the (yawed) screen right.
-    Vec3 offset = sub(view.eye, view.target);
-    Vec3 right = c.right;
-    offset = rotate(offset, c.up, yaw_rad);
-    right = rotate(right, c.up, yaw_rad);
+    // The fixed axis: file Y, pointing the way the screen's up mostly points (-Y for files
+    // shown upright, as COLMAP-style data is).
+    const Vec3 axis{0.0f, c.up[1] <= 0.0f ? -1.0f : 1.0f, 0.0f};
+
+    // Yaw about the axis: the eye keeps its height along Y.
+    Vec3 offset = rotate(sub(view.eye, view.target), axis, yaw_rad);
+    Vec3 right = rotate(c.right, axis, yaw_rad);
+    Vec3 up = rotate(c.up, axis, yaw_rad);
+
+    // Pitch about the yawed screen right, limited so the eye never reaches the axis.
+    const float length = std::sqrt(dot(offset, offset));
+    if (!(length > 0.0f)) {
+        return view;
+    }
+    const float height = std::asin(std::clamp(dot(offset, axis) / length, -1.0f, 1.0f));
+    const float limit = kOrbitPitchLimitDeg * std::numbers::pi_v<float> / 180.0f;
+    const float pitch = std::clamp(height + pitch_rad, -limit, limit) - height;
     // Moving the mouse up should show more of the top: the eye goes up, i.e. turns about
     // right by a negative angle in this right-handed setup.
-    offset = rotate(offset, right, -pitch_rad);
-    const Vec3 up = rotate(c.up, right, -pitch_rad);
+    offset = rotate(offset, right, -pitch);
+    up = rotate(up, right, -pitch);
+
     View out = view;
     out.eye = add(view.target, offset);
     out.up = up;
