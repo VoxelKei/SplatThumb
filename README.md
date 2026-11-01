@@ -186,6 +186,11 @@ See [CHANGELOG.md](CHANGELOG.md).
 Bug reports and ideas are welcome as [issues](../../issues). Pull requests are not accepted for
 now; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Author
+
+VoxelKei ([@VoxelKei on X](https://x.com/VoxelKei)). Please send bug reports and requests to
+[issues](../../issues), not to X.
+
 ## License
 
 [MIT](LICENSE)
