@@ -1,6 +1,7 @@
 # <img src="app/icon/splatthumb.svg" width="40" height="40" alt=""> SplatThumb
 
-Gaussian Splatting の中身を、開く前にエクスプローラーで。
+3D Gaussian Splatting のファイルが通常のエクスプローラー上でサムネイル表示できるようになります。
+簡易的なビューワーも備えているのでサムネイル画像のアングルを調整することもできます。
 
 [![MIT License](https://img.shields.io/badge/license-MIT-0f766e?style=flat-square)](LICENSE)
 ![Windows 10 / 11 x64](https://img.shields.io/badge/Windows_10_%2F_11-x64-0f766e?style=flat-square)
@@ -11,14 +12,14 @@ Gaussian Splatting の中身を、開く前にエクスプローラーで。
 
 <img src="docs/media/demo.webp" width="960" alt="エクスプローラーにスプラットのサムネイルが並び、SplatThumb のウインドウで回して視点を決める様子">
 
-SplatThumb は、3D Gaussian Splatting の `.ply` ファイルにサムネイルを表示する Windows の拡張機能です。
+SplatThumb は、3D Gaussian Splatting の `.ply` ファイルをエクスプローラー上でサムネイル表示する Windows の拡張機能です。
 ファイルのヘッダーを見てスプラットのシーンだけを描き、メッシュや点群の PLY は Windows の標準の表示に任せます。
 ファイルは読むだけで書き換えず、ネットワーク通信もテレメトリーもありません。
 
 - 標準(INRIA 形式)と PlayCanvas / SuperSplat の圧縮 PLY を、どのアイコンの大きさでも表示します。
 - ファイルごとに、ターンテーブルのように回して視点を決められます。視点はファイルの中身をもとにユーザーのフォルダーに保存し、ファイル自体には書き込みません。
 - 大きなシーンは 5 万〜40 万個のスプラットに間引いて素早く描きます。数は全体でもファイルごとでも選べます。
-- どのファイルも信用しない前提で、決まった上限のチェック、ファジング済みの解析と描画、Windows の別プロセスでの実行で守ります。
+- 対象外のファイルを確実に除外し、決まった上限のチェック、ファジング済みの解析と描画、Windows の別プロセスでの実行でシステムを守ります。
 - アンインストールすると、前に登録されていたサムネイルハンドラーまで元に戻します。
 - [Spatialograph Maker](https://www.spatialograph.app/) のプロジェクト(`.spgm`)も、アプリが保存したプレビューを表示します。
 
@@ -39,9 +40,9 @@ Windows は、一度作ったサムネイルをキャッシュに保存してい
 
 ## アップデート
 
-新しい版の `SplatThumb-<バージョン>-x64.msi` を、そのまま上書きでインストールしてください。先にアンインストールする必要はありません。古い版は新しい版に置き換わり、保存した視点と設定はそのまま残ります。インストールの前に、視点設定と設定の画面は閉じておいてください。
+新しいバージョンの `SplatThumb-<バージョン>-x64.msi` を、そのまま上書きでインストールしてください。先にアンインストールする必要はありません。古いバージョンは新しいバージョンに置き換わり、保存した視点と設定はそのまま残ります。インストールの前に、視点設定と設定の画面は閉じておいてください。
 
-すでに表示されているサムネイルは、作り直されるまで前の版のままです。新しい版で作り直したいときは、スタートメニューの「SplatThumb」から「既存のサムネイルを全て再生成する...」を使ってください。
+すでに表示されているサムネイルは、作り直されるまで前のバージョンのままです。新しいバージョンで作り直したいときは、スタートメニューの「SplatThumb」から「既存のサムネイルを全て再生成する...」を使ってください。
 
 ## 視点を決める
 
@@ -99,7 +100,7 @@ Windows は、一度作ったサムネイルをキャッシュに保存してい
 
 <a href="https://www.spatialograph.app/"><img src="docs/media/spatialograph-maker.jpg" width="400" alt="Spatialograph Maker で Gaussian Splatting のシーンを編集している画面"></a>
 
-SplatThumb は、同じ作者による 3D Gaussian Splatting の編集アプリ [Spatialograph Maker](https://www.spatialograph.app/) のプロジェクトにもサムネイルを表示します。スプラットは描かず、アプリがプロジェクトに保存したプレビュー画像(プロジェクト形式の版 3)をそのまま表示します。視点と splats 数の設定は効きません。古い版で保存したプロジェクトにはプレビュー画像がないため、通常のアイコンのままです。
+SplatThumb は、同じ作者による 3D Gaussian Splatting の編集アプリ [Spatialograph Maker](https://www.spatialograph.app/) のプロジェクトファイルにもサムネイルを表示します。スプラットは描かず、アプリがプロジェクトに保存したプレビュー画像をそのまま表示します。視点と splats 数の設定は効きません。古いバージョンで保存したプロジェクトにはプレビュー画像がないため、通常のアイコンのままです。
 
 ## ソースからのビルド
 
