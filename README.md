@@ -142,7 +142,7 @@ Please report security problems privately; see [SECURITY.md](SECURITY.md).
 
 SplatThumb also shows thumbnails for projects of [Spatialograph Maker](https://www.spatialograph.app/), a 3D
 Gaussian Splatting editor by the same author. It does not draw the splats: it shows the preview image that the app
-saves in the project file (project format version 3), as it is. The view and quality settings
+saves in the project file, as it is. The view and quality settings
 do not apply. Projects saved by older versions have no preview image and keep the usual icon.
 
 ## Building from source

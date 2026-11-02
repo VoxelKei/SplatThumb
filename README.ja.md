@@ -1,7 +1,7 @@
 # <img src="app/icon/splatthumb.svg" width="40" height="40" alt=""> SplatThumb
 
-3D Gaussian Splatting のファイルが通常のエクスプローラー上でサムネイル表示できるようになります。
-簡易的なビューワーも備えているのでサムネイル画像のアングルを調整することもできます。
+3D Gaussian Splatting のファイルを、通常のエクスプローラー上でサムネイル表示できるようになります。
+簡易的なビューワーも備えているので、サムネイル画像のアングルを調整することもできます。
 
 [![MIT License](https://img.shields.io/badge/license-MIT-0f766e?style=flat-square)](LICENSE)
 ![Windows 10 / 11 x64](https://img.shields.io/badge/Windows_10_%2F_11-x64-0f766e?style=flat-square)
@@ -19,7 +19,7 @@ SplatThumb は、3D Gaussian Splatting の `.ply` ファイルをエクスプロ
 - 標準(INRIA 形式)と PlayCanvas / SuperSplat の圧縮 PLY を、どのアイコンの大きさでも表示します。
 - ファイルごとに、ターンテーブルのように回して視点を決められます。視点はファイルの中身をもとにユーザーのフォルダーに保存し、ファイル自体には書き込みません。
 - 大きなシーンは 5 万〜40 万個のスプラットに間引いて素早く描きます。数は全体でもファイルごとでも選べます。
-- 対象外のファイルを確実に除外し、決まった上限のチェック、ファジング済みの解析と描画、Windows の別プロセスでの実行でシステムを守ります。
+- 対象外のファイルを除外し、決まった上限のチェック、ファジング済みの解析と描画、Windows の別プロセスでの実行でシステムを守ります。
 - アンインストールすると、前に登録されていたサムネイルハンドラーまで元に戻します。
 - [Spatialograph Maker](https://www.spatialograph.app/) のプロジェクト(`.spgm`)も、アプリが保存したプレビューを表示します。
 
