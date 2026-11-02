@@ -1,7 +1,7 @@
 # <img src="app/icon/splatthumb.svg" width="40" height="40" alt=""> SplatThumb
 
-3D Gaussian Splatting のファイルが通常のエクスプローラー上でサムネイル表示できるようになります。
-簡易的なビューワーも備えているのでサムネイル画像のアングルを調整することもできます。
+3D Gaussian Splatting のファイルを、通常のエクスプローラー上でサムネイル表示できるようになります。
+簡易的なビューワーも備えているので、サムネイル画像のアングルを調整することもできます。
 
 [![MIT License](https://img.shields.io/badge/license-MIT-0f766e?style=flat-square)](LICENSE)
 ![Windows 10 / 11 x64](https://img.shields.io/badge/Windows_10_%2F_11-x64-0f766e?style=flat-square)
