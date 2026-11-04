@@ -121,6 +121,29 @@ jobs:
       - name: Configure, build, test
         run: cmake --workflow --preset linux-clang-sanitize
 
+  macos-core:
+    # Builds core, the CLI and the tests with Apple clang as a universal binary
+    # (arm64 + x86_64), the first step toward a macOS Quick Look extension.
+    name: macos core (Apple clang, universal)
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Show toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          cmake --version
+
+      - name: Configure, build, test
+        run: cmake --workflow --preset macos
+
+      - name: Check the CLI is universal
+        run: lipo -archs build/macos/bin/splatthumb-cli
+
   fuzz:
     # Short fuzzing run on every change to catch parser and renderer crashes early.
     # fuzz-weekly.yml runs the same fuzzers for longer.
