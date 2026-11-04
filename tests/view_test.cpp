@@ -109,6 +109,9 @@ TEST(View, RejectsBrokenText) {
     bad(replace("eye 0 0 -10", "eye 0 0 -10 4"));      // too many numbers
     bad(replace("eye 0 0 -10", "eye 0 0 x"));          // not a number
     bad(replace("eye 0 0 -10", "eye 0 0 -10x"));       // trailing junk
+    bad(replace("eye 0 0 -10", "eye 0 0 +10"));        // no '+' in front, as std::from_chars
+    bad(replace("eye 0 0 -10", "eye 0 0 0x1p3"));      // no hex
+    bad(replace("eye 0 0 -10", "eye 0 0 1e-60"));      // underflows a float
     bad(replace("eye 0 0 -10", "eye 0 0 nan"));
     bad(replace("eye 0 0 -10", "eye 0 0 inf"));
     bad(replace("eye 0 0 -10", "eye 0 0 1e7"));        // beyond kMaxAbsCoordinate

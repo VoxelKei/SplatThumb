@@ -8,6 +8,17 @@
 #include <algorithm>
 #include <numbers>
 
+#if defined(__APPLE__) || defined(SPLATTHUMB_POSIX_FLOAT_TEXT)
+#include <cerrno>
+#include <cstdio>
+#include <cstdlib>
+#include <locale.h>
+#if defined(__APPLE__)
+#include <xlocale.h>
+#endif
+#define SPLATTHUMB_POSIX_FLOAT_TEXT_IMPL 1
+#endif
+
 #include "splatthumb/limits.h"
 
 namespace splatthumb {
@@ -20,6 +31,87 @@ constexpr std::size_t kMaxLines = 32;
 bool in_range(float v) noexcept {
     return std::isfinite(v) && std::fabs(v) <= limits::kMaxAbsCoordinate;
 }
+
+#if SPLATTHUMB_POSIX_FLOAT_TEXT_IMPL
+// Apple's libc++ has floating-point std::from_chars only from macOS 26 and std::to_chars
+// only from macOS 13.3, so on Apple the C library does the work under the "C" locale.
+
+// Switches this thread to the "C" locale for as long as it lives.
+class CLocaleScope {
+public:
+    CLocaleScope() noexcept {
+        static const locale_t c_locale = newlocale(LC_ALL_MASK, "C", locale_t{});
+        if (c_locale != locale_t{}) {
+            previous_ = uselocale(c_locale);
+        }
+    }
+    ~CLocaleScope() {
+        if (previous_ != locale_t{}) {
+            uselocale(previous_);
+        }
+    }
+    CLocaleScope(const CLocaleScope&) = delete;
+    CLocaleScope& operator=(const CLocaleScope&) = delete;
+    bool ok() const noexcept { return previous_ != locale_t{}; }
+
+private:
+    locale_t previous_{};
+};
+
+// Accepts the same text as std::from_chars: an optional '-', digits with an optional '.',
+// and an optional exponent. No '+' in front, no spaces, no hex, inf or nan.
+bool to_float(std::string_view token, float& out) noexcept {
+    std::array<char, 64> buf{};
+    if (token.empty() || token.size() >= buf.size() || token.front() == '+') {
+        return false;
+    }
+    for (const char c : token) {
+        const bool ok = (c >= '0' && c <= '9') || c == '.' || c == 'e' || c == 'E' ||
+                        c == '+' || c == '-';
+        if (!ok) {
+            return false;
+        }
+    }
+    std::copy(token.begin(), token.end(), buf.begin());
+    const CLocaleScope scope;
+    if (!scope.ok()) {
+        return false;
+    }
+    char* end = nullptr;
+    errno = 0;
+    out = std::strtof(buf.data(), &end);
+    return errno != ERANGE && end == buf.data() + token.size();
+}
+
+// Nine significant digits always read back as the same float.
+void append_float(std::string& s, float v) {
+    std::array<char, 32> buf{};
+    const CLocaleScope scope;
+    if (!scope.ok()) {
+        return;
+    }
+    const int n = std::snprintf(buf.data(), buf.size(), "%.9g", static_cast<double>(v));
+    if (n > 0 && static_cast<std::size_t>(n) < buf.size()) {
+        s.append(buf.data(), static_cast<std::size_t>(n));
+    }
+}
+#else
+bool to_float(std::string_view token, float& out) noexcept {
+    const char* first = token.data();
+    const char* last = first + token.size();
+    const auto [ptr, ec] = std::from_chars(first, last, out);
+    return ec == std::errc() && ptr == last;
+}
+
+// Shortest text that reads back as the same float, independent of the C locale.
+void append_float(std::string& s, float v) {
+    std::array<char, 32> buf{};
+    const auto [ptr, ec] = std::to_chars(buf.data(), buf.data() + buf.size(), v);
+    if (ec == std::errc()) {
+        s.append(buf.data(), ptr);
+    }
+}
+#endif
 
 // Splits off the next space-separated token of rest.
 std::string_view next_token(std::string_view& rest) noexcept {
@@ -39,10 +131,7 @@ bool parse_float(std::string_view token, float& out) noexcept {
     if (token.empty()) {
         return false;
     }
-    const char* first = token.data();
-    const char* last = first + token.size();
-    const auto [ptr, ec] = std::from_chars(first, last, out);
-    return ec == std::errc() && ptr == last && in_range(out);
+    return to_float(token, out) && in_range(out);
 }
 
 // Parses exactly n numbers from rest.
@@ -57,13 +146,8 @@ bool parse_floats(std::string_view rest, std::array<float, N>& out) noexcept {
 }
 
 void append_number(std::string& s, float v) {
-    // Shortest text that reads back as the same float, independent of the C locale.
-    std::array<char, 32> buf{};
-    const auto [ptr, ec] = std::to_chars(buf.data(), buf.data() + buf.size(), v);
     s += ' ';
-    if (ec == std::errc()) {
-        s.append(buf.data(), ptr);
-    }
+    append_float(s, v);
 }
 
 // Reads "<n>" for the quality key. A number this version does not know leaves quality
