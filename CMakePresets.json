@@ -42,6 +42,18 @@
         "SPLATTHUMB_BUILD_TESTS": "OFF"
       },
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
+    },
+    {
+      "name": "macos",
+      "displayName": "macOS Apple clang, universal (core, CLI and tests)",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/macos",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_OSX_ARCHITECTURES": "arm64;x86_64",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "13.0"
+      },
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" }
     }
   ],
   "buildPresets": [
@@ -49,7 +61,8 @@
     { "name": "msvc-release", "configurePreset": "msvc", "configuration": "Release" },
     { "name": "msvc-asan", "configurePreset": "msvc-asan", "configuration": "Debug" },
     { "name": "linux-clang-sanitize", "configurePreset": "linux-clang-sanitize" },
-    { "name": "linux-clang-fuzz", "configurePreset": "linux-clang-fuzz" }
+    { "name": "linux-clang-fuzz", "configurePreset": "linux-clang-fuzz" },
+    { "name": "macos", "configurePreset": "macos" }
   ],
   "testPresets": [
     {
@@ -61,7 +74,8 @@
     { "name": "msvc-debug", "inherits": "base", "configurePreset": "msvc", "configuration": "Debug" },
     { "name": "msvc-release", "inherits": "base", "configurePreset": "msvc", "configuration": "Release" },
     { "name": "msvc-asan", "inherits": "base", "configurePreset": "msvc-asan", "configuration": "Debug" },
-    { "name": "linux-clang-sanitize", "inherits": "base", "configurePreset": "linux-clang-sanitize" }
+    { "name": "linux-clang-sanitize", "inherits": "base", "configurePreset": "linux-clang-sanitize" },
+    { "name": "macos", "inherits": "base", "configurePreset": "macos" }
   ],
   "workflowPresets": [
     {
@@ -94,6 +108,14 @@
         { "type": "configure", "name": "linux-clang-sanitize" },
         { "type": "build", "name": "linux-clang-sanitize" },
         { "type": "test", "name": "linux-clang-sanitize" }
+      ]
+    },
+    {
+      "name": "macos",
+      "steps": [
+        { "type": "configure", "name": "macos" },
+        { "type": "build", "name": "macos" },
+        { "type": "test", "name": "macos" }
       ]
     }
   ]
