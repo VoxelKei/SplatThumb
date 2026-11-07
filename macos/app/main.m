@@ -144,6 +144,14 @@
     if (self.folder == nil) {
         return;
     }
+    // Removing an icon is itself a change in the folder; a running watcher would put the
+    // icons straight back, so removing always stops watching.
+    if (self.watcher != nil) {
+        [self.watcher stop];
+        self.watcher = nil;
+        self.watchCheckbox.state = NSControlStateValueOff;
+        [self log:@"— 見張りを止めました（アイコンを外すため）"];
+    }
     [self runOnFolder:@"アイコンを外す" operation:^NSString*(NSString* f) {
         return [STIconSetter removeIconForFile:f];
     }];
