@@ -93,3 +93,25 @@ They live in the app's container:
 `~/Library/Containers/com.voxelkei.splatthumb/Data/Library/Application Support/SplatThumb/views`.
 `splatthumb-icon` reads the same folder. Deleting the app's container removes all saved
 views; icons made from them stay until removed with "すべて外す".
+
+## Release package
+
+```bash
+macos/scripts/make-release.sh            # Developer ID signature, notarized, stapled
+macos/scripts/make-release.sh --adhoc    # local test only: ad hoc signature, no notarizing
+```
+
+Builds a universal (Apple silicon and Intel) `SplatThumb.app`, signs the Quick Look
+extension and then the app with the "Developer ID Application" identity (hardened runtime,
+secure timestamp), packs it with an Applications link into
+`build/macos-release/SplatThumb-<version>-macos.dmg`, signs and notarizes the disk image,
+staples the ticket, checks it with Gatekeeper, and writes a `.sha256` file. The version is
+the root `CMakeLists.txt` project version.
+
+One-time setup, by the account holder:
+
+1. A "Developer ID Application" certificate for the paid team (Xcode → Settings → Accounts →
+   Manage Certificates).
+2. A notarytool keychain profile named `splatthumb`:
+   `xcrun notarytool store-credentials splatthumb --apple-id <Apple ID> --team-id <team>`
+   (asks for an app-specific password from account.apple.com).

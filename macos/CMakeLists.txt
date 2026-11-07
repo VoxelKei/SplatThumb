@@ -1,4 +1,4 @@
-# M1 spike: macOS host app + Quick Look thumbnail extension.
+# macOS app (custom Finder icons, angle viewer) + Quick Look thumbnail extension (.spgm).
 # Separate project because it needs the Xcode generator (app extensions and signing);
 # the core library is used straight from ../core, not copied.
 #
@@ -6,10 +6,11 @@
 #   cmake --build build/macos-xcode --config Release
 #
 # Without SPLATTHUMB_TEAM_ID everything is signed ad hoc ("Sign to Run Locally").
+# Builds are universal (Apple silicon and Intel). Release packages: macos/scripts/make-release.sh
 cmake_minimum_required(VERSION 3.25)
 
 set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "")
-set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "")
+set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "")
 
 # Same version as the Windows build: read it from the root CMakeLists.txt.
 file(STRINGS ${CMAKE_CURRENT_LIST_DIR}/../CMakeLists.txt _root_project
