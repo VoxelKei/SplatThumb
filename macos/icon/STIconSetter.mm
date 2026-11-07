@@ -205,7 +205,7 @@ NSString* line(NSString* tag, NSString* path, NSString* detail) {
     // setIcon bumps the modification date although the data is unchanged; put it back.
     restore_times(p, before);
     return line(@"icon  ", path,
-                [NSString stringWithFormat:@"%.0f ms%@", ms_since(start), view ? NSLocalizedString(@", saved view", nil) : @""]);
+                [NSString stringWithFormat:@"%.0f ms%@", ms_since(start), view ? NSLocalizedString(@" (using the saved angle)", nil) : @""]);
 }
 
 @end
