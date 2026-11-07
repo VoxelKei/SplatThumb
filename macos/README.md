@@ -45,3 +45,31 @@ What macOS leaves behind: the empty sandbox folders
   `com.apple.HydraQLThumbnailExtension` claims `public.polygon-file-format` and wins, even
   after `pluginkit -e use`. It draws 3DGS files as square points, often upside down.
 - For `.spgm` (a type only this app declares) the extension is used and works.
+
+## Option B: custom Finder icons
+
+Because Quick Look cannot take over `.ply`, the app (and the `splatthumb-icon` command) can
+instead put the SplatThumb picture on each 3DGS PLY as a custom Finder icon:
+
+```bash
+build/macos-xcode/Release/splatthumb-icon set <file-or-folder>...
+build/macos-xcode/Release/splatthumb-icon remove <file-or-folder>...
+build/macos-xcode/Release/splatthumb-icon watch <folder>
+```
+
+In the app: "choose a folder and add icons", "remove this folder's icons", and a checkbox
+to watch the folder while the app is open.
+
+- The icon lives in the file's extended attributes (`com.apple.ResourceFork`,
+  `com.apple.FinderInfo`); the PLY data is unchanged. A fingerprint is kept in
+  `com.voxelkei.splatthumb.icon` so unchanged files are skipped and only icons SplatThumb
+  set are removed.
+- `setIcon` bumps the modification date; it is put back. Removal also drops the empty
+  resource fork `setIcon:nil` leaves, so the file ends up as before.
+- Shown in icon and list view. The column/gallery preview and Space-bar Quick Look still
+  come from Apple's Hydra extension.
+- The icon survives Finder copies and `cp`; it is lost on filesystems and transfers that
+  drop extended attributes (FAT/exFAT, many uploads, Git).
+- The watcher waits until a file has not changed for 3 s, so files still being copied are
+  not read half-written. Removing icons stops watching first.
+- About 1 s per file at 512 px (188k splats).
