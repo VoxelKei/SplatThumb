@@ -115,8 +115,20 @@ void reply_with_image(CGImageRef image, CGFloat side_points,
     QLThumbnailReply* reply =
         [QLThumbnailReply replyWithContextSize:size
                                   drawingBlock:^BOOL(CGContextRef context) {
-                                      CGContextDrawImage(
-                                          context, CGRectMake(0, 0, size.width, size.height), image);
+                                      // The context is request.scale times contextSize in
+                                      // pixels, but its user space is not always scaled to
+                                      // match, so fill the whole bitmap whatever the CTM is.
+                                      CGRect target = CGRectMake(0, 0, size.width, size.height);
+                                      const size_t pw = CGBitmapContextGetWidth(context);
+                                      const size_t ph = CGBitmapContextGetHeight(context);
+                                      if (pw > 0 && ph > 0) {
+                                          target = CGContextConvertRectToUserSpace(
+                                              context, CGRectMake(0, 0, static_cast<CGFloat>(pw),
+                                                                  static_cast<CGFloat>(ph)));
+                                      }
+                                      os_log_debug(log_handle(), "context %zux%zu px, draw %.0fx%.0f",
+                                                   pw, ph, target.size.width, target.size.height);
+                                      CGContextDrawImage(context, target, image);
                                       CGImageRelease(image);
                                       return YES;
                                   }];
