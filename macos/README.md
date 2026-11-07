@@ -31,4 +31,17 @@ Leave out `SPLATTHUMB_TEAM_ID` to sign ad hoc ("Sign to Run Locally"). The resul
 ## Remove
 
 Quit the app, delete `~/Applications/SplatThumb.app`, then `qlmanage -r` and
-`qlmanage -r cache`.
+`qlmanage -r cache`. The extension disappears from `pluginkit` right away. A build folder
+copy registers too (Xcode registers what it builds); remove it with
+`lsregister -u build/macos-xcode/Release/SplatThumb.app`.
+
+What macOS leaves behind: the empty sandbox folders
+`~/Library/Containers/com.voxelkei.splatthumb{,.thumbnail}` and
+`~/Library/Application Scripts/com.voxelkei.splatthumb{,.thumbnail}` (a few KB).
+
+## What the spike found
+
+- Finder never asks a third-party extension for `.ply`: Apple's
+  `com.apple.HydraQLThumbnailExtension` claims `public.polygon-file-format` and wins, even
+  after `pluginkit -e use`. It draws 3DGS files as square points, often upside down.
+- For `.spgm` (a type only this app declares) the extension is used and works.
