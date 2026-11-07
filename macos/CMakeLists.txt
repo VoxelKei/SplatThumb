@@ -11,7 +11,15 @@ cmake_minimum_required(VERSION 3.25)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "")
 set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "")
 
-project(SplatThumbMac VERSION 0.4.0 LANGUAGES C CXX OBJC OBJCXX)
+# Same version as the Windows build: read it from the root CMakeLists.txt.
+file(STRINGS ${CMAKE_CURRENT_LIST_DIR}/../CMakeLists.txt _root_project
+     REGEX "^project\\(SplatThumb VERSION [0-9.]+")
+string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" SPLATTHUMB_VERSION "${_root_project}")
+if(NOT SPLATTHUMB_VERSION)
+    message(FATAL_ERROR "could not read the version from ../CMakeLists.txt")
+endif()
+
+project(SplatThumbMac VERSION ${SPLATTHUMB_VERSION} LANGUAGES C CXX OBJC OBJCXX)
 
 if(NOT CMAKE_GENERATOR STREQUAL "Xcode")
     message(FATAL_ERROR "macos/ must be configured with -G Xcode")
@@ -58,6 +66,8 @@ set_target_properties(SplatThumbThumbnail PROPERTIES
     XCODE_PRODUCT_TYPE com.apple.product-type.app-extension
     MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/thumbnail/Info.plist
     XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER com.voxelkei.splatthumb.thumbnail
+    MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
+    MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     XCODE_ATTRIBUTE_APPLICATION_EXTENSION_API_ONLY YES
     XCODE_ATTRIBUTE_OTHER_LDFLAGS "-e _NSExtensionMain"
     XCODE_ATTRIBUTE_SKIP_INSTALL YES)
@@ -82,6 +92,8 @@ set_target_properties(SplatThumb PROPERTIES
     MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/app/Info.plist
     XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER com.voxelkei.splatthumb
     XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
+    MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
+    MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     XCODE_EMBED_APP_EXTENSIONS SplatThumbThumbnail
     XCODE_EMBED_APP_EXTENSIONS_CODE_SIGN_ON_COPY YES
     XCODE_EMBED_APP_EXTENSIONS_REMOVE_HEADERS_ON_COPY YES)

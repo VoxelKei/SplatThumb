@@ -55,6 +55,45 @@ static NSString* const kOldBookmarkKey = @"FolderBookmark"; // single folder, ea
 static NSString* const kWatchingKey = @"Watching";
 static NSString* const kResidentKey = @"Resident";
 
+// The only pages the app opens, and only when clicked; it never connects to the network.
+static NSString* const kRepoURL = @"https://github.com/VoxelKei/SplatThumb";
+static NSString* const kAppURL = @"https://www.spatialograph.app/";
+static NSString* const kAuthorURL = @"https://x.com/VoxelKei";
+
+static NSString* AppVersion(void) {
+    NSString* v = NSBundle.mainBundle.infoDictionary[@"CFBundleShortVersionString"];
+    return v.length > 0 ? v : @"?";
+}
+
+// "text" with "link" appended as a clickable link (in a selectable text field).
+static NSMutableAttributedString* LinkedText(NSString* before, NSString* link, NSString* url,
+                                              NSString* after, CGFloat size) {
+    NSFont* font = [NSFont systemFontOfSize:size];
+    NSDictionary* plain = @{
+        NSFontAttributeName : font,
+        NSForegroundColorAttributeName : NSColor.secondaryLabelColor
+    };
+    NSMutableAttributedString* s = [[NSMutableAttributedString alloc] initWithString:before
+                                                                          attributes:plain];
+    [s appendAttributedString:[[NSAttributedString alloc]
+                                  initWithString:link
+                                      attributes:@{
+                                          NSFontAttributeName : font,
+                                          NSLinkAttributeName : [NSURL URLWithString:url]
+                                      }]];
+    [s appendAttributedString:[[NSAttributedString alloc] initWithString:after attributes:plain]];
+    return s;
+}
+
+static NSTextField* LinkLabel(NSAttributedString* text) {
+    NSTextField* label = [NSTextField labelWithAttributedString:text];
+    // Links are only clickable in a selectable field that keeps its attributes.
+    label.selectable = YES;
+    label.allowsEditingTextAttributes = YES;
+    label.translatesAutoresizingMaskIntoConstraints = NO;
+    return label;
+}
+
 @interface AppDelegate
     : NSObject <NSApplicationDelegate, NSWindowDelegate, NSTableViewDataSource, NSTableViewDelegate>
 @property(strong) NSWindow* window;
@@ -110,7 +149,7 @@ static NSString* const kResidentKey = @"Resident";
 
 - (void)buildWindow {
     self.window = [[NSWindow alloc]
-        initWithContentRect:NSMakeRect(0, 0, 720, 640)
+        initWithContentRect:NSMakeRect(0, 0, 720, 690)
                   styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
                             NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable
                     backing:NSBackingStoreBuffered
@@ -173,10 +212,22 @@ static NSString* const kResidentKey = @"Resident";
     self.logView.editable = NO;
     self.logView.font = [NSFont monospacedSystemFontOfSize:11 weight:NSFontWeightRegular];
 
+    // Same line as the Windows settings window.
+    const CGFloat small = NSFont.smallSystemFontSize;
+    NSTextField* about = [NSTextField
+        labelWithString:[NSString stringWithFormat:@"SplatThumb %@  ·  © 2026 VoxelKei  ·  MIT License",
+                                                   AppVersion()]];
+    about.font = [NSFont systemFontOfSize:small];
+    about.textColor = NSColor.secondaryLabelColor;
+    about.translatesAutoresizingMaskIntoConstraints = NO;
+    NSTextField* repo = LinkLabel(LinkedText(@"GitHub: ", @"github.com/VoxelKei/SplatThumb", kRepoURL, @"", small));
+    NSTextField* app = LinkLabel(LinkedText(@"", @"Spatialograph Maker", kAppURL,
+                                            @" - 同じ作者による 3DGS 編集アプリ", small));
+
     for (NSView* v in @[
              heading, tableScroll, add, self.removeFolderButton, self.removeAllButton,
              self.watchCheckbox, self.whileOpenRadio, self.residentRadio, angle, angleHint,
-             logScroll
+             logScroll, about, repo, app
          ]) {
         [content addSubview:v];
     }
@@ -209,7 +260,14 @@ static NSString* const kResidentKey = @"Resident";
         [logScroll.topAnchor constraintEqualToAnchor:angleHint.bottomAnchor constant:12],
         [logScroll.leadingAnchor constraintEqualToAnchor:left constant:16],
         [logScroll.trailingAnchor constraintEqualToAnchor:right constant:-16],
-        [logScroll.bottomAnchor constraintEqualToAnchor:content.bottomAnchor constant:-16],
+        [about.topAnchor constraintEqualToAnchor:logScroll.bottomAnchor constant:10],
+        [about.leadingAnchor constraintEqualToAnchor:left constant:16],
+        [repo.topAnchor constraintEqualToAnchor:about.bottomAnchor constant:2],
+        [repo.leadingAnchor constraintEqualToAnchor:left constant:16],
+        [app.centerYAnchor constraintEqualToAnchor:repo.centerYAnchor],
+        [app.leadingAnchor constraintEqualToAnchor:repo.trailingAnchor constant:16],
+        [app.trailingAnchor constraintLessThanOrEqualToAnchor:right constant:-16],
+        [repo.bottomAnchor constraintEqualToAnchor:content.bottomAnchor constant:-12],
     ]];
     [self.window center];
 }
@@ -250,8 +308,101 @@ static NSString* const kResidentKey = @"Resident";
 
 // --- life cycle --------------------------------------------------------------
 
+// --- menus and About ----------------------------------------------------------
+
+- (void)buildMainMenu {
+    // One app menu with the minimum.
+    NSMenu* appMenu = [[NSMenu alloc] initWithTitle:@"SplatThumb"];
+    [appMenu addItemWithTitle:@"SplatThumb について" action:@selector(showAbout:) keyEquivalent:@""]
+        .target = self;
+    [appMenu addItem:NSMenuItem.separatorItem];
+    [appMenu addItemWithTitle:@"PLY を開いてアングルを決める…" action:@selector(openPly:) keyEquivalent:@"o"]
+        .target = self;
+    [appMenu addItemWithTitle:@"ウインドウを閉じる" action:@selector(performClose:) keyEquivalent:@"w"];
+    [appMenu addItem:NSMenuItem.separatorItem];
+    [appMenu addItemWithTitle:@"SplatThumb を終了" action:@selector(terminate:) keyEquivalent:@"q"];
+    NSMenuItem* item = [[NSMenuItem alloc] initWithTitle:appMenu.title action:nil keyEquivalent:@""];
+    item.submenu = appMenu;
+    NSMenu* bar = [[NSMenu alloc] init];
+    [bar addItem:item];
+    NSApp.mainMenu = bar;
+}
+
+- (void)showAbout:(id)sender {
+    (void)sender;
+    const CGFloat size = NSFont.smallSystemFontSize;
+    NSMutableAttributedString* credits = [[NSMutableAttributedString alloc] init];
+    NSDictionary* plain = @{
+        NSFontAttributeName : [NSFont systemFontOfSize:size],
+        NSForegroundColorAttributeName : NSColor.labelColor
+    };
+    [credits appendAttributedString:[[NSAttributedString alloc]
+                                        initWithString:@"3D Gaussian Splatting の PLY を、Finder のアイコンで見られるようにします。\n\n"
+                                            attributes:plain]];
+    [credits appendAttributedString:LinkedText(@"作者: VoxelKei (", @"X: @VoxelKei", kAuthorURL, @")\n", size)];
+    [credits appendAttributedString:LinkedText(@"GitHub: ", @"github.com/VoxelKei/SplatThumb", kRepoURL, @"\n", size)];
+    [credits appendAttributedString:LinkedText(@"", @"Spatialograph Maker", kAppURL,
+                                               @" - 同じ作者による 3DGS 編集アプリ", size)];
+    NSMutableParagraphStyle* centered = [[NSMutableParagraphStyle alloc] init];
+    centered.alignment = NSTextAlignmentCenter;
+    [credits addAttribute:NSParagraphStyleAttributeName
+                    value:centered
+                    range:NSMakeRange(0, credits.length)];
+    [NSApp activateIgnoringOtherApps:YES];
+    // Pass the icon explicitly: the panel does not always find it on its own.
+    NSImage* icon = [NSBundle.mainBundle imageForResource:@"AppIcon"];
+    if (icon == nil) {
+        icon = [NSWorkspace.sharedWorkspace iconForFile:NSBundle.mainBundle.bundlePath];
+    }
+    [NSApp orderFrontStandardAboutPanelWithOptions:@{
+        NSAboutPanelOptionApplicationIcon : icon,
+        NSAboutPanelOptionApplicationName : @"SplatThumb",
+        NSAboutPanelOptionApplicationVersion : AppVersion(),
+        NSAboutPanelOptionVersion : @"",
+        NSAboutPanelOptionCredits : credits,
+    }];
+}
+
+// ⌘C and ⌘A in text views without an Edit menu. (A menu holding Copy would be treated as
+// the Edit menu, and macOS would add Writing Tools, AutoFill, Dictation and Emoji to it.)
+- (void)handleEditKeys {
+    [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskKeyDown
+                                          handler:^NSEvent*(NSEvent* event) {
+        const NSEventModifierFlags mods =
+            event.modifierFlags & NSEventModifierFlagDeviceIndependentFlagsMask;
+        if (mods != NSEventModifierFlagCommand) {
+            return event;
+        }
+        NSResponder* responder = event.window.firstResponder;
+        if (![responder isKindOfClass:NSTextView.class]) {
+            return event;
+        }
+        NSString* key = event.charactersIgnoringModifiers.lowercaseString;
+        if ([key isEqualToString:@"c"]) {
+            [(NSTextView*)responder copy:nil];
+            return nil;
+        }
+        if ([key isEqualToString:@"a"]) {
+            [(NSTextView*)responder selectAll:nil];
+            return nil;
+        }
+        return event;
+    }];
+}
+
+- (void)applicationWillFinishLaunching:(NSNotification*)notification {
+    (void)notification;
+    // Keep macOS from adding Dictation and Emoji & Symbols to the menu.
+    [self.defaults registerDefaults:@{
+        @"NSDisabledDictationMenuItem" : @YES,
+        @"NSDisabledCharacterPaletteMenuItem" : @YES,
+    }];
+}
+
 - (void)applicationDidFinishLaunching:(NSNotification*)notification {
     (void)notification;
+    [self buildMainMenu];
+    [self handleEditKeys];
     self.work = dispatch_queue_create("com.voxelkei.splatthumb.icons", DISPATCH_QUEUE_SERIAL);
     self.folders = [NSMutableArray array];
     self.watchers = [NSMutableArray array];
@@ -678,6 +829,9 @@ static NSString* const kResidentKey = @"Resident";
     [menu addItem:NSMenuItem.separatorItem];
     [menu addItemWithTitle:@"SplatThumb を開く" action:@selector(showWindow:) keyEquivalent:@""]
         .target = self;
+    [menu addItemWithTitle:@"SplatThumb について" action:@selector(showAbout:) keyEquivalent:@""]
+        .target = self;
+    [menu addItem:NSMenuItem.separatorItem];
     [menu addItemWithTitle:@"終了" action:@selector(terminate:) keyEquivalent:@"q"];
     self.statusItem.menu = menu;
 }
