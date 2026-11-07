@@ -78,3 +78,18 @@ covered and are not added twice.
 - The watcher waits until a file has not changed for 3 s, so files still being copied are
   not read half-written. Removing icons stops watching first.
 - About 1 s per file at 512 px (188k splats).
+
+## Thumbnail angle
+
+"PLY を開いてアングルを決める…" (or dropping a `.ply` on the window or Dock icon, or Finder's
+Open With → SplatThumb; the app is only an alternate handler, never the default) opens a
+viewer like the Windows one: drag turns, right-drag or Shift-drag moves, scroll or pinch
+zooms, and the axes show while turning. "この視点をサムネイルにする" saves the view and remakes
+that file's icon; "リセット" removes the saved view and goes back to the automatic one.
+
+Views use the shared core (`view_store`), so the files are the same as on Windows
+(`<fingerprint>.view`, keyed by the file's contents, so identical copies share a view).
+They live in the app's container:
+`~/Library/Containers/com.voxelkei.splatthumb/Data/Library/Application Support/SplatThumb/views`.
+`splatthumb-icon` reads the same folder. Deleting the app's container removes all saved
+views; icons made from them stay until removed with "すべて外す".

@@ -64,13 +64,14 @@ set_target_properties(SplatThumbThumbnail PROPERTIES
 splatthumb_sign(SplatThumbThumbnail ${CMAKE_CURRENT_SOURCE_DIR}/thumbnail/SplatThumbThumbnail.entitlements)
 
 # --- Host app ----------------------------------------------------------------
-add_executable(SplatThumb MACOSX_BUNDLE app/main.m icon/STIconSetter.mm)
+add_executable(SplatThumb MACOSX_BUNDLE app/main.m app/STViewerWindow.mm icon/STIconSetter.mm)
 target_include_directories(SplatThumb PRIVATE icon)
 target_link_libraries(SplatThumb PRIVATE
     splatthumb_core
     "-framework Cocoa"
     "-framework CoreServices"
-    "-framework ServiceManagement")
+    "-framework ServiceManagement"
+    "-framework UniformTypeIdentifiers")
 set_target_properties(SplatThumb PROPERTIES
     MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/app/Info.plist
     XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER com.voxelkei.splatthumb

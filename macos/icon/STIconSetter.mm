@@ -8,6 +8,8 @@
 #include <sys/xattr.h>
 
 #include <chrono>
+#include <cstdint>
+#include <cstdio>
 #include <optional>
 #include <string>
 
@@ -16,7 +18,10 @@
 #include "splatthumb/fingerprint.h"
 #include "splatthumb/loader.h"
 #include "splatthumb/render.h"
+#include "splatthumb/settings.h"
 #include "splatthumb/status.h"
+#include "splatthumb/view.h"
+#include "splatthumb/view_store.h"
 
 namespace {
 
@@ -69,6 +74,27 @@ NSImage* make_nsimage(const splatthumb::Image& image) {
     return made;
 }
 
+// Stable 64-bit FNV-1a, so the marker does not depend on the standard library's hash.
+std::uint64_t fnv1a(const std::string& text) {
+    std::uint64_t h = 1469598103934665603ull;
+    for (const unsigned char c : text) {
+        h = (h ^ c) * 1099511628211ull;
+    }
+    return h;
+}
+
+// Marker stored with the icon: the file's fingerprint, plus a hash of the saved view when
+// there is one, so a new angle (or going back to automatic) makes a fresh icon.
+std::string icon_marker(const std::string& fp_hex, const std::optional<splatthumb::View>& view) {
+    if (!view) {
+        return fp_hex;
+    }
+    char buf[24];
+    std::snprintf(buf, sizeof(buf), ":%016llx",
+                  static_cast<unsigned long long>(fnv1a(splatthumb::format_view(*view))));
+    return fp_hex + buf;
+}
+
 NSString* line(NSString* tag, NSString* path, NSString* detail) {
     return detail.length > 0
                ? [NSString stringWithFormat:@"%@ %@ (%@)", tag, path.lastPathComponent, detail]
@@ -78,6 +104,17 @@ NSString* line(NSString* tag, NSString* path, NSString* detail) {
 } // namespace
 
 @implementation STIconSetter
+
++ (NSString*)viewsRoot {
+    // The app is sandboxed, so its home is its container; the command-line tool is not, so
+    // it looks inside the app's container to share the same views.
+    NSString* home = NSHomeDirectory();
+    if (NSProcessInfo.processInfo.environment[@"APP_SANDBOX_CONTAINER_ID"] == nil) {
+        home = [home stringByAppendingPathComponent:
+                         @"Library/Containers/com.voxelkei.splatthumb/Data"];
+    }
+    return [home stringByAppendingPathComponent:@"Library/Application Support/SplatThumb/views"];
+}
 
 + (NSArray<NSString*>*)plyFilesAt:(NSString*)path {
     NSMutableArray<NSString*>* out = [NSMutableArray array];
@@ -127,8 +164,12 @@ NSString* line(NSString* tag, NSString* path, NSString* detail) {
         return line(@"FAILED", path, @"cannot open");
     }
     const auto fp = fingerprint(source);
-    const std::string fp_hex = fp ? fp->hex() : std::string();
-    if (fp && read_attr(p, kFingerprintAttr) == fp_hex) {
+    std::optional<View> view;
+    if (fp) {
+        view = load_view(self.viewsRoot.fileSystemRepresentation, *fp);
+    }
+    const std::string marker = fp ? icon_marker(fp->hex(), view) : std::string();
+    if (fp && read_attr(p, kFingerprintAttr) == marker) {
         return line(@"same  ", path, nil);
     }
 
@@ -136,8 +177,10 @@ NSString* line(NSString* tag, NSString* path, NSString* detail) {
     options.size = kIconSize;
     options.background = Background::Gray;
     LoadOptions load;
+    load.max_splats = max_splats_for(view && view->quality ? *view->quality : Quality::Standard);
     const RenderResult result = render_thumbnail(
-        source, options, load, Deadline::after(std::chrono::milliseconds(kRenderTimeLimitMs)));
+        source, options, load, Deadline::after(std::chrono::milliseconds(kRenderTimeLimitMs)),
+        nullptr, view ? &*view : nullptr);
     if (result.status != Status::Ok) {
         // Not 3DGS (or broken): drop an icon we set earlier, in case the file was replaced.
         if (read_attr(p, kFingerprintAttr)) {
@@ -153,11 +196,12 @@ NSString* line(NSString* tag, NSString* path, NSString* detail) {
         return line(@"FAILED", path, @"could not set the icon (read-only or locked?)");
     }
     if (fp) {
-        setxattr(p, kFingerprintAttr, fp_hex.data(), fp_hex.size(), 0, XATTR_NOFOLLOW);
+        setxattr(p, kFingerprintAttr, marker.data(), marker.size(), 0, XATTR_NOFOLLOW);
     }
     // setIcon bumps the modification date although the data is unchanged; put it back.
     restore_times(p, before);
-    return line(@"icon  ", path, [NSString stringWithFormat:@"%.0f ms", ms_since(start)]);
+    return line(@"icon  ", path,
+                [NSString stringWithFormat:@"%.0f ms%@", ms_since(start), view ? @", 保存した視点" : @""]);
 }
 
 @end

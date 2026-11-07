@@ -5,11 +5,16 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface STIconSetter : NSObject
 
+// Folder of saved views (same .view format and layout as Windows), inside the app's
+// sandbox container: Library/Application Support/SplatThumb/views.
+@property(class, readonly) NSString* viewsRoot;
+
 // The .ply files at path: the file itself, or every .ply inside a folder (recursively).
 + (NSArray<NSString*>*)plyFilesAt:(NSString*)path;
 
-// Renders a 3DGS PLY and sets the picture as its Finder icon. Unchanged files (same
-// fingerprint as when the icon was set) are skipped; non-3DGS files are left alone.
+// Renders a 3DGS PLY and sets the picture as its Finder icon, from the file's saved view
+// when there is one. Unchanged files (same fingerprint and view as when the icon was set)
+// are skipped; non-3DGS files are left alone.
 // The PLY data and its modification date are kept. Returns a one-line report.
 + (NSString*)setIconForFile:(NSString*)path;
 

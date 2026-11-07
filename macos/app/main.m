@@ -8,8 +8,47 @@
 // are remembered as security-scoped bookmarks.
 #import <Cocoa/Cocoa.h>
 #import <ServiceManagement/ServiceManagement.h>
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
 #import "STIconSetter.h"
+#import "STViewerWindow.h"
+
+// Window content that accepts .ply files dropped on it (they open in the viewer).
+@interface STDropView : NSView
+@property(copy) void (^onDrop)(NSArray<NSURL*>* urls);
+@end
+
+@implementation STDropView
+- (instancetype)initWithFrame:(NSRect)frame {
+    if ((self = [super initWithFrame:frame])) {
+        [self registerForDraggedTypes:@[ NSPasteboardTypeFileURL ]];
+    }
+    return self;
+}
+- (NSArray<NSURL*>*)plyURLs:(id<NSDraggingInfo>)info {
+    NSArray<NSURL*>* urls = [info.draggingPasteboard
+        readObjectsForClasses:@[ NSURL.class ]
+                      options:@{NSPasteboardURLReadingFileURLsOnlyKey : @YES}];
+    NSMutableArray<NSURL*>* out = [NSMutableArray array];
+    for (NSURL* u in urls) {
+        if ([u.pathExtension caseInsensitiveCompare:@"ply"] == NSOrderedSame) {
+            [out addObject:u];
+        }
+    }
+    return out;
+}
+- (NSDragOperation)draggingEntered:(id<NSDraggingInfo>)info {
+    return [self plyURLs:info].count > 0 ? NSDragOperationCopy : NSDragOperationNone;
+}
+- (BOOL)performDragOperation:(id<NSDraggingInfo>)info {
+    NSArray<NSURL*>* urls = [self plyURLs:info];
+    if (urls.count == 0 || self.onDrop == nil) {
+        return NO;
+    }
+    self.onDrop(urls);
+    return YES;
+}
+@end
 
 static NSString* const kBookmarksKey = @"FolderBookmarks";
 static NSString* const kOldBookmarkKey = @"FolderBookmark"; // single folder, earlier spike
@@ -71,7 +110,7 @@ static NSString* const kResidentKey = @"Resident";
 
 - (void)buildWindow {
     self.window = [[NSWindow alloc]
-        initWithContentRect:NSMakeRect(0, 0, 700, 560)
+        initWithContentRect:NSMakeRect(0, 0, 720, 640)
                   styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
                             NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable
                     backing:NSBackingStoreBuffered
@@ -79,6 +118,12 @@ static NSString* const kResidentKey = @"Resident";
     self.window.title = @"SplatThumb";
     self.window.releasedWhenClosed = NO;
     self.window.delegate = self;
+    STDropView* drop = [[STDropView alloc] initWithFrame:NSZeroRect];
+    __weak AppDelegate* weakSelf = self;
+    drop.onDrop = ^(NSArray<NSURL*>* urls) {
+        [weakSelf openViewers:urls];
+    };
+    self.window.contentView = drop;
     NSView* content = self.window.contentView;
 
     NSTextField* heading = [NSTextField labelWithString:@"アイコンを付けるフォルダ"];
@@ -106,6 +151,12 @@ static NSString* const kResidentKey = @"Resident";
                                     action:@selector(removeSelectedFolders:)];
     self.removeAllButton = [self button:@"登録したフォルダのアイコンをすべて外す"
                                  action:@selector(removeAllIcons:)];
+    NSButton* angle = [self button:@"PLY を開いてアングルを決める…" action:@selector(openPly:)];
+    NSTextField* angleHint = [NSTextField
+        labelWithString:@"（.ply をこのウィンドウや Dock のアイコンにドロップ、Finder の「このアプリケーションで開く」でも開けます）"];
+    angleHint.textColor = NSColor.secondaryLabelColor;
+    angleHint.font = [NSFont systemFontOfSize:NSFont.smallSystemFontSize];
+    angleHint.translatesAutoresizingMaskIntoConstraints = NO;
 
     self.watchCheckbox =
         [NSButton checkboxWithTitle:@"登録したフォルダを見張る（新しい・変わった .ply に自動で付ける）"
@@ -124,7 +175,8 @@ static NSString* const kResidentKey = @"Resident";
 
     for (NSView* v in @[
              heading, tableScroll, add, self.removeFolderButton, self.removeAllButton,
-             self.watchCheckbox, self.whileOpenRadio, self.residentRadio, logScroll
+             self.watchCheckbox, self.whileOpenRadio, self.residentRadio, angle, angleHint,
+             logScroll
          ]) {
         [content addSubview:v];
     }
@@ -149,7 +201,12 @@ static NSString* const kResidentKey = @"Resident";
         [self.whileOpenRadio.leadingAnchor constraintEqualToAnchor:left constant:36],
         [self.residentRadio.topAnchor constraintEqualToAnchor:self.whileOpenRadio.bottomAnchor constant:4],
         [self.residentRadio.leadingAnchor constraintEqualToAnchor:left constant:36],
-        [logScroll.topAnchor constraintEqualToAnchor:self.residentRadio.bottomAnchor constant:12],
+        [angle.topAnchor constraintEqualToAnchor:self.residentRadio.bottomAnchor constant:14],
+        [angle.leadingAnchor constraintEqualToAnchor:left constant:16],
+        [angleHint.topAnchor constraintEqualToAnchor:angle.bottomAnchor constant:4],
+        [angleHint.leadingAnchor constraintEqualToAnchor:left constant:20],
+        [angleHint.trailingAnchor constraintLessThanOrEqualToAnchor:right constant:-16],
+        [logScroll.topAnchor constraintEqualToAnchor:angleHint.bottomAnchor constant:12],
         [logScroll.leadingAnchor constraintEqualToAnchor:left constant:16],
         [logScroll.trailingAnchor constraintEqualToAnchor:right constant:-16],
         [logScroll.bottomAnchor constraintEqualToAnchor:content.bottomAnchor constant:-16],
@@ -471,6 +528,46 @@ static NSString* const kResidentKey = @"Resident";
                  return [STIconSetter removeIconForFile:f];
              }];
     [self updateControls];
+}
+
+// --- angle ---------------------------------------------------------------------
+
+- (void)openViewers:(NSArray<NSURL*>*)urls {
+    __weak AppDelegate* weakSelf = self;
+    for (NSURL* url in urls) {
+        [STViewerWindow openFile:url
+                             log:^(NSString* line) {
+                                 [weakSelf log:line];
+                             }];
+    }
+}
+
+- (void)openPly:(id)sender {
+    (void)sender;
+    NSOpenPanel* panel = [NSOpenPanel openPanel];
+    panel.canChooseFiles = YES;
+    panel.canChooseDirectories = NO;
+    panel.allowsMultipleSelection = NO;
+    UTType* ply = [UTType typeWithFilenameExtension:@"ply"];
+    panel.allowedContentTypes = ply != nil ? @[ ply ] : @[];
+    panel.prompt = @"開く";
+    panel.message = @"アングルを決める .ply を選んでください";
+    if ([panel runModal] == NSModalResponseOK) {
+        [self openViewers:panel.URLs];
+    }
+}
+
+// Files opened from Finder ("Open With"), or dropped on the Dock icon.
+- (void)application:(NSApplication*)application openURLs:(NSArray<NSURL*>*)urls {
+    (void)application;
+    if (self.window == nil) {
+        // Launched by opening a file: finish launching first.
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self openViewers:urls];
+        });
+        return;
+    }
+    [self openViewers:urls];
 }
 
 // --- watching ----------------------------------------------------------------
