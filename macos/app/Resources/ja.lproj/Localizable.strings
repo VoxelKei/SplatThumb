@@ -15,7 +15,7 @@
 "Author: VoxelKei (" = "作者: VoxelKei (";
 "Back to the automatic view. The icon has been remade." = "自動の視点に戻しました。アイコンを作り直しました。";
 "Back to the automatic view: %@" = "自動の視点に戻しました：%@";
-"Catching up: checking icons" = "前回の続き：アイコンを確認";
+"Checking icons" = "前回の続き：アイコンを確認";
 "Choose a .ply to set its angle." = "アングルを決める .ply を選んでください";
 "Choose a PLY…" = "PLY を選んで開く…";
 "Close" = "閉じる";
@@ -44,7 +44,7 @@
 "Removing all icons" = "アイコンをすべて外す";
 "Reset" = "リセット";
 "Shows 3D Gaussian Splatting PLY files as Finder icons.\n\n" = "3D Gaussian Splatting の PLY を、Finder のアイコンで見られるようにします。\n\n";
-"SplatThumb - Thumbnail view — %@" = "SplatThumb - サムネイルの視点 — %@";
+"SplatThumb - Thumbnail view - %@" = "SplatThumb - サムネイルの視点 - %@";
 "SplatThumb was removed from Login Items, so it is back to “Only while the app is open”." = "ログイン項目から外されていたので「アプリを開いている間だけ」に戻しました";
 "The file could not be read, or it has nothing to draw." = "ファイルを読み込めないか、描くものがありません。";
 "The splat data is not changed (the icon is kept in the file's extended attributes)." = "点群データは変わりません（アイコンはファイルのおまけ情報に入ります）。";
@@ -56,13 +56,13 @@
 "View saved: %@" = "視点を保存しました：%@";
 "Watch these folders (new or changed .ply files get icons automatically)" = "登録したフォルダを見張る（新しい・変わった .ply に自動で付ける）";
 "Watching %lu folder(s)" = "見張り中：%lu 個のフォルダ";
-"You can also use this button." = "このボタンからも設定できます。";
+"Or use this button:" = "このボタンからも設定できます。";
 "always" = "常駐";
 "cannot open" = "開けません";
 "could not set the icon (read-only or locked?)" = "アイコンを付けられませんでした（読み取り専用かロック？）";
 "no icon set by SplatThumb" = "SplatThumb が付けたアイコンではありません";
 "only while the app is open" = "アプリを開いている間だけ";
-"— %@: %lu folder(s)" = "— %@：%lu 個のフォルダ";
+"— %@ (%lu folder(s))" = "— %@（%lu 個のフォルダ）";
 "— %lu .ply file(s), %.1f s" = "— %lu 個の .ply、%.1f 秒";
 "— Always: starts at login and keeps watching from the menu bar after the window is closed" = "— 常駐にしました：ログイン時に起動し、ウィンドウを閉じてもメニューバーで見張りを続けます";
 "— Only while the app is open (removed from Login Items)" = "— 「アプリを開いている間だけ」にしました（ログイン項目から外しました）";

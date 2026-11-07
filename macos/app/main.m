@@ -199,7 +199,7 @@ static NSTextField* LinkLabel(NSAttributedString* text) {
     NSTextField* angleHelp = [NSTextField wrappingLabelWithString:
         NSLocalizedString(@"In Finder, right-click a .ply and choose Open With → SplatThumb to open the angle window. Drag to turn it, then click “Use this view” to remake the icon from that angle.\nYou can also drop a .ply on this window or on SplatThumb in the Dock.", nil)];
     angleHelp.translatesAutoresizingMaskIntoConstraints = NO;
-    NSTextField* angleButtonNote = [NSTextField labelWithString:NSLocalizedString(@"You can also use this button.", nil)];
+    NSTextField* angleButtonNote = [NSTextField labelWithString:NSLocalizedString(@"Or use this button:", nil)];
     angleButtonNote.translatesAutoresizingMaskIntoConstraints = NO;
     NSButton* angle = [self button:NSLocalizedString(@"Choose a PLY…", nil) action:@selector(openPly:)];
     NSView* box = angleBox.contentView;
@@ -440,7 +440,7 @@ static NSTextField* LinkLabel(NSAttributedString* text) {
     if (self.folders.count > 0 && [self.defaults boolForKey:kWatchingKey]) {
         // Catch up on what changed while the app was not running, then keep watching.
         [self runOnFolders:self.folders
-                      verb:NSLocalizedString(@"Catching up: checking icons", nil)
+                      verb:NSLocalizedString(@"Checking icons", nil)
                  operation:^NSString*(NSString* f) {
                      return [STIconSetter setIconForFile:f];
                  }];
@@ -597,7 +597,7 @@ static NSTextField* LinkLabel(NSAttributedString* text) {
     for (NSURL* url in folders) {
         [paths addObject:url.path];
     }
-    [self log:[NSString stringWithFormat:NSLocalizedString(@"— %@: %lu folder(s)", nil), verb, (unsigned long)paths.count]];
+    [self log:[NSString stringWithFormat:NSLocalizedString(@"— %@ (%lu folder(s))", nil), verb, (unsigned long)paths.count]];
     dispatch_async(self.work, ^{
         NSDate* start = [NSDate date];
         // Folders may overlap (one registered before its parent), so handle each file once.

@@ -456,7 +456,7 @@ static NSMutableArray<STViewerWindow*>* gOpenViewers;
                     backing:NSBackingStoreBuffered
                       defer:NO];
     self.window.title =
-        [NSString stringWithFormat:NSLocalizedString(@"SplatThumb - Thumbnail view — %@", nil), self.url.lastPathComponent];
+        [NSString stringWithFormat:NSLocalizedString(@"SplatThumb - Thumbnail view - %@", nil), self.url.lastPathComponent];
     self.window.releasedWhenClosed = NO;
     self.window.delegate = self;
     self.window.contentMinSize = NSMakeSize(420, 420);

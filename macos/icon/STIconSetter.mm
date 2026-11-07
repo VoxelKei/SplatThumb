@@ -97,7 +97,7 @@ std::string icon_marker(const std::string& fp_hex, const std::optional<splatthum
 
 NSString* line(NSString* tag, NSString* path, NSString* detail) {
     return detail.length > 0
-               ? [NSString stringWithFormat:@"%@ %@ (%@)", tag, path.lastPathComponent, detail]
+               ? [NSString stringWithFormat:@"%@ %@: %@", tag, path.lastPathComponent, detail]
                : [NSString stringWithFormat:@"%@ %@", tag, path.lastPathComponent];
 }
 
