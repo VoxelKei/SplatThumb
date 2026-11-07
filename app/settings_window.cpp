@@ -223,7 +223,7 @@ void SettingsWindow::create_controls() noexcept {
         kProgress);
     add(L"STATIC", L"", SS_ETCHEDHORZ, kAboutRule);
     try {
-        // "SplatThumb 0.4.0 · © 2026 VoxelKei · MIT License"
+        // "SplatThumb 0.5.0 · © 2026 VoxelKei · MIT License"
         const std::string_view v = version();
         std::wstring about = L"SplatThumb ";
         about.append(v.begin(), v.end());

@@ -3,6 +3,24 @@
 All notable changes to SplatThumb. Versions follow [Semantic Versioning](https://semver.org/);
 0.x versions are previews.
 
+## 0.5.0 - 2026-11-08
+
+- A Mac version (macOS 13 or later, Apple silicon and Intel), as a notarized `.dmg`. macOS does
+  not let other apps replace Finder's thumbnails for `.ply`, so it works differently from
+  Windows (see the README):
+  - The app puts SplatThumb's picture on 3DGS `.ply` files as their custom Finder icon, in
+    folders you register. The splat data and the modified date are unchanged; the icon is
+    kept in the file's extended attributes and can be removed again.
+  - Registered folders can be watched while the app is open, or always (a login item with a
+    menu bar icon), so new and changed files get icons too. "Remake All Icons" and "Remove
+    All Icons" act on all registered folders.
+  - A viewer like the Windows one sets the angle, opened from Finder's Open With menu. Views
+    are saved in the same `.view` format as on Windows.
+  - Spatialograph Maker projects (`.spgm`) get Quick Look thumbnails.
+  - English and Japanese, following the system language.
+- On Apple platforms, saved views are read and written without `std::from_chars` for floats,
+  so the core builds with Apple's compiler. Windows behaviour is unchanged.
+
 ## 0.4.0 - 2026-11-02
 
 - SplatThumb has its own icon (an orange square with a white splat), shown on its windows, the
