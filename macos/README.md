@@ -57,8 +57,13 @@ build/macos-xcode/Release/splatthumb-icon remove <file-or-folder>...
 build/macos-xcode/Release/splatthumb-icon watch <folder>
 ```
 
-In the app: "choose a folder and add icons", "remove this folder's icons", and a checkbox
-to watch the folder while the app is open.
+In the app: a list of registered folders (remembered as security-scoped bookmarks; icons
+are set when a folder is added), "remove all icons in the registered folders", and a
+checkbox to watch them. Watching runs either only while the app is open, or resident: the
+app registers itself as a login item (`SMAppService.mainApp`), keeps running in the menu
+bar after its window is closed, and on the next launch catches up and resumes watching.
+Switching back unregisters the login item. Folders inside a registered folder are already
+covered and are not added twice.
 
 - The icon lives in the file's extended attributes (`com.apple.ResourceFork`,
   `com.apple.FinderInfo`); the PLY data is unchanged. A fingerprint is kept in
