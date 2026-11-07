@@ -54,7 +54,7 @@
 "Use this view" = "この視点をサムネイルにする";
 "View saved. The icon has been remade." = "視点を保存しました。アイコンを作り直しました。";
 "View saved: %@" = "視点を保存しました：%@";
-"Watch these folders (new or changed .ply files get icons automatically)" = "登録したフォルダを見張る（新しい・変わった .ply に自動で付ける）";
+"Watch these folders (new or changed .ply files get icons automatically)" = "登録したフォルダを見張る（新規もしくは更新された .ply に自動で付ける）";
 "Watching %lu folder(s)" = "見張り中：%lu 個のフォルダ";
 "Or use this button:" = "このボタンからも設定できます。";
 "always" = "常駐";
