@@ -661,8 +661,13 @@ static NSString* const kResidentKey = @"Resident";
     if (self.statusItem == nil) {
         self.statusItem =
             [NSStatusBar.systemStatusBar statusItemWithLength:NSSquareStatusItemLength];
-        self.statusItem.button.image = [NSImage imageWithSystemSymbolName:@"cube.transparent"
-                                                 accessibilityDescription:@"SplatThumb"];
+        // The app icon in one colour; as a template image macOS tints it for light and
+        // dark menu bars.
+        NSImage* icon = [NSImage imageNamed:@"StatusIcon"];
+        icon.template = YES;
+        icon.size = NSMakeSize(18, 18);
+        icon.accessibilityDescription = @"SplatThumb";
+        self.statusItem.button.image = icon;
     }
     NSMenu* menu = [[NSMenu alloc] init];
     NSString* state = self.watching

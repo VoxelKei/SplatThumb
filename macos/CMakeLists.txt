@@ -64,7 +64,13 @@ set_target_properties(SplatThumbThumbnail PROPERTIES
 splatthumb_sign(SplatThumbThumbnail ${CMAKE_CURRENT_SOURCE_DIR}/thumbnail/SplatThumbThumbnail.entitlements)
 
 # --- Host app ----------------------------------------------------------------
-add_executable(SplatThumb MACOSX_BUNDLE app/main.m app/STViewerWindow.mm icon/STIconSetter.mm)
+set(SPLATTHUMB_APP_RESOURCES
+    app/Resources/AppIcon.icns
+    app/Resources/StatusIcon.png
+    app/Resources/StatusIcon@2x.png)
+set_source_files_properties(${SPLATTHUMB_APP_RESOURCES} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+add_executable(SplatThumb MACOSX_BUNDLE app/main.m app/STViewerWindow.mm icon/STIconSetter.mm
+    ${SPLATTHUMB_APP_RESOURCES})
 target_include_directories(SplatThumb PRIVATE icon)
 target_link_libraries(SplatThumb PRIVATE
     splatthumb_core
