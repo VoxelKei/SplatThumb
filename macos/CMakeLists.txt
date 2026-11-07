@@ -64,11 +64,16 @@ set_target_properties(SplatThumbThumbnail PROPERTIES
 splatthumb_sign(SplatThumbThumbnail ${CMAKE_CURRENT_SOURCE_DIR}/thumbnail/SplatThumbThumbnail.entitlements)
 
 # --- Host app ----------------------------------------------------------------
-add_executable(SplatThumb MACOSX_BUNDLE app/main.m)
-target_link_libraries(SplatThumb PRIVATE "-framework Cocoa")
+add_executable(SplatThumb MACOSX_BUNDLE app/main.m icon/STIconSetter.mm)
+target_include_directories(SplatThumb PRIVATE icon)
+target_link_libraries(SplatThumb PRIVATE
+    splatthumb_core
+    "-framework Cocoa"
+    "-framework CoreServices")
 set_target_properties(SplatThumb PROPERTIES
     MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/app/Info.plist
     XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER com.voxelkei.splatthumb
+    XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
     XCODE_EMBED_APP_EXTENSIONS SplatThumbThumbnail
     XCODE_EMBED_APP_EXTENSIONS_CODE_SIGN_ON_COPY YES
     XCODE_EMBED_APP_EXTENSIONS_REMOVE_HEADERS_ON_COPY YES)
@@ -76,7 +81,7 @@ splatthumb_sign(SplatThumb ${CMAKE_CURRENT_SOURCE_DIR}/app/SplatThumb.entitlemen
 add_dependencies(SplatThumb SplatThumbThumbnail)
 
 # --- Option B spike: custom Finder icons ------------------------------------
-add_executable(splatthumb-icon icon/main.mm)
+add_executable(splatthumb-icon icon/main.mm icon/STIconSetter.mm)
 target_link_libraries(splatthumb-icon PRIVATE
     splatthumb_core
     "-framework Foundation"
