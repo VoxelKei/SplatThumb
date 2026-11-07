@@ -137,7 +137,7 @@ NSString* line(NSString* tag, NSString* path, NSString* detail) {
 + (NSString*)removeIconForFile:(NSString*)path {
     const char* p = path.fileSystemRepresentation;
     if (!read_attr(p, kFingerprintAttr)) {
-        return line(@"skip  ", path, @"no icon set by SplatThumb");
+        return line(@"skip  ", path, NSLocalizedString(@"no icon set by SplatThumb", nil));
     }
     struct stat before {};
     stat(p, &before);
@@ -161,7 +161,7 @@ NSString* line(NSString* tag, NSString* path, NSString* detail) {
     const char* p = path.fileSystemRepresentation;
     FileByteSource source;
     if (!source.open(p)) {
-        return line(@"FAILED", path, @"cannot open");
+        return line(@"FAILED", path, NSLocalizedString(@"cannot open", nil));
     }
     const auto fp = fingerprint(source);
     std::optional<View> view;
@@ -193,7 +193,7 @@ NSString* line(NSString* tag, NSString* path, NSString* detail) {
     stat(p, &before);
     NSImage* image = make_nsimage(result.image);
     if (image == nil || ![[NSWorkspace sharedWorkspace] setIcon:image forFile:path options:0]) {
-        return line(@"FAILED", path, @"could not set the icon (read-only or locked?)");
+        return line(@"FAILED", path, NSLocalizedString(@"could not set the icon (read-only or locked?)", nil));
     }
     if (fp) {
         setxattr(p, kFingerprintAttr, marker.data(), marker.size(), 0, XATTR_NOFOLLOW);
@@ -201,7 +201,7 @@ NSString* line(NSString* tag, NSString* path, NSString* detail) {
     // setIcon bumps the modification date although the data is unchanged; put it back.
     restore_times(p, before);
     return line(@"icon  ", path,
-                [NSString stringWithFormat:@"%.0f ms%@", ms_since(start), view ? @", 保存した視点" : @""]);
+                [NSString stringWithFormat:@"%.0f ms%@", ms_since(start), view ? NSLocalizedString(@", saved view", nil) : @""]);
 }
 
 @end

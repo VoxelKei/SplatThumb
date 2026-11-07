@@ -79,6 +79,14 @@ set(SPLATTHUMB_APP_RESOURCES
     app/Resources/StatusIcon.png
     app/Resources/StatusIcon@2x.png)
 set_source_files_properties(${SPLATTHUMB_APP_RESOURCES} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+# UI text: English is the development language (the keys), Japanese is translated.
+set(SPLATTHUMB_APP_STRINGS
+    app/Resources/en.lproj/Localizable.strings
+    app/Resources/ja.lproj/Localizable.strings)
+# Xcode keeps each file's .lproj folder, so the location is just Resources.
+set_source_files_properties(${SPLATTHUMB_APP_STRINGS}
+    PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+list(APPEND SPLATTHUMB_APP_RESOURCES ${SPLATTHUMB_APP_STRINGS})
 add_executable(SplatThumb MACOSX_BUNDLE app/main.m app/STViewerWindow.mm icon/STIconSetter.mm
     ${SPLATTHUMB_APP_RESOURCES})
 target_include_directories(SplatThumb PRIVATE icon)
