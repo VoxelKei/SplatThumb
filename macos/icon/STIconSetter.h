@@ -18,6 +18,9 @@ NS_ASSUME_NONNULL_BEGIN
 // The PLY data and its modification date are kept. Returns a one-line report.
 + (NSString*)setIconForFile:(NSString*)path;
 
+// The same, but always draws the icon again, even when nothing changed.
++ (NSString*)setIconForFile:(NSString*)path force:(BOOL)force;
+
 // Removes an icon this tool set (files without our marker are left alone), leaving the
 // file's attributes and modification date as they were before. Returns a one-line report.
 + (NSString*)removeIconForFile:(NSString*)path;

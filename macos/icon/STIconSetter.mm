@@ -156,6 +156,10 @@ NSString* line(NSString* tag, NSString* path, NSString* detail) {
 }
 
 + (NSString*)setIconForFile:(NSString*)path {
+    return [self setIconForFile:path force:NO];
+}
+
++ (NSString*)setIconForFile:(NSString*)path force:(BOOL)force {
     using namespace splatthumb;
     const auto start = std::chrono::steady_clock::now();
     const char* p = path.fileSystemRepresentation;
@@ -169,7 +173,7 @@ NSString* line(NSString* tag, NSString* path, NSString* detail) {
         view = load_view(self.viewsRoot.fileSystemRepresentation, *fp);
     }
     const std::string marker = fp ? icon_marker(fp->hex(), view) : std::string();
-    if (fp && read_attr(p, kFingerprintAttr) == marker) {
+    if (!force && fp && read_attr(p, kFingerprintAttr) == marker) {
         return line(@"same  ", path, nil);
     }
 

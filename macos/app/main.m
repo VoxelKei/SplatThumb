@@ -101,6 +101,7 @@ static NSTextField* LinkLabel(NSAttributedString* text) {
 @property(strong) NSTextView* logView;
 @property(strong) NSButton* removeFolderButton;
 @property(strong) NSButton* removeAllButton;
+@property(strong) NSButton* remakeAllButton;
 @property(strong) NSButton* watchCheckbox;
 @property(strong) NSButton* whileOpenRadio;
 @property(strong) NSButton* residentRadio;
@@ -149,7 +150,7 @@ static NSTextField* LinkLabel(NSAttributedString* text) {
 
 - (void)buildWindow {
     self.window = [[NSWindow alloc]
-        initWithContentRect:NSMakeRect(0, 0, 720, 780)
+        initWithContentRect:NSMakeRect(0, 0, 720, 820)
                   styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
                             NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable
                     backing:NSBackingStoreBuffered
@@ -188,6 +189,8 @@ static NSTextField* LinkLabel(NSAttributedString* text) {
     NSButton* add = [self button:NSLocalizedString(@"Add Folder…", nil) action:@selector(addFolders:)];
     self.removeFolderButton = [self button:NSLocalizedString(@"Remove Selected from List", nil)
                                     action:@selector(removeSelectedFolders:)];
+    self.remakeAllButton = [self button:NSLocalizedString(@"Remake All Icons in These Folders", nil)
+                                 action:@selector(remakeAllIcons:)];
     self.removeAllButton = [self button:NSLocalizedString(@"Remove All Icons in These Folders", nil)
                                  action:@selector(removeAllIcons:)];
     // How to set a file's thumbnail angle, in a box so it stands out. Finder's context menu
@@ -245,7 +248,7 @@ static NSTextField* LinkLabel(NSAttributedString* text) {
                                             NSLocalizedString(@" - a 3DGS editing app by the same author", nil), small));
 
     for (NSView* v in @[
-             heading, tableScroll, add, self.removeFolderButton, self.removeAllButton,
+             heading, tableScroll, add, self.removeFolderButton, self.remakeAllButton, self.removeAllButton,
              self.watchCheckbox, self.whileOpenRadio, self.residentRadio, angleBox,
              logScroll, about, repo, app
          ]) {
@@ -264,9 +267,11 @@ static NSTextField* LinkLabel(NSAttributedString* text) {
         [add.leadingAnchor constraintEqualToAnchor:left constant:16],
         [self.removeFolderButton.centerYAnchor constraintEqualToAnchor:add.centerYAnchor],
         [self.removeFolderButton.leadingAnchor constraintEqualToAnchor:add.trailingAnchor constant:8],
-        [self.removeAllButton.centerYAnchor constraintEqualToAnchor:add.centerYAnchor],
-        [self.removeAllButton.trailingAnchor constraintEqualToAnchor:right constant:-16],
-        [self.watchCheckbox.topAnchor constraintEqualToAnchor:add.bottomAnchor constant:14],
+        [self.remakeAllButton.topAnchor constraintEqualToAnchor:add.bottomAnchor constant:6],
+        [self.remakeAllButton.leadingAnchor constraintEqualToAnchor:left constant:16],
+        [self.removeAllButton.centerYAnchor constraintEqualToAnchor:self.remakeAllButton.centerYAnchor],
+        [self.removeAllButton.leadingAnchor constraintEqualToAnchor:self.remakeAllButton.trailingAnchor constant:8],
+        [self.watchCheckbox.topAnchor constraintEqualToAnchor:self.remakeAllButton.bottomAnchor constant:14],
         [self.watchCheckbox.leadingAnchor constraintEqualToAnchor:left constant:16],
         [self.whileOpenRadio.topAnchor constraintEqualToAnchor:self.watchCheckbox.bottomAnchor constant:6],
         [self.whileOpenRadio.leadingAnchor constraintEqualToAnchor:left constant:36],
@@ -319,6 +324,7 @@ static NSTextField* LinkLabel(NSAttributedString* text) {
     [self.table reloadData];
     self.removeFolderButton.enabled = self.table.selectedRowIndexes.count > 0;
     self.removeAllButton.enabled = any;
+    self.remakeAllButton.enabled = any;
     self.watchCheckbox.enabled = any;
     self.watchCheckbox.state = self.watching ? NSControlStateValueOn : NSControlStateValueOff;
     [self updateStatusItem];
@@ -593,6 +599,14 @@ static NSTextField* LinkLabel(NSAttributedString* text) {
 - (void)runOnFolders:(NSArray<NSURL*>*)folders
                 verb:(NSString*)verb
            operation:(NSString* (^)(NSString*))operation {
+    [self runOnFolders:folders verb:verb operation:operation done:nil];
+}
+
+// The same, then runs done on the main queue.
+- (void)runOnFolders:(NSArray<NSURL*>*)folders
+                verb:(NSString*)verb
+           operation:(NSString* (^)(NSString*))operation
+                done:(void (^_Nullable)(void))done {
     NSMutableArray<NSString*>* paths = [NSMutableArray array];
     for (NSURL* url in folders) {
         [paths addObject:url.path];
@@ -611,6 +625,9 @@ static NSTextField* LinkLabel(NSAttributedString* text) {
         }
         [self log:[NSString stringWithFormat:NSLocalizedString(@"— %lu .ply file(s), %.1f s", nil), (unsigned long)count,
                                              -start.timeIntervalSinceNow]];
+        if (done != nil) {
+            dispatch_async(dispatch_get_main_queue(), done);
+        }
     });
 }
 
@@ -677,6 +694,32 @@ static NSTextField* LinkLabel(NSAttributedString* text) {
         }
     }
     [self updateControls];
+}
+
+- (void)remakeAllIcons:(id)sender {
+    (void)sender;
+    if (self.folders.count == 0) {
+        return;
+    }
+    // Draws every icon again (after a change of settings or of SplatThumb itself), whether
+    // or not the file changed, from the saved angle where there is one. Files that are not
+    // 3DGS are still left alone. The watch is paused meanwhile: the new icons are changes in
+    // the folders, and it would otherwise look at every file again.
+    const BOOL wasWatching = self.watching;
+    [self stopWatching];
+    self.remakeAllButton.enabled = NO;
+    self.removeAllButton.enabled = NO;
+    [self runOnFolders:self.folders
+                  verb:NSLocalizedString(@"Remaking all icons", nil)
+             operation:^NSString*(NSString* f) {
+                 return [STIconSetter setIconForFile:f force:YES];
+             }
+                  done:^{
+                      if (wasWatching && self.folders.count > 0) {
+                          [self startWatching];
+                      }
+                      [self updateControls];
+                  }];
 }
 
 - (void)removeAllIcons:(id)sender {

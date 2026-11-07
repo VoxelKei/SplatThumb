@@ -69,3 +69,5 @@
 "— Stopped watching" = "— 見張りを止めました";
 "— Stopped watching (to remove icons)" = "— 見張りを止めました（アイコンを外すため）";
 "— Watching %lu folder(s) (%@)" = "— 見張りを始めました：%lu 個のフォルダ（%@）";
+"Remake All Icons in These Folders" = "登録したフォルダのアイコンをすべて再生成する";
+"Remaking all icons" = "アイコンをすべて再生成";
