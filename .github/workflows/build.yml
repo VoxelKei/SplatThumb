@@ -144,6 +144,31 @@ jobs:
       - name: Check the CLI is universal
         run: lipo -archs build/macos/bin/splatthumb-cli
 
+  macos-app:
+    # Builds the macOS app, its Quick Look extension and splatthumb-icon with the
+    # Xcode generator, signed ad hoc. Release signing is not done here.
+    name: macos app (Xcode, ad hoc signed)
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Configure
+        run: cmake -S macos -B build/macos-xcode -G Xcode
+
+      - name: Build
+        run: cmake --build build/macos-xcode --config Release -- -quiet
+
+      - name: Check the bundle
+        run: |
+          app=build/macos-xcode/Release/SplatThumb.app
+          test -d "$app/Contents/PlugIns/SplatThumbThumbnail.appex"
+          codesign --verify --deep --strict "$app"
+          codesign -d --entitlements - "$app/Contents/PlugIns/SplatThumbThumbnail.appex"
+          plutil -p "$app/Contents/PlugIns/SplatThumbThumbnail.appex/Contents/Info.plist"
+
   fuzz:
     # Short fuzzing run on every change to catch parser and renderer crashes early.
     # fuzz-weekly.yml runs the same fuzzers for longer.
