@@ -74,3 +74,14 @@ set_target_properties(SplatThumb PROPERTIES
     XCODE_EMBED_APP_EXTENSIONS_REMOVE_HEADERS_ON_COPY YES)
 splatthumb_sign(SplatThumb ${CMAKE_CURRENT_SOURCE_DIR}/app/SplatThumb.entitlements)
 add_dependencies(SplatThumb SplatThumbThumbnail)
+
+# --- Option B spike: custom Finder icons ------------------------------------
+add_executable(splatthumb-icon icon/main.mm)
+target_link_libraries(splatthumb-icon PRIVATE
+    splatthumb_core
+    "-framework Foundation"
+    "-framework AppKit"
+    "-framework CoreServices")
+set_target_properties(splatthumb-icon PROPERTIES
+    XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "-"
+    XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES)
