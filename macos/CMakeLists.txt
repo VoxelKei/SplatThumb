@@ -69,7 +69,8 @@ target_include_directories(SplatThumb PRIVATE icon)
 target_link_libraries(SplatThumb PRIVATE
     splatthumb_core
     "-framework Cocoa"
-    "-framework CoreServices")
+    "-framework CoreServices"
+    "-framework ServiceManagement")
 set_target_properties(SplatThumb PROPERTIES
     MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/app/Info.plist
     XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER com.voxelkei.splatthumb
