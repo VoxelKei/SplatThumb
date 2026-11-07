@@ -26,6 +26,21 @@ never modified; there is no network access and no telemetry.
 - Also shows the preview saved in [Spatialograph Maker](https://www.spatialograph.app/)
   projects (`.spgm`).
 
+## Windows and macOS
+
+The Windows version is the one released so far. A macOS version is in development and not
+released yet. It cannot replace macOS's own `.ply` thumbnails, so it works differently:
+
+| | Windows | macOS (in development) |
+| --- | --- | --- |
+| How splats show | Explorer thumbnails, made by SplatThumb when Explorer asks | A custom Finder icon that the SplatThumb app puts on each 3DGS `.ply`. The large preview and Quick Look (Space) still show Apple's own view |
+| The `.ply` file | Only read, never changed | Splat data and modified date unchanged; the icon is added as extended attributes and can be removed again |
+| New files | Automatic | The app watches the folders you add, either while it is open or from the menu bar from login |
+| Choosing the view | Turn it in the SplatThumb window | The same, from Finder's Open With menu |
+| `.spgm` projects | Thumbnail | Thumbnail (Quick Look extension) |
+| Removing | Uninstall in Settings; everything is put back | "Remove All Icons in These Folders" in the app, then delete the app |
+| Requirements | Windows 10/11 x64 | macOS 13 or later, Apple silicon |
+
 ## Install and uninstall
 
 Requirements: Windows 10/11 x64. SplatThumb installs for your user account only and needs no
