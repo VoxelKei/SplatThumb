@@ -27,7 +27,7 @@
 "Folders that get icons" = "アイコンを付けるフォルダ";
 "How to set the angle" = "アングルの設定方法";
 "Icons are set on the 3DGS .ply files in this folder and the folders inside it." = "このフォルダ（とその中のフォルダ）の 3DGS .ply にアイコンを付けます";
-"In Finder, right-click a .ply and choose Open With → SplatThumb to open the angle window. Adjust the angle, then click “Use this view” to remake the icon from that angle.\nYou can also drop a .ply on this window or on SplatThumb in the Dock." = "Finder で .ply を右クリックし、「このアプリケーションで開く」→「SplatThumb」を選ぶと、アングルを決める画面が開きます。アングルを調整して、「この視点をサムネイルにする」を押すと、そのアングルでアイコンが作り直されます。\n.ply をこのウインドウや Dock の SplatThumb にドロップしても開けます。";
+"In Finder, right-click a .ply and choose Open With → SplatThumb to open the angle window. Adjust the angle, then click “Use this view” to remake the icon from that angle.\nYou can also drop a .ply on this window or on SplatThumb in the Dock.\nThis also works for a .ply outside the registered folders, but such a file is not watched and is left out of Remake All and Remove All. To take its icon off, select it in Finder, press ⌘I, click the small icon at the top left and press Delete." = "Finder で .ply を右クリックし、「このアプリケーションで開く」→「SplatThumb」を選ぶと、アングルを決める画面が開きます。アングルを調整して、「この視点をサムネイルにする」を押すと、そのアングルでアイコンが作り直されます。\n.ply をこのウインドウや Dock の SplatThumb にドロップしても開けます。\n登録したフォルダの外にある .ply にも、この方法でアイコンを付けられます。ただし、見張りや「すべて再生成する」「すべて外す」の対象にはなりません。外すときは、Finder でファイルを選んで ⌘I を押し、左上の小さなアイコンをクリックして delete キーを押します。";
 "Loading..." = "読み込み中...";
 "Not watching" = "見張っていません";
 "Only while the app is open" = "アプリを開いている間だけ";

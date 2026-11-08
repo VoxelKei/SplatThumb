@@ -85,12 +85,17 @@ To choose the angle, right-click a `.ply` in Finder and choose Open With → Spl
 turn, right-drag or Shift-drag to move, and scroll or pinch to zoom. Click "Use this view" and
 the icon is remade from that angle.
 
+This also works one file at a time for a `.ply` outside the registered folders. Such a file is
+not watched and is left out of "Remake All" and "Remove All". To take its icon off, select it
+in Finder, press ⌘I, click the small icon at the top left and press Delete.
+
 The app is shown in Japanese or English, following the macOS language order.
 
 To remove SplatThumb:
 
 1. In SplatThumb, click "Remove All Icons in These Folders". The icons come off and the files
    are as before.
+   Icons you set one by one on files outside those folders come off with ⌘I as described above.
 2. If you chose "Always", switch back to "Only while the app is open" (this removes the login
    item).
 3. Quit SplatThumb and delete it from Applications.
