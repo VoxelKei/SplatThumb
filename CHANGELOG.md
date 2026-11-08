@@ -11,6 +11,10 @@ All notable changes to SplatThumb. Versions follow [Semantic Versioning](https:/
   second to pick them; if that is not enough, it draws the even sample as before. The viewer
   that sets the angle (Windows and Mac) picks splats the same way. Applies to Windows
   thumbnails, Mac Finder icons, and the CLI (`--importance off` turns it off).
+- Mac: "Splats used for icons" (up to 50,000, 200,000 or 400,000) in the main window, and the
+  same choice for one file in the angle window ("Same as the app setting" or a count of its
+  own, saved with the angle), as on Windows. Icons whose count changed are redrawn when they
+  are checked again; "Remake All Icons in These Folders" updates them all at once.
 
 ## 0.5.1 - 2026-11-08
 

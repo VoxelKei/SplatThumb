@@ -105,6 +105,7 @@ static NSTextField* LinkLabel(NSAttributedString* text) {
 @property(strong) NSButton* watchCheckbox;
 @property(strong) NSButton* whileOpenRadio;
 @property(strong) NSButton* residentRadio;
+@property(strong) NSPopUpButton* qualityPopup;
 @property(strong) NSStatusItem* statusItem;
 @property(strong) NSMutableArray<NSURL*>* folders;            // security-scoped while listed
 @property(strong) NSMutableArray<STFolderWatcher*>* watchers; // empty when not watching
@@ -229,6 +230,19 @@ static NSTextField* LinkLabel(NSAttributedString* text) {
     self.residentRadio = [self radio:NSLocalizedString(@"Always (start at login; keep running in the menu bar after the window is closed)", nil)];
     (self.resident ? self.residentRadio : self.whileOpenRadio).state = NSControlStateValueOn;
 
+    // Same choices as the Windows settings window.
+    NSTextField* qualityLabel = [NSTextField labelWithString:NSLocalizedString(@"Splats used for icons:", nil)];
+    qualityLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    self.qualityPopup = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    self.qualityPopup.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.qualityPopup addItemsWithTitles:@[
+        NSLocalizedString(@"Up to 50,000", nil), NSLocalizedString(@"Up to 200,000", nil),
+        NSLocalizedString(@"Up to 400,000", nil)
+    ]];
+    [self.qualityPopup selectItemAtIndex:STIconSetter.qualitySetting];
+    self.qualityPopup.target = self;
+    self.qualityPopup.action = @selector(qualityChanged:);
+
     NSScrollView* logScroll = [NSTextView scrollableTextView];
     logScroll.translatesAutoresizingMaskIntoConstraints = NO;
     self.logView = logScroll.documentView;
@@ -249,7 +263,8 @@ static NSTextField* LinkLabel(NSAttributedString* text) {
 
     for (NSView* v in @[
              heading, tableScroll, add, self.removeFolderButton, self.remakeAllButton, self.removeAllButton,
-             self.watchCheckbox, self.whileOpenRadio, self.residentRadio, angleBox,
+             self.watchCheckbox, self.whileOpenRadio, self.residentRadio, qualityLabel,
+             self.qualityPopup, angleBox,
              logScroll, about, repo, app
          ]) {
         [content addSubview:v];
@@ -277,7 +292,11 @@ static NSTextField* LinkLabel(NSAttributedString* text) {
         [self.whileOpenRadio.leadingAnchor constraintEqualToAnchor:left constant:36],
         [self.residentRadio.topAnchor constraintEqualToAnchor:self.whileOpenRadio.bottomAnchor constant:4],
         [self.residentRadio.leadingAnchor constraintEqualToAnchor:left constant:36],
-        [angleBox.topAnchor constraintEqualToAnchor:self.residentRadio.bottomAnchor constant:16],
+        [self.qualityPopup.topAnchor constraintEqualToAnchor:self.residentRadio.bottomAnchor constant:14],
+        [qualityLabel.firstBaselineAnchor constraintEqualToAnchor:self.qualityPopup.firstBaselineAnchor],
+        [qualityLabel.leadingAnchor constraintEqualToAnchor:left constant:16],
+        [self.qualityPopup.leadingAnchor constraintEqualToAnchor:qualityLabel.trailingAnchor constant:8],
+        [angleBox.topAnchor constraintEqualToAnchor:self.qualityPopup.bottomAnchor constant:16],
         [angleBox.leadingAnchor constraintEqualToAnchor:left constant:13],
         [angleBox.trailingAnchor constraintEqualToAnchor:right constant:-13],
         [logScroll.topAnchor constraintEqualToAnchor:angleBox.bottomAnchor constant:12],
@@ -829,6 +848,19 @@ static NSTextField* LinkLabel(NSAttributedString* text) {
         [self log:NSLocalizedString(@"— Stopped watching", nil)];
     }
     [self updateControls];
+}
+
+// --- splat count ---------------------------------------------------------------
+
+- (void)qualityChanged:(id)sender {
+    (void)sender;
+    const NSInteger q = self.qualityPopup.indexOfSelectedItem;
+    if (q == STIconSetter.qualitySetting) {
+        return;
+    }
+    STIconSetter.qualitySetting = q;
+    [self log:[NSString stringWithFormat:NSLocalizedString(@"— Splats used for icons: %@. Files with a count saved in their view keep it. To update the icons already set, click “Remake All Icons in These Folders”.", nil),
+                                         self.qualityPopup.titleOfSelectedItem]];
 }
 
 // --- resident mode -----------------------------------------------------------

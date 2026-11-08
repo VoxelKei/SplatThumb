@@ -121,6 +121,9 @@ out-of-range values use the default.
 | `Quality` | Splats drawn at most: 0 = 50,000, 1 = 200,000, 2 = 400,000 | 1 |
 | `ViewerWidth`, `ViewerHeight` | Size of the viewpoint window when it was last resized and closed, in pixels at 100% scaling (480 x 420 up to 16384) | 760 x 820 |
 
+On the Mac, the app keeps the same `Quality` number (0, 1 or 2) under the key `Quality` in its
+user defaults and uses it for Finder icons. A count saved with a file's view wins there too.
+
 The background is always dark gray, so a thumbnail looks the same in light and dark Explorer
 themes. (A transparent background was tried during v0.2 and dropped.)
 

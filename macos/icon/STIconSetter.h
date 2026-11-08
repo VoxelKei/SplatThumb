@@ -9,6 +9,11 @@ NS_ASSUME_NONNULL_BEGIN
 // sandbox container: Library/Application Support/SplatThumb/views.
 @property(class, readonly) NSString* viewsRoot;
 
+// Most splats drawn for an icon when the file's saved view has no count of its own:
+// 0 = up to 50,000, 1 = up to 200,000 (the default), 2 = up to 400,000, as on Windows.
+// Kept in the user defaults ("Quality"); out-of-range values read as 1.
+@property(class) NSInteger qualitySetting;
+
 // The .ply files at path: the file itself, or every .ply inside a folder (recursively).
 + (NSArray<NSString*>*)plyFilesAt:(NSString*)path;
 

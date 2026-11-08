@@ -71,3 +71,10 @@
 "— Watching %lu folder(s) (%@)" = "— 見張りを始めました：%lu 個のフォルダ（%@）";
 "Remake All Icons in These Folders" = "登録したフォルダのアイコンをすべて再生成する";
 "Remaking all icons" = "アイコンをすべて再生成";
+"Splats used for icons:" = "アイコンに使用するsplats数：";
+"Up to 50,000" = "最大 5 万個";
+"Up to 200,000" = "最大 20 万個";
+"Up to 400,000" = "最大 40 万個";
+"Same as the app setting (%@)" = "全体の設定に従う（%@）";
+"— Splats used for icons: %@. Files with a count saved in their view keep it. To update the icons already set, click “Remake All Icons in These Folders”." = "— アイコンに使用するsplats数：%@。ファイルごとに数を保存したものは、その数のままです。付けてあるアイコンを更新するには「登録したフォルダのアイコンをすべて再生成する」を押してください。";
+"Splat count changed. Click “Use this view” to use it for the icon." = "splats数を変えました。「この視点をサムネイルにする」を押すとアイコンに反映されます。";
