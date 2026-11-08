@@ -8,9 +8,9 @@ All notable changes to SplatThumb. Versions follow [Semantic Versioning](https:/
 - Big scenes no longer look sparse. When a file has more splats than the thumbnail draws,
   SplatThumb now keeps the ones that add the most to the picture (the largest and most opaque
   ones the camera can see) instead of an even sample. It reads the file for at most one more
-  second to pick them; if that is not enough, it draws the even sample as before. The viewer
-  that sets the angle (Windows and Mac) picks splats the same way. Applies to Windows
-  thumbnails, Mac Finder icons, and the CLI (`--importance off` turns it off).
+  second to pick them; if that is not enough, it draws the even sample as before. Applies to
+  Windows thumbnails, Mac Finder icons, and the CLI (`--importance off` turns it off). The
+  window for setting the view still draws the even sample, so it stays quick to turn.
 - Mac: "Splats used for icons" (up to 50,000, 200,000 or 400,000) in the main window, and the
   same choice for one file in the angle window ("Same as the app setting" or a count of its
   own, saved with the angle), as on Windows. Icons whose count changed are redrawn when they

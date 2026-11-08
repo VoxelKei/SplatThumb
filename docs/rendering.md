@@ -48,8 +48,9 @@ million splats this looks almost the same as drawing every splat, even with only
   used if the whole file was read or at least twice as many records as the sample; otherwise
   the even sample is drawn, as is the case after a read error or when memory runs out.
 - At most twice the splat limit is held while picking (about 24 MB for 200,000).
-- The viewer that sets the angle keeps the most important splats the same way, but without
-  leaving out what the first view cannot see, since the view moves there.
+- The viewer that sets the angle still draws the even sample. The important splats are
+  larger, so drawing them took 3 to 6 times as long there (0.7 to 1.5 s for a still picture
+  of a 2.5 million splat scene), which made turning the view feel slow.
 - `splatthumb-cli render ... --importance off` draws the even sample, as before.
 
 ## 4. Project and blend (`render.cpp`)

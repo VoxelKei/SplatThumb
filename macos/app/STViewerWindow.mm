@@ -82,10 +82,6 @@ std::optional<Loaded> load_file(const char* path, Quality quality) {
     if (automatic.status != Status::Ok) {
         return std::nullopt;
     }
-    // Then, as the thumbnail does, keep the most important splats of a sampled file. No
-    // camera: the view moves here, so splats out of the first view are kept too.
-    prefer_important_splats(source, c, options.max_splats, nullptr, loaded,
-                            Deadline::after(kLoadTime));
     Loaded out;
     try {
         const std::size_t step = loaded.splats.size() / kPreviewSplats + 1;
