@@ -4,10 +4,11 @@ See your Gaussian splats in Explorer before you open them.
 
 [![MIT License](https://img.shields.io/badge/license-MIT-0f766e?style=flat-square)](LICENSE)
 ![Windows 10 / 11 x64](https://img.shields.io/badge/Windows_10_%2F_11-x64-0f766e?style=flat-square)
-![Preview v0.4](https://img.shields.io/badge/preview-v0.4-64748b?style=flat-square)
+![macOS 13+](https://img.shields.io/badge/macOS-13%2B-0f766e?style=flat-square)
+![Preview v0.5](https://img.shields.io/badge/preview-v0.5-64748b?style=flat-square)
 
 [Download](../../releases) | [Install](#install-and-uninstall) | [Choosing the view](#choosing-the-view) | [Safety](#safety) |
-[Build](#building-from-source) | [日本語](README.ja.md)
+[Mac](#install-and-remove-mac) | [Build](#building-from-source) | [日本語](README.ja.md)
 
 <img src="docs/media/demo.webp" width="960" alt="Splat thumbnails appearing in Explorer, then choosing a file's view by turning it in the SplatThumb window">
 
@@ -28,11 +29,10 @@ never modified; there is no network access and no telemetry.
 
 ## Windows and Mac versions
 
-A Mac version is in development (not released yet; see [macos/README.md](macos/README.md) to
-build it). macOS does not let other apps replace Finder's thumbnails for `.ply`, so it works
+A Mac version is available from v0.5.0 (see [Install and remove (Mac)](#install-and-remove-mac)). macOS does not let other apps replace Finder's thumbnails for `.ply`, so it works
 differently:
 
-| | Windows | Mac (in development) |
+| | Windows | Mac |
 |---|---|---|
 | How pictures appear | Explorer thumbnail, for every `.ply` | Custom Finder icon, set by the app on `.ply` files in folders you register |
 | When | Automatically | When a folder is added, and while watching (only while the app is open, or always via a login item) |
@@ -43,7 +43,7 @@ differently:
 | Saved views | `.view` files, keyed by the file's contents | The same `.view` files, so a view can be copied between the two |
 | `.spgm` projects | Thumbnail | Thumbnail (Quick Look) |
 | Removing it | Uninstall from Settings; everything is put back | Click "Remove All Icons in These Folders" in the app, then delete the app |
-| Requirements | Windows 10/11 x64 | macOS 13 or later, Apple silicon |
+| Requirements | Windows 10/11 x64 | macOS 13 or later (Apple silicon or Intel) |
 
 ## Install and uninstall
 
@@ -64,6 +64,38 @@ before, if any.
 Windows keeps thumbnails it has already made in its thumbnail cache, so they can still show
 after uninstalling. To clear the cache, run Disk Cleanup, check only "Thumbnails", and choose
 OK.
+
+## Install and remove (Mac)
+
+Requirements: macOS 13 or later, Apple silicon or Intel.
+
+1. Download `SplatThumb-<version>-macos.dmg` from [Releases](../../releases), open it and drag
+   SplatThumb to Applications. The app is notarized by Apple.
+2. Open SplatThumb once and use "Add Folder…" to choose a folder with 3D Gaussian Splatting
+   `.ply` files. The 3DGS files in it get SplatThumb's picture as their Finder icon (the
+   splat data is not changed).
+3. To give new or changed files icons too, turn on "Watch these folders" and choose "Only
+   while the app is open" or "Always" (starts at login and keeps running in the menu bar).
+
+To choose the angle, right-click a `.ply` in Finder and choose Open With → SplatThumb. Adjust
+the angle and click "Use this view"; the icon is remade from that angle.
+
+To remove SplatThumb:
+
+1. In SplatThumb, click "Remove All Icons in These Folders". The icons come off and the files
+   are as before.
+2. If you chose "Always", switch back to "Only while the app is open" (this removes the login
+   item).
+3. Quit SplatThumb and delete it from Applications.
+4. If you like, also delete what is left of its settings and saved angles:
+   `~/Library/Containers/com.voxelkei.splatthumb`, `~/Library/Containers/com.voxelkei.splatthumb.thumbnail`,
+   `~/Library/Application Scripts/com.voxelkei.splatthumb` and
+   `~/Library/Application Scripts/com.voxelkei.splatthumb.thumbnail` (saved angles are in the
+   first one, under `Data/Library/Application Support/SplatThumb/views`).
+
+The icon is kept in the file's extended attributes. Copied to an exFAT/FAT drive or a Windows
+share, it can turn into a hidden file starting with `._` next to the `.ply`; on Windows you
+can delete those.
 
 ## Update
 

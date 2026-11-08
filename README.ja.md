@@ -5,10 +5,11 @@
 
 [![MIT License](https://img.shields.io/badge/license-MIT-0f766e?style=flat-square)](LICENSE)
 ![Windows 10 / 11 x64](https://img.shields.io/badge/Windows_10_%2F_11-x64-0f766e?style=flat-square)
-![Preview v0.4](https://img.shields.io/badge/preview-v0.4-64748b?style=flat-square)
+![macOS 13+](https://img.shields.io/badge/macOS-13%2B-0f766e?style=flat-square)
+![Preview v0.5](https://img.shields.io/badge/preview-v0.5-64748b?style=flat-square)
 
 [ダウンロード](../../releases) | [インストール](#インストールとアンインストール) | [視点を決める](#視点を決める) | [安全性](#安全性) |
-[ビルド](#ソースからのビルド) | [English](README.md)
+[Mac 版](#mac-版のインストールと削除) | [ビルド](#ソースからのビルド) | [English](README.md)
 
 <img src="docs/media/demo.webp" width="960" alt="エクスプローラーにスプラットのサムネイルが並び、SplatThumb のウインドウで回して視点を決める様子">
 
@@ -25,10 +26,10 @@ SplatThumb は、3D Gaussian Splatting の `.ply` ファイルをエクスプロ
 
 ## Windows 版と Mac 版の違い
 
-Mac 版は開発中です(まだ配布していません。ビルド方法は [macos/README.md](macos/README.md))。
+Mac 版は v0.5.0 から使えます([Mac 版のインストールと削除](#mac-版のインストールと削除))。
 macOS では、ほかのアプリが Finder の `.ply` のサムネイルを置き換えられないため、仕組みが違います。
 
-| | Windows 版 | Mac 版(開発中) |
+| | Windows 版 | Mac 版 |
 |---|---|---|
 | 絵の出し方 | エクスプローラーのサムネイル(すべての `.ply`) | Finder のカスタムアイコン(登録したフォルダの `.ply` にアプリが付ける) |
 | いつ | 自動 | フォルダを追加したときと、見張り中(アプリを開いている間だけ、またはログイン項目で常駐) |
@@ -39,7 +40,7 @@ macOS では、ほかのアプリが Finder の `.ply` のサムネイルを置�
 | 保存した視点 | ファイルの中身をもとにした `.view` ファイル | Windows 版と同じ `.view` ファイル(コピーすれば共通に使える) |
 | `.spgm` | サムネイル | サムネイル(クイックルック) |
 | 消すとき | 設定からアンインストール。すべて元に戻る | アプリで「登録したフォルダのアイコンをすべて外す」を押してから、アプリを削除 |
-| 動作環境 | Windows 10/11 x64 | macOS 13 以降、Apple シリコン |
+| 動作環境 | Windows 10/11 x64 | macOS 13 以降(Apple シリコン、Intel) |
 
 ## インストールとアンインストール
 
@@ -55,6 +56,33 @@ macOS では、ほかのアプリが Finder の `.ply` のサムネイルを置�
 
 Windows は、一度作ったサムネイルをキャッシュに保存しています。そのため、アンインストール後もしばらくサムネイルが表示されることがあります。
 消すには「ディスク クリーンアップ」を開き、「縮小表示」だけにチェックを入れて「OK」を選びます。
+
+## Mac 版のインストールと削除
+
+動作環境: macOS 13 以降(Apple シリコン、Intel)。
+
+1. [リリース](../../releases) から `SplatThumb-<バージョン>-macos.dmg` をダウンロードして開き、SplatThumb を
+   「アプリケーション」フォルダにドラッグします。アプリは Apple の公証(notarization)を受けています。
+2. SplatThumb を一度開き、「フォルダを追加…」で 3DGS の `.ply` があるフォルダを選びます。
+   中の 3DGS の `.ply` に、SplatThumb の絵が Finder のアイコンとして付きます(点群データは変わりません)。
+3. 新しいファイルや更新したファイルにも自動で付けるには「登録したフォルダを見張る」をオンにし、
+   「アプリを開いている間だけ」か「常駐」(ログイン時に起動してメニューバーで続ける)を選びます。
+
+アングルを決めるには、Finder で `.ply` を右クリックし、「このアプリケーションで開く」→「SplatThumb」を選びます。
+アングルを調整して「この視点をサムネイルにする」を押すと、そのアングルでアイコンが作り直されます。
+
+削除するときは、次の順に行います。
+
+1. SplatThumb で「登録したフォルダのアイコンをすべて外す」を押します(付けたアイコンが外れ、ファイルは元どおりになります)。
+2. 「常駐」にしていた場合は「アプリを開いている間だけ」に戻します(ログイン項目から外れます)。
+3. SplatThumb を終了し、「アプリケーション」フォルダから削除します。
+4. 必要なら、残った設定と保存したアングルも削除します:
+   `~/Library/Containers/com.voxelkei.splatthumb`、`~/Library/Containers/com.voxelkei.splatthumb.thumbnail`、
+   `~/Library/Application Scripts/com.voxelkei.splatthumb`、`~/Library/Application Scripts/com.voxelkei.splatthumb.thumbnail`
+   (保存したアングルは最初のフォルダの `Data/Library/Application Support/SplatThumb/views` にあります)。
+
+アイコンはファイルの拡張属性に入っています。exFAT/FAT のドライブや Windows の共有フォルダにコピーすると、
+アイコンの代わりに `._` で始まる隠しファイルができることがあります。Windows 側では消してかまいません。
 
 ## アップデート
 
