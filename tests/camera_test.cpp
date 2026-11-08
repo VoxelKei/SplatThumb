@@ -152,4 +152,22 @@ TEST(AutoCamera, ExtremeOptionsStayFinite) {
     EXPECT_TRUE(std::isfinite(c.eye[2]));
 }
 
+TEST(MayBeVisible, DropsOnlyWhatCannotShow) {
+    const auto cam = splatthumb::look_at({0, 0, -10}, {0, 0, 0}, {0, -1, 0}, 90.0f, 1.0f);
+    ASSERT_EQ(cam.status, Status::Ok);
+    Splat s;
+    s.scale = {0.01f, 0.01f, 0.01f};
+    s.position = {0, 0, 0};
+    EXPECT_TRUE(splatthumb::may_be_visible(s, cam.camera));
+    s.position = {0, 0, -20}; // behind the eye
+    EXPECT_FALSE(splatthumb::may_be_visible(s, cam.camera));
+    s.position = {30, 0, 0}; // 90 degrees: half side at depth 10 is 10
+    EXPECT_FALSE(splatthumb::may_be_visible(s, cam.camera));
+    s.scale = {10, 10, 10}; // ...unless it is big enough to reach in
+    EXPECT_TRUE(splatthumb::may_be_visible(s, cam.camera));
+    s.scale = {0.01f, 0.01f, 0.01f};
+    s.position = {0, 9.9f, 0}; // just inside the top edge
+    EXPECT_TRUE(splatthumb::may_be_visible(s, cam.camera));
+}
+
 } // namespace

@@ -11,6 +11,7 @@
 
 #include "ply_builder.h"
 #include "splatthumb/loader.h"
+#include "splatthumb/render.h"
 
 namespace {
 
@@ -37,6 +38,7 @@ public:
 
     std::size_t read_at(std::uint64_t offset, std::span<std::byte> out) noexcept override {
         ++reads;
+        offsets.push_back(offset);
         if (fail_after >= 0 && reads > static_cast<std::uint64_t>(fail_after)) {
             return 0;
         }
@@ -49,6 +51,7 @@ public:
 
     std::uint64_t reads = 0;
     long long fail_after = -1;
+    std::vector<std::uint64_t> offsets; // every read_at offset, in order
 
 private:
     std::byte byte_at(std::uint64_t pos) const {
@@ -57,7 +60,11 @@ private:
         }
         const std::uint64_t rel = pos - header_.size();
         RawSplat raw;
-        raw.x = static_cast<float>(rel / kStandardRecordSize);
+        const std::uint64_t index = rel / kStandardRecordSize;
+        raw.x = static_cast<float>(index);
+        // Sizes vary with the index, so the most important records are known: those
+        // with index % 1000 == 999 are the largest.
+        raw.scale[0] = raw.scale[1] = -6.0f + 0.005f * static_cast<float>(index % 1000);
         std::byte rec[kStandardRecordSize];
         write_record(raw, rec);
         return rec[rel % kStandardRecordSize];
@@ -198,6 +205,146 @@ TEST(Loader, PassesOnWhyNotASplat) {
     c.kind = splatthumb::SplatKind::NotSplat;
     c.status = Status::HasFaces;
     EXPECT_EQ(splatthumb::load_splats(src, c, {}, far_future()).status, Status::HasFaces);
+}
+
+// ---- load_important_splats ----
+
+using splatthumb::ImportantResult;
+
+ImportantResult important(splatthumb::ByteSource& src, std::size_t max_splats,
+                          const splatthumb::Camera* camera = nullptr,
+                          Deadline stop = far_future()) {
+    const Classification c = splatthumb::inspect(src);
+    return splatthumb::load_important_splats(src, c, max_splats, camera, stop);
+}
+
+splatthumb::Splat splat_with_scale(float a, float b, float c, float opacity = 1.0f) {
+    splatthumb::Splat s;
+    s.scale = {a, b, c};
+    s.opacity = opacity;
+    s.rotation = {1, 0, 0, 0};
+    return s;
+}
+
+TEST(Importance, IsOpacityTimesTheTwoLargestAxes) {
+    EXPECT_FLOAT_EQ(splatthumb::splat_importance(splat_with_scale(1, 2, 3)), 6.0f);
+    EXPECT_FLOAT_EQ(splatthumb::splat_importance(splat_with_scale(3, 1, 2)), 6.0f);
+    EXPECT_FLOAT_EQ(splatthumb::splat_importance(splat_with_scale(2, 3, 1, 0.5f)), 3.0f);
+    EXPECT_FLOAT_EQ(splatthumb::splat_importance(splat_with_scale(2, 2, 2)), 4.0f);
+}
+
+TEST(Importance, KeepsTheLargestSplats) {
+    ProceduralSource src(10000);
+    const ImportantResult r = important(src, 10);
+    ASSERT_EQ(r.status, Status::Ok);
+    EXPECT_TRUE(r.complete);
+    EXPECT_EQ(r.records_read, 10000u);
+    ASSERT_EQ(r.splats.size(), 10u);
+    for (const auto& s : r.splats) {
+        // Records 999, 1999, ..., 9999.
+        EXPECT_EQ(static_cast<int>(s.position[0]) % 1000, 999);
+    }
+}
+
+TEST(Importance, KeepsTheLargestSplatsWhenTheBufferFillsManyTimes) {
+    ProceduralSource src(100000);
+    const ImportantResult r = important(src, 100);
+    ASSERT_EQ(r.status, Status::Ok);
+    ASSERT_EQ(r.splats.size(), 100u);
+    for (const auto& s : r.splats) {
+        EXPECT_EQ(static_cast<int>(s.position[0]) % 1000, 999);
+    }
+}
+
+TEST(Importance, ReadsEveryRecordOnceInSpreadPieces) {
+    // 56-byte records: 18724 per 1 MiB piece, so 6 pieces.
+    constexpr std::uint64_t n = 100000;
+    ProceduralSource src(n);
+    const ImportantResult r = important(src, splatthumb::limits::kStandardRenderSplats);
+    ASSERT_EQ(r.status, Status::Ok);
+    EXPECT_TRUE(r.complete);
+    ASSERT_EQ(r.splats.size(), n);
+    std::vector<bool> seen(n, false);
+    for (const auto& s : r.splats) {
+        const auto i = static_cast<std::size_t>(s.position[0]);
+        ASSERT_LT(i, n);
+        EXPECT_FALSE(seen[i]);
+        seen[i] = true;
+    }
+    // Header read, then one read per piece. The second piece is not next to the first.
+    ASSERT_EQ(src.offsets.size(), 1u + 6u);
+    const std::uint64_t piece_bytes = (splatthumb::limits::kMaxReadChunkBytes /
+                                       kStandardRecordSize) * kStandardRecordSize;
+    EXPECT_GT(src.offsets[2] - src.offsets[1], piece_bytes);
+}
+
+TEST(Importance, MaxSplatsIsCapped) {
+    ProceduralSource src(splatthumb::limits::kMaxRenderSplats + 10);
+    const ImportantResult r = important(src, splatthumb::limits::kMaxRenderSplats * 2);
+    ASSERT_EQ(r.status, Status::Ok);
+    EXPECT_EQ(r.splats.size(), splatthumb::limits::kMaxRenderSplats);
+}
+
+TEST(Importance, StopsAtTheStopTimeWithoutFailing) {
+    ProceduralSource src(100000);
+    const ImportantResult r =
+        important(src, 100, nullptr, Deadline(Deadline::Clock::now() - std::chrono::seconds(1)));
+    EXPECT_EQ(r.status, Status::Ok);
+    EXPECT_FALSE(r.complete);
+    EXPECT_EQ(r.records_read, 0u);
+    EXPECT_TRUE(r.splats.empty());
+}
+
+TEST(Importance, ReadFailureIsReported) {
+    ProceduralSource src(100000);
+    src.fail_after = 2;
+    const ImportantResult r = important(src, 100);
+    EXPECT_EQ(r.status, Status::ReadError);
+    EXPECT_TRUE(r.splats.empty());
+}
+
+TEST(Importance, CameraLeavesOutWhatItCannotSee) {
+    // Records sit on the x axis at x = index. A camera at x = 500 looking toward +x sees
+    // only the ones beyond it.
+    ProceduralSource src(1000);
+    const auto cam = splatthumb::look_at({500, 0, 0}, {600, 0, 0}, {0, -1, 0}, 45.0f, 10.0f);
+    ASSERT_EQ(cam.status, Status::Ok);
+    const ImportantResult r = important(src, 1000, &cam.camera);
+    ASSERT_EQ(r.status, Status::Ok);
+    ASSERT_FALSE(r.splats.empty());
+    for (const auto& s : r.splats) {
+        EXPECT_GT(s.position[0], 500.0f);
+    }
+}
+
+TEST(Importance, NotASplatIsPassedOn) {
+    Classification c;
+    splatthumb::MemoryByteSource src({});
+    c.kind = splatthumb::SplatKind::NotSplat;
+    c.status = Status::HasFaces;
+    EXPECT_EQ(splatthumb::load_important_splats(src, c, 10, nullptr, far_future()).status,
+              Status::HasFaces);
+}
+
+TEST(Importance, ThumbnailUsesItOnlyForSampledFiles) {
+    splatthumb::RenderOptions options;
+    options.size = 32;
+    LoadOptions load;
+    load.max_splats = 500;
+    for (const bool on : {true, false}) {
+        load.importance = on;
+        ProceduralSource big(5000);
+        splatthumb::ThumbnailStats stats;
+        const auto r = splatthumb::render_thumbnail(big, options, load, far_future(), &stats);
+        ASSERT_EQ(r.status, Status::Ok);
+        EXPECT_EQ(stats.importance_records_read, on ? 5000u : 0u);
+    }
+    load.importance = true;
+    ProceduralSource small(400);
+    splatthumb::ThumbnailStats stats;
+    const auto r = splatthumb::render_thumbnail(small, options, load, far_future(), &stats);
+    ASSERT_EQ(r.status, Status::Ok);
+    EXPECT_EQ(stats.importance_records_read, 0u);
 }
 
 } // namespace

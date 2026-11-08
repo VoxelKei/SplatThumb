@@ -22,8 +22,7 @@ network access and no telemetry.
   icon size).
 - Lets you pick the view for each file by turning it like a turntable. The view is stored in
   your profile, keyed by the file's contents, and never written into the file.
-- Keeps big scenes quick by drawing a sample of 50,000 to 400,000 splats, chosen globally or
-  per file on Windows.
+- Keeps big scenes quick by drawing 50,000 to 400,000 splats, chosen globally or per file. The largest and most opaque splats are kept, so big scenes do not look sparse.
 - Treats every file as untrusted: fixed limits, a fuzz-tested parser and renderer, Windows'
   separate thumbnail process, and the macOS app sandbox.
 - Removes cleanly: the Windows uninstaller restores any thumbnail handler that was there
@@ -84,6 +83,11 @@ Requirements: macOS 13 or later, Apple silicon or Intel.
 To choose the angle, right-click a `.ply` in Finder and choose Open With → SplatThumb. Drag to
 turn, right-drag or Shift-drag to move, and scroll or pinch to zoom. Click "Use this view" and
 the icon is remade from that angle.
+
+"Splats used for icons" in the main window sets how many splats are drawn at most (up to
+50,000, 200,000 or 400,000). After changing it, click "Remake All Icons in These Folders" to
+update the icons already set. The angle window has the same choice for one file, or "Same as
+the app setting"; it is saved with the angle.
 
 This also works one file at a time for a `.ply` outside the registered folders. Such a file is
 not watched and is left out of "Remake All" and "Remove All". To take its icon off, select it
@@ -158,8 +162,7 @@ Open "SplatThumb" from the Start menu to:
 - remake the existing thumbnails in a folder and all folders inside it after changing a
   setting.
 
-The Mac app has no splat-count setting: it draws up to 200,000 splats, or the count saved with
-a file's view on Windows.
+The Mac app has the same splat-count choice; see [Install and remove (Mac)](#install-and-remove-mac).
 
 ## Which files get a thumbnail
 
@@ -173,9 +176,10 @@ a file's view on Windows.
 
 The Mac version gives icons to the same files.
 
-Large files are sampled: at most 200,000 splats are drawn (on Windows, 50,000 or 400,000 with
-the "Splats used for the thumbnail" setting). If a picture cannot be made within 3 seconds, the
-usual icon stays. The detection rules are in
+Large files are thinned out: at most 200,000 splats are drawn (or 50,000 or 400,000 with the
+"Splats used for the thumbnail" setting on Windows, "Splats used for icons" on the Mac). SplatThumb keeps the splats that add the most
+to the picture (the largest and most opaque), reading the file for at most one extra second. If
+a picture cannot be made within 3 seconds, the usual icon stays. The detection rules are in
 [docs/detection.md](docs/detection.md).
 
 ## Troubleshooting

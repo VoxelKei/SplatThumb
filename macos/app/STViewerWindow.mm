@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <iterator>
 #include <memory>
 #include <numbers>
 #include <optional>
@@ -31,6 +32,9 @@ namespace {
 constexpr float kPi = std::numbers::pi_v<float>;
 constexpr std::size_t kPreviewSplats = 30'000;
 constexpr int kPreviewSize = 320;
+// The still picture is drawn at most this large (in pixels) and stretched to the view,
+// without supersampling: quick to redraw, and sharp enough to choose a view.
+constexpr int kStillSize = 512;
 constexpr auto kPreviewTime = std::chrono::milliseconds(500);
 constexpr auto kFullTime = std::chrono::seconds(10);
 constexpr auto kLoadTime = std::chrono::seconds(60);
@@ -170,7 +174,7 @@ std::optional<Loaded> load_file(const char* path, Quality quality) {
 
 - (void)renderIfNeeded:(int)side {
     const bool quick = _dragging || _settling;
-    const int want = quick ? std::min(side, kPreviewSize) : std::min(side, limits::kMaxThumbnailSize);
+    const int want = quick ? std::min(side, kPreviewSize) : std::min(side, kStillSize);
     if (!_dirty && _imageSize == want && _showsPreview == quick) {
         return;
     }
@@ -184,6 +188,7 @@ std::optional<Loaded> load_file(const char* path, Quality quality) {
     RenderOptions options;
     options.size = want;
     options.background = Background::Gray;
+    options.supersample = false;
     RenderResult r = render_splats(quick ? _preview : _splats, cam.camera, options,
                                    Deadline::after(quick ? std::chrono::milliseconds(kPreviewTime)
                                                          : std::chrono::milliseconds(kFullTime)));
@@ -411,6 +416,7 @@ std::optional<Loaded> load_file(const char* path, Quality quality) {
 @property(strong) STPictureView* picture;
 @property(strong) NSTextField* status;
 @property(strong) NSArray<NSButton*>* buttons;
+@property(strong) NSPopUpButton* qualityPopup;
 @property(copy) NSURL* url;
 @property(copy) void (^log)(NSString*);
 @end
@@ -419,8 +425,31 @@ static NSMutableArray<STViewerWindow*>* gOpenViewers;
 
 @implementation STViewerWindow {
     std::optional<Fingerprint> _fingerprint;
-    std::optional<Quality> _quality; // the saved view's own quality, kept when saving
+    std::optional<Quality> _quality; // this file's own count (none: the app setting), saved with the view
+    Quality _loadedQuality;          // the count the splats in the picture were loaded with
     bool _accessing;
+    bool _reloading;
+}
+
+// The popup's choices, in order: the app setting, then each count.
+static const std::optional<Quality> kQualityChoices[] = {std::nullopt, Quality::Fast,
+                                                         Quality::Standard, Quality::High};
+
+static Quality SettingQuality(void) {
+    switch (STIconSetter.qualitySetting) {
+    case 0: return Quality::Fast;
+    case 2: return Quality::High;
+    default: return Quality::Standard;
+    }
+}
+
+static NSString* QualityTitle(Quality q) {
+    switch (q) {
+    case Quality::Fast: return NSLocalizedString(@"Up to 50,000", nil);
+    case Quality::High: return NSLocalizedString(@"Up to 400,000", nil);
+    case Quality::Standard: break;
+    }
+    return NSLocalizedString(@"Up to 200,000", nil);
 }
 
 + (void)openFile:(NSURL*)url log:(void (^)(NSString*))log {
@@ -474,8 +503,20 @@ static NSMutableArray<STViewerWindow*>* gOpenViewers;
     close.translatesAutoresizingMaskIntoConstraints = NO;
     close.keyEquivalent = @"\e";
     self.buttons = @[ reset, save ];
+    // Splats for this file's icon, as on Windows: the app setting or a count of its own.
+    self.qualityPopup = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    self.qualityPopup.translatesAutoresizingMaskIntoConstraints = NO;
+    for (const auto& choice : kQualityChoices) {
+        [self.qualityPopup addItemWithTitle:
+            choice ? QualityTitle(*choice)
+                   : [NSString stringWithFormat:NSLocalizedString(@"Same as the app setting (%@)", nil),
+                                                QualityTitle(SettingQuality())]];
+    }
+    self.qualityPopup.target = self;
+    self.qualityPopup.action = @selector(qualityChanged:);
+    self.qualityPopup.enabled = NO;
 
-    for (NSView* v in @[ self.picture, self.status, reset, save, close ]) {
+    for (NSView* v in @[ self.picture, self.status, reset, self.qualityPopup, save, close ]) {
         [content addSubview:v];
     }
     [NSLayoutConstraint activateConstraints:@[
@@ -488,6 +529,9 @@ static NSMutableArray<STViewerWindow*>* gOpenViewers;
         [reset.topAnchor constraintEqualToAnchor:self.status.bottomAnchor constant:8],
         [reset.leadingAnchor constraintEqualToAnchor:content.leadingAnchor constant:12],
         [reset.bottomAnchor constraintEqualToAnchor:content.bottomAnchor constant:-12],
+        [self.qualityPopup.centerYAnchor constraintEqualToAnchor:reset.centerYAnchor],
+        [self.qualityPopup.leadingAnchor constraintEqualToAnchor:reset.trailingAnchor constant:8],
+        [self.qualityPopup.trailingAnchor constraintLessThanOrEqualToAnchor:save.leadingAnchor constant:-8],
         [close.centerYAnchor constraintEqualToAnchor:reset.centerYAnchor],
         [close.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-12],
         [save.centerYAnchor constraintEqualToAnchor:reset.centerYAnchor],
@@ -518,9 +562,10 @@ static NSMutableArray<STViewerWindow*>* gOpenViewers;
             saved = load_view(root.fileSystemRepresentation, *fp);
         }
         const std::optional<Quality> quality = saved ? saved->quality : std::nullopt;
+        const Quality effective = quality.value_or(SettingQuality());
         std::optional<Loaded> loaded;
         if (splat) {
-            loaded = load_file(path.fileSystemRepresentation, quality.value_or(Quality::Standard));
+            loaded = load_file(path.fileSystemRepresentation, effective);
         }
         // Shared so the block can carry the (large) splat vectors without copying them.
         auto shared = std::make_shared<std::optional<Loaded>>(std::move(loaded));
@@ -535,6 +580,9 @@ static NSMutableArray<STViewerWindow*>* gOpenViewers;
             }
             self->_fingerprint = fp;
             self->_quality = quality;
+            self->_loadedQuality = effective;
+            [self selectQuality];
+            self.qualityPopup.enabled = fp.has_value();
             Loaded& l = **shared;
             STPictureView* p = self.picture;
             p->_splats = std::move(l.splats);
@@ -554,8 +602,67 @@ static NSMutableArray<STViewerWindow*>* gOpenViewers;
     });
 }
 
+- (void)selectQuality {
+    for (NSInteger i = 0; i < static_cast<NSInteger>(std::size(kQualityChoices)); ++i) {
+        if (kQualityChoices[i] == _quality) {
+            [self.qualityPopup selectItemAtIndex:i];
+        }
+    }
+}
+
+// Loads the splats again when the count to draw changed, keeping the current view.
+- (void)reloadIfNeeded:(NSString*)message {
+    const Quality want = _quality.value_or(SettingQuality());
+    if (want == _loadedQuality || _reloading) {
+        self.status.stringValue = message;
+        return;
+    }
+    _reloading = true;
+    self.qualityPopup.enabled = NO;
+    for (NSButton* b in self.buttons) {
+        b.enabled = NO;
+    }
+    self.status.stringValue = NSLocalizedString(@"Loading...", nil);
+    NSString* path = self.url.path;
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        auto shared = std::make_shared<std::optional<Loaded>>(
+            load_file(path.fileSystemRepresentation, want));
+        dispatch_async(dispatch_get_main_queue(), ^{
+            self->_reloading = false;
+            self.qualityPopup.enabled = YES;
+            for (NSButton* b in self.buttons) {
+                b.enabled = YES;
+            }
+            if (!*shared) {
+                self.status.stringValue = NSLocalizedString(@"The file could not be read, or it has nothing to draw.", nil);
+                return;
+            }
+            Loaded& l = **shared;
+            STPictureView* p = self.picture;
+            p->_splats = std::move(l.splats);
+            p->_preview = std::move(l.preview);
+            p->_autoView = l.auto_view;
+            self->_loadedQuality = want;
+            [p setView:p->_view settle:false];
+            // The choice may have changed again while loading.
+            [self reloadIfNeeded:message];
+        });
+    });
+}
+
+- (void)qualityChanged:(id)sender {
+    (void)sender;
+    const NSInteger i = self.qualityPopup.indexOfSelectedItem;
+    if (i < 0 || i >= static_cast<NSInteger>(std::size(kQualityChoices))) {
+        return;
+    }
+    _quality = kQualityChoices[i];
+    [self reloadIfNeeded:NSLocalizedString(@"Splat count changed. Click “Use this view” to use it for the icon.", nil)];
+}
+
 // Remakes the Finder icon on a background queue, then reports and runs done on main.
 - (void)remakeIcon:(NSString*)message done:(void (^_Nullable)(void))done {
+    self.qualityPopup.enabled = NO;
     for (NSButton* b in self.buttons) {
         b.enabled = NO;
     }
@@ -570,6 +677,7 @@ static NSMutableArray<STViewerWindow*>* gOpenViewers;
                 ok ? message
                    : [NSString stringWithFormat:NSLocalizedString(@"%@ But the icon could not be set: %@", nil), message,
                                                 result];
+            self.qualityPopup.enabled = YES;
             for (NSButton* b in self.buttons) {
                 b.enabled = YES;
             }
@@ -602,6 +710,7 @@ static NSMutableArray<STViewerWindow*>* gOpenViewers;
         remove_view(STIconSetter.viewsRoot.fileSystemRepresentation, *_fingerprint);
     }
     _quality.reset();
+    [self selectQuality];
     [self.picture setView:self.picture->_autoView settle:false];
     self.log([NSString stringWithFormat:NSLocalizedString(@"Back to the automatic view: %@", nil), self.url.lastPathComponent]);
     [self remakeIcon:NSLocalizedString(@"Back to the automatic view. The icon has been remade.", nil) done:nil];

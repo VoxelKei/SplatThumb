@@ -95,6 +95,16 @@ std::string icon_marker(const std::string& fp_hex, const std::optional<splatthum
     return fp_hex + buf;
 }
 
+NSString* const kQualityKey = @"Quality";
+
+splatthumb::Quality quality_from_setting(NSInteger q) {
+    switch (q) {
+    case 0: return splatthumb::Quality::Fast;
+    case 2: return splatthumb::Quality::High;
+    default: return splatthumb::Quality::Standard;
+    }
+}
+
 NSString* line(NSString* tag, NSString* path, NSString* detail) {
     return detail.length > 0
                ? [NSString stringWithFormat:@"%@ %@: %@", tag, path.lastPathComponent, detail]
@@ -155,6 +165,17 @@ NSString* line(NSString* tag, NSString* path, NSString* detail) {
     return line(ok ? @"remove" : @"FAILED", path, nil);
 }
 
++ (NSInteger)qualitySetting {
+    const id value = [NSUserDefaults.standardUserDefaults objectForKey:kQualityKey];
+    const NSInteger q = [value isKindOfClass:NSNumber.class] ? [value integerValue] : 1;
+    return q >= 0 && q <= 2 ? q : 1;
+}
+
++ (void)setQualitySetting:(NSInteger)quality {
+    [NSUserDefaults.standardUserDefaults setInteger:(quality >= 0 && quality <= 2 ? quality : 1)
+                                             forKey:kQualityKey];
+}
+
 + (NSString*)setIconForFile:(NSString*)path {
     return [self setIconForFile:path force:NO];
 }
@@ -172,7 +193,15 @@ NSString* line(NSString* tag, NSString* path, NSString* detail) {
     if (fp) {
         view = load_view(self.viewsRoot.fileSystemRepresentation, *fp);
     }
-    const std::string marker = fp ? icon_marker(fp->hex(), view) : std::string();
+    // A count saved with the view wins over the app setting.
+    const Quality quality =
+        view && view->quality ? *view->quality : quality_from_setting(self.qualitySetting);
+    std::string marker = fp ? icon_marker(fp->hex(), view) : std::string();
+    if (fp && quality != Quality::Standard) {
+        // So a changed count is not taken for an unchanged icon. Standard adds nothing,
+        // which keeps the marks of icons made before the setting existed.
+        marker += quality == Quality::Fast ? ":q0" : ":q2";
+    }
     if (!force && fp && read_attr(p, kFingerprintAttr) == marker) {
         return line(@"same  ", path, nil);
     }
@@ -181,7 +210,7 @@ NSString* line(NSString* tag, NSString* path, NSString* detail) {
     options.size = kIconSize;
     options.background = Background::Gray;
     LoadOptions load;
-    load.max_splats = max_splats_for(view && view->quality ? *view->quality : Quality::Standard);
+    load.max_splats = max_splats_for(quality);
     const RenderResult result = render_thumbnail(
         source, options, load, Deadline::after(std::chrono::milliseconds(kRenderTimeLimitMs)),
         nullptr, view ? &*view : nullptr);

@@ -53,4 +53,12 @@ CameraResult look_at(const Vec3& eye, const Vec3& target, const Vec3& up_hint, f
 CameraResult auto_camera(std::span<const Splat> splats,
                          const AutoCameraOptions& options = {}) noexcept;
 
+// Distance along forward below which splats are not drawn.
+float near_distance(const Camera& camera) noexcept;
+
+// False when the splat cannot show up in a square image from this camera: it is not
+// beyond near_distance, or it lies (with its extent) entirely outside the field of view.
+// True for anything that might show, so it never drops a visible splat.
+bool may_be_visible(const Splat& splat, const Camera& camera) noexcept;
+
 } // namespace splatthumb

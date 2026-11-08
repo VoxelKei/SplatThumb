@@ -227,6 +227,21 @@ TEST(Compressed, SampledLoadStaysInBounds) {
     }
 }
 
+TEST(Compressed, ImportancePassStaysInBounds) {
+    std::vector<RawChunk> chunks(40);
+    chunks[7].min_pos[0] = 50;
+    chunks[7].max_pos[0] = 52;
+    const std::vector<PackedSplat> splats(10000);
+    const auto bytes = make_compressed_file(chunks, splats);
+    splatthumb::MemoryByteSource src(bytes);
+    const Classification c = splatthumb::inspect(src);
+    const auto r = splatthumb::load_important_splats(src, c, 777, nullptr, far_future());
+    ASSERT_EQ(r.status, Status::Ok);
+    EXPECT_TRUE(r.complete);
+    EXPECT_EQ(r.records_read, 10000u);
+    EXPECT_EQ(r.splats.size(), 777u);
+}
+
 TEST(Compressed, RendersThumbnail) {
     std::vector<PackedSplat> splats;
     for (int i = 0; i < 200; ++i) {
