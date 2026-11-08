@@ -8,8 +8,8 @@
 ![macOS 13+](https://img.shields.io/badge/macOS-13%2B-0f766e?style=flat-square)
 ![Preview v0.5](https://img.shields.io/badge/preview-v0.5-64748b?style=flat-square)
 
-[ダウンロード](../../releases) | [インストール(Windows)](#windows-版のインストールとアンインストール) | [視点を決める](#視点を決める) | [安全性](#安全性) |
-[インストール(Mac)](#mac-版のインストールと削除) | [ビルド](#ソースからのビルド) | [English](README.md)
+[ダウンロード](../../releases) | [インストール(Windows)](#windows-版のインストールとアンインストール) | [インストール(Mac)](#mac-版のインストールと削除) |
+[視点を決める](#視点を決める) | [安全性](#安全性) | [ビルド](#ソースからのビルド) | [English](README.md)
 
 <img src="docs/media/demo.webp" width="960" alt="エクスプローラーにスプラットのサムネイルが並び、SplatThumb のウインドウで回して視点を決める様子">
 
