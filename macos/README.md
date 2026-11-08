@@ -1,11 +1,11 @@
-# macOS Quick Look thumbnails (M1 spike)
+# SplatThumb for macOS (developer notes)
 
-Prototype only: a host app (`SplatThumb.app`, `com.voxelkei.splatthumb`) that carries a
-Quick Look thumbnail extension (`SplatThumbThumbnail.appex`,
-`com.voxelkei.splatthumb.thumbnail`). The extension draws 3D Gaussian Splatting PLY files
-with the shared `core/` library and shows the preview image embedded in `.spgm` projects.
-Anything else (normal meshes, broken files, timeouts) is declined so macOS can show what it
-would show otherwise.
+The Mac app (`SplatThumb.app`, `com.voxelkei.splatthumb`) puts SplatThumb's picture on 3D
+Gaussian Splatting `.ply` files as custom Finder icons, and carries a Quick Look thumbnail
+extension (`SplatThumbThumbnail.appex`, `com.voxelkei.splatthumb.thumbnail`) that shows the
+preview image embedded in `.spgm` projects. Both use the shared `core/` library. For using it,
+see the main [README](../README.md#install-and-remove-mac); this file is about building and how
+it works.
 
 ## Build
 
@@ -24,8 +24,8 @@ Leave out `SPLATTHUMB_TEAM_ID` to sign ad hoc ("Sign to Run Locally"). The resul
 
 1. Copy `SplatThumb.app` to `~/Applications` and open it once (this registers the extension).
 2. `pluginkit -m -v -i com.voxelkei.splatthumb.thumbnail` should list it.
-3. `qlmanage -r cache` and look at a `.ply` in Finder, or
-   `qlmanage -t -s 256 -o /tmp/out file.ply`.
+3. `qlmanage -r cache` and look at a `.spgm` in Finder, or
+   `qlmanage -t -s 256 -o /tmp/out file.spgm`.
 4. Logs: `log stream --predicate 'subsystem == "com.voxelkei.splatthumb"'`.
 
 ## Remove
@@ -39,7 +39,7 @@ What macOS leaves behind: the empty sandbox folders
 `~/Library/Containers/com.voxelkei.splatthumb{,.thumbnail}` and
 `~/Library/Application Scripts/com.voxelkei.splatthumb{,.thumbnail}` (a few KB).
 
-## What the spike found
+## Why .ply gets custom icons (what the first spike found)
 
 - Finder never asks a third-party extension for `.ply`: Apple's
   `com.apple.HydraQLThumbnailExtension` claims `public.polygon-file-format` and wins, even
@@ -58,7 +58,7 @@ build/macos-xcode/Release/splatthumb-icon watch <folder>
 ```
 
 In the app: a list of registered folders (remembered as security-scoped bookmarks; icons
-are set when a folder is added), "remove all icons in the registered folders", and a
+are set when a folder is added), "Remake All Icons" and "Remove All Icons" for the registered folders, and a
 checkbox to watch them. Watching runs either only while the app is open, or resident: the
 app registers itself as a login item (`SMAppService.mainApp`), keeps running in the menu
 bar after its window is closed, and on the next launch catches up and resumes watching.
@@ -81,18 +81,18 @@ covered and are not added twice.
 
 ## Thumbnail angle
 
-"PLY を開いてアングルを決める…" (or dropping a `.ply` on the window or Dock icon, or Finder's
+"Open a PLY to Set Its Angle…" (or dropping a `.ply` on the window or Dock icon, or Finder's
 Open With → SplatThumb; the app is only an alternate handler, never the default) opens a
 viewer like the Windows one: drag turns, right-drag or Shift-drag moves, scroll or pinch
-zooms, and the axes show while turning. "この視点をサムネイルにする" saves the view and remakes
-that file's icon; "リセット" removes the saved view and goes back to the automatic one.
+zooms, and the axes show while turning. "Use this view" saves the view and remakes
+that file's icon; "Reset" removes the saved view and goes back to the automatic one.
 
 Views use the shared core (`view_store`), so the files are the same as on Windows
 (`<fingerprint>.view`, keyed by the file's contents, so identical copies share a view).
 They live in the app's container:
 `~/Library/Containers/com.voxelkei.splatthumb/Data/Library/Application Support/SplatThumb/views`.
 `splatthumb-icon` reads the same folder. Deleting the app's container removes all saved
-views; icons made from them stay until removed with "すべて外す".
+views; icons made from them stay until removed with "Remove All Icons in These Folders".
 
 ## Release package
 

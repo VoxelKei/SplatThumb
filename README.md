@@ -1,6 +1,6 @@
 # <img src="app/icon/splatthumb.svg" width="40" height="40" alt=""> SplatThumb
 
-See your Gaussian splats in Explorer before you open them.
+See your Gaussian splats in Explorer and Finder before you open them.
 
 [![MIT License](https://img.shields.io/badge/license-MIT-0f766e?style=flat-square)](LICENSE)
 ![Windows 10 / 11 x64](https://img.shields.io/badge/Windows_10_%2F_11-x64-0f766e?style=flat-square)
@@ -12,18 +12,22 @@ See your Gaussian splats in Explorer before you open them.
 
 <img src="docs/media/demo.webp" width="960" alt="Splat thumbnails appearing in Explorer, then choosing a file's view by turning it in the SplatThumb window">
 
-SplatThumb is a thumbnail handler for 3D Gaussian Splatting `.ply` files. It recognises splat
-scenes from the file header and leaves meshes and point clouds to Windows. Files are only read,
-never modified; there is no network access and no telemetry.
+SplatThumb shows 3D Gaussian Splatting `.ply` files as thumbnails in Windows Explorer and as
+Finder icons on the Mac. It recognises splat scenes from the file header and leaves meshes and
+point clouds alone. On Windows, files are only read, never modified; on the Mac, the icon is
+added to the file's extended attributes but the splat data is never changed. There is no
+network access and no telemetry.
 
-- Previews standard (INRIA) and PlayCanvas / SuperSplat compressed PLY at every icon size.
+- Previews standard (INRIA) and PlayCanvas / SuperSplat compressed PLY (on Windows, at every
+  icon size).
 - Lets you pick the view for each file by turning it like a turntable. The view is stored in
   your profile, keyed by the file's contents, and never written into the file.
 - Keeps big scenes quick by drawing a sample of 50,000 to 400,000 splats, chosen globally or
-  per file.
-- Treats every file as untrusted: fixed limits, a fuzz-tested parser and renderer, and Windows'
-  separate thumbnail process.
-- Uninstalls cleanly, restoring any thumbnail handler that was there before.
+  per file on Windows.
+- Treats every file as untrusted: fixed limits, a fuzz-tested parser and renderer, Windows'
+  separate thumbnail process, and the macOS app sandbox.
+- Removes cleanly: the Windows uninstaller restores any thumbnail handler that was there
+  before, and the Mac app can take all its icons off again.
 - Also shows the preview saved in [Spatialograph Maker](https://www.spatialograph.app/)
   projects (`.spgm`).
 
@@ -77,8 +81,11 @@ Requirements: macOS 13 or later, Apple silicon or Intel.
 3. To give new or changed files icons too, turn on "Watch these folders" and choose "Only
    while the app is open" or "Always" (starts at login and keeps running in the menu bar).
 
-To choose the angle, right-click a `.ply` in Finder and choose Open With → SplatThumb. Adjust
-the angle and click "Use this view"; the icon is remade from that angle.
+To choose the angle, right-click a `.ply` in Finder and choose Open With → SplatThumb. Drag to
+turn, right-drag or Shift-drag to move, and scroll or pinch to zoom. Click "Use this view" and
+the icon is remade from that angle.
+
+The app is shown in Japanese or English, following the macOS language order.
 
 To remove SplatThumb:
 
@@ -99,7 +106,7 @@ can delete those.
 
 ## Update
 
-Run the newer `SplatThumb-<version>-x64.msi` over the installed one. There is no need to
+On Windows, run the newer `SplatThumb-<version>-x64.msi` over the installed one. There is no need to
 uninstall first: the new version replaces the old one, and your saved views and settings are
 kept. Close the viewpoint and settings windows before installing.
 
@@ -107,7 +114,13 @@ Thumbnails Windows already made stay as they were until they are made again. To 
 folder up to date with the new version, open "SplatThumb" from the Start menu and use "Remake
 all existing thumbnails...".
 
+On the Mac, quit SplatThumb and drag the new SplatThumb from the newer `.dmg` to Applications,
+replacing the old one. Your folders and saved angles are kept. To redraw the icons with the
+new version, click "Remake All Icons in These Folders".
+
 ## Choosing the view
+
+This section is about Windows; for the Mac, see [Install and remove (Mac)](#install-and-remove-mac).
 
 When the automatic view frames a file badly, you can pick the view for that file. To do so, right-click it in Explorer and choose "Set view with SplatThumb" (on
 Windows 11, it is under "Show more options").
@@ -130,7 +143,7 @@ made; uninstalling deletes it too. Details: [docs/views-and-settings.md](docs/vi
 
 ## Settings
 
-The settings and view windows are shown in Japanese or English, following the Windows display
+This section is about Windows. The settings and view windows are shown in Japanese or English, following the Windows display
 language.
 
 Open "SplatThumb" from the Start menu to:
@@ -140,6 +153,9 @@ Open "SplatThumb" from the Start menu to:
 - remake the existing thumbnails in a folder and all folders inside it after changing a
   setting.
 
+The Mac app has no splat-count setting: it draws up to 200,000 splats, or the count saved with
+a file's view on Windows.
+
 ## Which files get a thumbnail
 
 | File | Thumbnail |
@@ -147,11 +163,14 @@ Open "SplatThumb" from the Start menu to:
 | 3D Gaussian Splatting PLY in the standard (INRIA) layout, binary little-endian, as written by most training tools | Yes |
 | The same with extra properties such as normals or `f_rest_*` | Yes (only the base color is drawn) |
 | PlayCanvas / SuperSplat compressed PLY (`.compressed.ply`) | Yes (only the base color is drawn) |
-| Meshes, point clouds, ASCII or big-endian PLY | No, Windows shows its usual icon |
+| Meshes, point clouds, ASCII or big-endian PLY | No, the usual icon stays |
 | Other splat formats (`.spz`, `.splat`, `.sog`, ...) | No |
 
-Large files are sampled: at most 200,000 splats are drawn (50,000 or 400,000 with the "Splats
-used for the thumbnail" setting). If a thumbnail cannot be made within 3 seconds, Windows shows its usual icon instead. The detection rules are in
+The Mac version gives icons to the same files.
+
+Large files are sampled: at most 200,000 splats are drawn (on Windows, 50,000 or 400,000 with
+the "Splats used for the thumbnail" setting). If a picture cannot be made within 3 seconds, the
+usual icon stays. The detection rules are in
 [docs/detection.md](docs/detection.md).
 
 ## Troubleshooting
@@ -173,16 +192,24 @@ SplatThumb was installed, that app's handler is used instead.
 please open an issue (without attaching the file if it is a real-world scan). If you build from
 source, `splatthumb-cli.exe info <file>` shows why.
 
+**Mac: a file gets no icon.** Check that it is in a folder registered in the app (or a folder
+inside one). Files that are not 3DGS get no icon, and the app's log says "not3DGS" and why.
+The column view's preview and Quick Look (Space) always show Apple's own preview, even for files
+with an icon.
+
 ## Safety
 
-- Files are opened read-only and never modified. Saved views and settings are kept in your user
-  profile, not in or next to the files.
+- On Windows, files are opened read-only and never modified. On the Mac, the only thing added
+  to a file is the icon (in its extended attributes); the splat data is never changed. Saved
+  views and settings are kept in your user profile, not in or next to the files.
 - Every size and count in a file is checked against fixed limits before it is used, so a broken
   or malicious file is rejected instead of crashing anything. The parser and renderer are
   fuzz-tested on every change.
-- The handler runs in Windows' separate thumbnail process, not inside Explorer itself.
+- On Windows, the handler runs in Windows' separate thumbnail process, not inside Explorer
+  itself. On the Mac, the app and its extension run in the macOS app sandbox and can only reach
+  the folders and files you choose.
 - No network access, no telemetry, no administrator rights.
-- Uninstalling removes everything the installer wrote, along with your saved views and settings,
+- Uninstalling on Windows removes everything the installer wrote, along with your saved views and settings,
   and restores the previous thumbnail handlers, if there were any.
 
 Please report security problems privately; see [SECURITY.md](SECURITY.md).
@@ -226,7 +253,8 @@ The background is dark gray. Add `--background transparent` for a transparent on
 
 To try the Explorer thumbnail handler from a local build, see
 [docs/dev-registration.md](docs/dev-registration.md). To build the installer (MSI), see
-[installer/README.md](installer/README.md).
+[installer/README.md](installer/README.md). To build the Mac app and its `.dmg`, see
+[macos/README.md](macos/README.md).
 
 ## Changes
 
