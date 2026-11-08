@@ -74,7 +74,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          PREVIOUS_TAG: v0.4.0
+          PREVIOUS_TAG: v0.5.0
         run: |
           gh release download $env:PREVIOUS_TAG --repo $env:GITHUB_REPOSITORY --dir previous --pattern '*.msi' --pattern 'SHA256SUMS.txt'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

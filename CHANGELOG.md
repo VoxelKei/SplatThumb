@@ -3,6 +3,13 @@
 All notable changes to SplatThumb. Versions follow [Semantic Versioning](https://semver.org/);
 0.x versions are previews.
 
+## 0.5.1 - 2026-11-08
+
+- Mac: the "How to set the angle" box says that Open With also works for a `.ply` outside the
+  registered folders, that such a file is not watched or covered by "Remake All" and "Remove
+  All", and how to take its icon off in Finder (Get Info). The README says the same.
+- No changes to Windows behaviour.
+
 ## 0.5.0 - 2026-11-08
 
 - A Mac version (macOS 13 or later, Apple silicon and Intel), as a notarized `.dmg`. macOS does
