@@ -37,7 +37,7 @@ bool project(const Splat& s, const Camera& cam, int side, float focal, Projected
     const float x = dot3(p, cam.right);
     const float y = dot3(p, cam.up);
     const float z = dot3(p, cam.forward);
-    const float near_z = std::max(cam.radius * 0.01f, cam.near_clip);
+    const float near_z = near_distance(cam);
     if (!(z > near_z)) {
         return false;
     }
@@ -279,7 +279,7 @@ RenderResult render_thumbnail(ByteSource& source, const RenderOptions& options,
         return result;
     }
 
-    const LoadResult loaded = load_splats(source, c, load_options, deadline);
+    LoadResult loaded = load_splats(source, c, load_options, deadline);
     auto t2 = Clock::now();
     st.load_ms = ms(t1, t2);
     st.splats_loaded = loaded.splats.size();
@@ -307,8 +307,22 @@ RenderResult render_thumbnail(ByteSource& source, const RenderOptions& options,
         return result;
     }
 
+    // A sampled file: read on for a while and draw its most important splats instead, so
+    // big scenes are not drawn as a sparse scatter. The camera stays the one chosen from
+    // the even sample, which frames the scene better than the biased pick would.
+    if (load_options.importance) {
+        st.importance_records_read = prefer_important_splats(
+            source, c, load_options.max_splats, &cam.camera, loaded, deadline);
+    }
+    auto t4 = Clock::now();
+    st.importance_ms = ms(t3, t4);
+    if (deadline.expired()) {
+        result.status = Status::Timeout;
+        return result;
+    }
+
     result = render_splats(loaded.splats, cam.camera, options, deadline);
-    st.render_ms = ms(t3, Clock::now());
+    st.render_ms = ms(t4, Clock::now());
     st.splats_drawn = result.splats_drawn;
     return result;
 }

@@ -171,4 +171,26 @@ CameraResult auto_camera(std::span<const Splat> splats, const AutoCameraOptions&
     return result;
 }
 
+float near_distance(const Camera& camera) noexcept {
+    return std::max(camera.radius * 0.01f, camera.near_clip);
+}
+
+bool may_be_visible(const Splat& splat, const Camera& camera) noexcept {
+    const Vec3 p = sub(splat.position, camera.eye);
+    const float x = p[0] * camera.right[0] + p[1] * camera.right[1] + p[2] * camera.right[2];
+    const float y = p[0] * camera.up[0] + p[1] * camera.up[1] + p[2] * camera.up[2];
+    const float z = p[0] * camera.forward[0] + p[1] * camera.forward[1] + p[2] * camera.forward[2];
+    if (!(z > near_distance(camera))) {
+        return false;
+    }
+    // Half the image side at depth z, plus the splat's 3-sigma reach.
+    const float half = std::tan(camera.fov_y * 0.5f) * z;
+    const float reach =
+        3.0f * std::max({splat.scale[0], splat.scale[1], splat.scale[2]});
+    const float limit = half + reach;
+    // NaN anywhere makes these comparisons false, which keeps the splat; the renderer
+    // drops it later.
+    return !(std::fabs(x) > limit) && !(std::fabs(y) > limit);
+}
+
 } // namespace splatthumb

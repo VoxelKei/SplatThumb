@@ -43,14 +43,19 @@ RenderResult render_splats(std::span<const Splat> splats, const Camera& camera,
 
 // Timings in milliseconds for each step of render_thumbnail.
 struct ThumbnailStats {
-    double inspect_ms = 0, load_ms = 0, camera_ms = 0, render_ms = 0;
+    double inspect_ms = 0, load_ms = 0, camera_ms = 0, importance_ms = 0, render_ms = 0;
     std::uint64_t vertex_count = 0;
     std::uint64_t splats_loaded = 0;
+    // Records looked at to pick the most important splats; 0 when the sample was drawn.
+    std::uint64_t importance_records_read = 0;
     std::size_t splats_drawn = 0;
 };
 
 // inspect + load_splats + auto_camera + render_splats under one deadline. A given view
-// replaces auto_camera; if it cannot make a camera, auto_camera is used instead.
+// replaces auto_camera; if it cannot make a camera, auto_camera is used instead. When the
+// file has more splats than load_options.max_splats and load_options.importance is set,
+// up to limits::kImportanceReadMs more is spent in load_important_splats, and its splats
+// are drawn if it read at least twice as many records as the sample.
 RenderResult render_thumbnail(ByteSource& source, const RenderOptions& options,
                               const LoadOptions& load_options, const Deadline& deadline,
                               ThumbnailStats* stats = nullptr,

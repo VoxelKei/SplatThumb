@@ -57,6 +57,10 @@ inline constexpr std::size_t kMaxReadChunkBytes = 1024 * 1024;
 // Whole thumbnail generation is abandoned after this long.
 inline constexpr int kRenderTimeLimitMs = 3000;
 
+// When a file has more splats than the quality setting allows, at most this long is spent
+// reading on to pick the most important ones; the rest of the time is left for drawing.
+inline constexpr int kImportanceReadMs = 1000;
+
 // Splats with lower opacity (after sigmoid) are skipped.
 inline constexpr float kMinOpacity = 0.02f;
 

@@ -30,7 +30,7 @@ void print_usage() {
               "       splatthumb-cli fingerprint <file.ply>\n"
               "       splatthumb-cli render <file.ply> <out.png> [--size N]\n"
               "                     [--background gray|transparent]\n"
-              "                     [--sampling blocks|uniform]");
+              "                     [--sampling blocks|uniform] [--importance on|off]");
 }
 
 void print(std::string_view label, std::string_view value) {
@@ -147,6 +147,10 @@ bool parse_render_flags(const std::string* args, int n, RenderArgs& out) {
             out.load.mode = splatthumb::SampleMode::Blocks;
         } else if (key == "--sampling" && value == "uniform") {
             out.load.mode = splatthumb::SampleMode::Uniform;
+        } else if (key == "--importance" && value == "on") {
+            out.load.importance = true;
+        } else if (key == "--importance" && value == "off") {
+            out.load.importance = false;
         } else {
             return false;
         }
@@ -173,9 +177,11 @@ int run_render(const std::filesystem::path& in, const std::filesystem::path& out
     print("vertices:", stats.vertex_count);
     print("loaded:", stats.splats_loaded);
     print("drawn:", stats.splats_drawn);
-    std::printf("%-12s inspect %.1f / load %.1f / camera %.1f / render %.1f / total %.1f ms\n",
-                "time:", stats.inspect_ms, stats.load_ms, stats.camera_ms, stats.render_ms,
-                total_ms);
+    print("importance:", stats.importance_records_read);
+    std::printf("%-12s inspect %.1f / load %.1f / camera %.1f / importance %.1f / render %.1f / "
+                "total %.1f ms\n",
+                "time:", stats.inspect_ms, stats.load_ms, stats.camera_ms, stats.importance_ms,
+                stats.render_ms, total_ms);
     if (r.status != splatthumb::Status::Ok) {
         print("error:", splatthumb::to_string(r.status));
         return kExitRenderFailed;
@@ -200,9 +206,9 @@ int run(int argc, Char** argv) {
     if (argc == 3 && std::filesystem::path(argv[1]) == "fingerprint") {
         return run_fingerprint(std::filesystem::path(argv[2]));
     }
-    if (argc >= 4 && argc <= 10 && std::filesystem::path(argv[1]) == "render") {
+    if (argc >= 4 && argc <= 12 && std::filesystem::path(argv[1]) == "render") {
         // Flags are ASCII; convert them through path for both char and wchar_t argv.
-        std::string flags[6];
+        std::string flags[8];
         const int n = argc - 4;
         for (int i = 0; i < n; ++i) {
             flags[i] = std::filesystem::path(argv[4 + i]).string();

@@ -15,6 +15,9 @@ public:
 
     bool expired() const noexcept { return Clock::now() >= at_; }
 
+    // Earlier deadlines compare less, so std::min picks the one that comes first.
+    friend bool operator<(const Deadline& l, const Deadline& r) noexcept { return l.at_ < r.at_; }
+
 private:
     Clock::time_point at_;
 };

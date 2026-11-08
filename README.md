@@ -22,8 +22,8 @@ network access and no telemetry.
   icon size).
 - Lets you pick the view for each file by turning it like a turntable. The view is stored in
   your profile, keyed by the file's contents, and never written into the file.
-- Keeps big scenes quick by drawing a sample of 50,000 to 400,000 splats, chosen globally or
-  per file on Windows.
+- Keeps big scenes quick by drawing 50,000 to 400,000 splats, chosen globally or per file on
+  Windows. The largest and most opaque splats are kept, so big scenes do not look sparse.
 - Treats every file as untrusted: fixed limits, a fuzz-tested parser and renderer, Windows'
   separate thumbnail process, and the macOS app sandbox.
 - Removes cleanly: the Windows uninstaller restores any thumbnail handler that was there
@@ -173,9 +173,10 @@ a file's view on Windows.
 
 The Mac version gives icons to the same files.
 
-Large files are sampled: at most 200,000 splats are drawn (on Windows, 50,000 or 400,000 with
-the "Splats used for the thumbnail" setting). If a picture cannot be made within 3 seconds, the
-usual icon stays. The detection rules are in
+Large files are thinned out: at most 200,000 splats are drawn (on Windows, 50,000 or 400,000
+with the "Splats used for the thumbnail" setting). SplatThumb keeps the splats that add the most
+to the picture (the largest and most opaque), reading the file for at most one extra second. If
+a picture cannot be made within 3 seconds, the usual icon stays. The detection rules are in
 [docs/detection.md](docs/detection.md).
 
 ## Troubleshooting

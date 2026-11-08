@@ -5,6 +5,7 @@
 // -timeout catches runs that ignore the deadline.
 
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -148,6 +149,23 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     load.block_size = 7;
     const auto result = splatthumb::render_thumbnail(
         source, options, load, splatthumb::Deadline::after(std::chrono::seconds(1)));
+
+    // The importance pass on its own, with a small limit so the keep-the-best buffer fills
+    // and shrinks often. Whatever it keeps must be within the limit and finite.
+    {
+        const auto c = splatthumb::inspect(source);
+        const auto imp = splatthumb::load_important_splats(
+            source, c, 16, nullptr, splatthumb::Deadline::after(std::chrono::seconds(1)));
+        if (imp.splats.size() > 16 ||
+            (imp.status != splatthumb::Status::Ok && !imp.splats.empty())) {
+            __builtin_trap();
+        }
+        for (const auto& s : imp.splats) {
+            if (!std::isfinite(splatthumb::splat_importance(s))) {
+                __builtin_trap();
+            }
+        }
+    }
 
     switch (result.status) {
     case splatthumb::Status::Ok:

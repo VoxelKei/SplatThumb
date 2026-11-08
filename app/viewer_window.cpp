@@ -373,6 +373,10 @@ bool Viewer::load_splats_at(Quality quality) noexcept {
     if (automatic.status != Status::Ok) {
         return false;
     }
+    // Then, as the thumbnail does, keep the most important splats of a sampled file. No
+    // camera: the view moves here, so splats out of the first view are kept too.
+    prefer_important_splats(source, c, load_options.max_splats, nullptr, loaded,
+                            Deadline::after(kLoadTime));
     try {
         std::vector<Splat> preview;
         const std::size_t step = loaded.splats.size() / kPreviewSplats + 1;
