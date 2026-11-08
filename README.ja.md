@@ -8,8 +8,8 @@
 ![macOS 13+](https://img.shields.io/badge/macOS-13%2B-0f766e?style=flat-square)
 ![Preview v0.5](https://img.shields.io/badge/preview-v0.5-64748b?style=flat-square)
 
-[ダウンロード](../../releases) | [インストール](#インストールとアンインストール) | [視点を決める](#視点を決める) | [安全性](#安全性) |
-[Mac 版](#mac-版のインストールと削除) | [ビルド](#ソースからのビルド) | [English](README.md)
+[ダウンロード](../../releases) | [インストール(Windows)](#windows-版のインストールとアンインストール) | [視点を決める](#視点を決める) | [安全性](#安全性) |
+[インストール(Mac)](#mac-版のインストールと削除) | [ビルド](#ソースからのビルド) | [English](README.md)
 
 <img src="docs/media/demo.webp" width="960" alt="エクスプローラーにスプラットのサムネイルが並び、SplatThumb のウインドウで回して視点を決める様子">
 
@@ -42,7 +42,7 @@ macOS では、ほかのアプリが Finder の `.ply` のサムネイルを置�
 | 消すとき | 設定からアンインストールすると、すべて元に戻る | アプリで「登録したフォルダのアイコンをすべて外す」を押してから、アプリを削除する |
 | 動作環境 | Windows 10/11 x64 | macOS 13 以降(Apple シリコン、Intel) |
 
-## インストールとアンインストール
+## Windows 版のインストールとアンインストール
 
 動作環境: Windows 10/11 x64。SplatThumb はお使いのユーザーだけにインストールされ、管理者権限は不要です。
 
