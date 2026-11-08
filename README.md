@@ -7,8 +7,8 @@ See your Gaussian splats in Explorer and Finder before you open them.
 ![macOS 13+](https://img.shields.io/badge/macOS-13%2B-0f766e?style=flat-square)
 ![Preview v0.5](https://img.shields.io/badge/preview-v0.5-64748b?style=flat-square)
 
-[Download](../../releases) | [Install (Windows)](#install-and-uninstall-windows) | [Choosing the view](#choosing-the-view) | [Safety](#safety) |
-[Install (Mac)](#install-and-remove-mac) | [Build](#building-from-source) | [日本語](README.ja.md)
+[Download](../../releases) | [Install (Windows)](#install-and-uninstall-windows) | [Install (Mac)](#install-and-remove-mac) |
+[Choosing the view](#choosing-the-view) | [Safety](#safety) | [Build](#building-from-source) | [日本語](README.ja.md)
 
 <img src="docs/media/demo.webp" width="960" alt="Splat thumbnails appearing in Explorer, then choosing a file's view by turning it in the SplatThumb window">
 
