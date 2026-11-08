@@ -55,6 +55,45 @@ static NSString* const kOldBookmarkKey = @"FolderBookmark"; // single folder, ea
 static NSString* const kWatchingKey = @"Watching";
 static NSString* const kResidentKey = @"Resident";
 
+// The only pages the app opens, and only when clicked; it never connects to the network.
+static NSString* const kRepoURL = @"https://github.com/VoxelKei/SplatThumb";
+static NSString* const kAppURL = @"https://www.spatialograph.app/";
+static NSString* const kAuthorURL = @"https://x.com/VoxelKei";
+
+static NSString* AppVersion(void) {
+    NSString* v = NSBundle.mainBundle.infoDictionary[@"CFBundleShortVersionString"];
+    return v.length > 0 ? v : @"?";
+}
+
+// "text" with "link" appended as a clickable link (in a selectable text field).
+static NSMutableAttributedString* LinkedText(NSString* before, NSString* link, NSString* url,
+                                              NSString* after, CGFloat size) {
+    NSFont* font = [NSFont systemFontOfSize:size];
+    NSDictionary* plain = @{
+        NSFontAttributeName : font,
+        NSForegroundColorAttributeName : NSColor.secondaryLabelColor
+    };
+    NSMutableAttributedString* s = [[NSMutableAttributedString alloc] initWithString:before
+                                                                          attributes:plain];
+    [s appendAttributedString:[[NSAttributedString alloc]
+                                  initWithString:link
+                                      attributes:@{
+                                          NSFontAttributeName : font,
+                                          NSLinkAttributeName : [NSURL URLWithString:url]
+                                      }]];
+    [s appendAttributedString:[[NSAttributedString alloc] initWithString:after attributes:plain]];
+    return s;
+}
+
+static NSTextField* LinkLabel(NSAttributedString* text) {
+    NSTextField* label = [NSTextField labelWithAttributedString:text];
+    // Links are only clickable in a selectable field that keeps its attributes.
+    label.selectable = YES;
+    label.allowsEditingTextAttributes = YES;
+    label.translatesAutoresizingMaskIntoConstraints = NO;
+    return label;
+}
+
 @interface AppDelegate
     : NSObject <NSApplicationDelegate, NSWindowDelegate, NSTableViewDataSource, NSTableViewDelegate>
 @property(strong) NSWindow* window;
@@ -62,6 +101,7 @@ static NSString* const kResidentKey = @"Resident";
 @property(strong) NSTextView* logView;
 @property(strong) NSButton* removeFolderButton;
 @property(strong) NSButton* removeAllButton;
+@property(strong) NSButton* remakeAllButton;
 @property(strong) NSButton* watchCheckbox;
 @property(strong) NSButton* whileOpenRadio;
 @property(strong) NSButton* residentRadio;
@@ -110,7 +150,7 @@ static NSString* const kResidentKey = @"Resident";
 
 - (void)buildWindow {
     self.window = [[NSWindow alloc]
-        initWithContentRect:NSMakeRect(0, 0, 720, 640)
+        initWithContentRect:NSMakeRect(0, 0, 720, 820)
                   styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
                             NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable
                     backing:NSBackingStoreBuffered
@@ -126,13 +166,13 @@ static NSString* const kResidentKey = @"Resident";
     self.window.contentView = drop;
     NSView* content = self.window.contentView;
 
-    NSTextField* heading = [NSTextField labelWithString:@"アイコンを付けるフォルダ"];
+    NSTextField* heading = [NSTextField labelWithString:NSLocalizedString(@"Folders that get icons", nil)];
     heading.font = [NSFont boldSystemFontOfSize:NSFont.systemFontSize];
     heading.translatesAutoresizingMaskIntoConstraints = NO;
 
     self.table = [[NSTableView alloc] init];
     NSTableColumn* column = [[NSTableColumn alloc] initWithIdentifier:@"path"];
-    column.title = @"フォルダ";
+    column.title = @"Folder"; // header is hidden
     column.resizingMask = NSTableColumnAutoresizingMask;
     [self.table addTableColumn:column];
     self.table.headerView = nil;
@@ -146,25 +186,47 @@ static NSString* const kResidentKey = @"Resident";
     tableScroll.borderType = NSBezelBorder;
     tableScroll.translatesAutoresizingMaskIntoConstraints = NO;
 
-    NSButton* add = [self button:@"フォルダを追加…" action:@selector(addFolders:)];
-    self.removeFolderButton = [self button:@"選んだフォルダを一覧から外す"
+    NSButton* add = [self button:NSLocalizedString(@"Add Folder…", nil) action:@selector(addFolders:)];
+    self.removeFolderButton = [self button:NSLocalizedString(@"Remove Selected from List", nil)
                                     action:@selector(removeSelectedFolders:)];
-    self.removeAllButton = [self button:@"登録したフォルダのアイコンをすべて外す"
+    self.remakeAllButton = [self button:NSLocalizedString(@"Remake All Icons in These Folders", nil)
+                                 action:@selector(remakeAllIcons:)];
+    self.removeAllButton = [self button:NSLocalizedString(@"Remove All Icons in These Folders", nil)
                                  action:@selector(removeAllIcons:)];
-    NSButton* angle = [self button:@"PLY を開いてアングルを決める…" action:@selector(openPly:)];
-    NSTextField* angleHint = [NSTextField
-        labelWithString:@"（.ply をこのウィンドウや Dock のアイコンにドロップ、Finder の「このアプリケーションで開く」でも開けます）"];
-    angleHint.textColor = NSColor.secondaryLabelColor;
-    angleHint.font = [NSFont systemFontOfSize:NSFont.smallSystemFontSize];
-    angleHint.translatesAutoresizingMaskIntoConstraints = NO;
+    // How to set a file's thumbnail angle, in a box so it stands out. Finder's context menu
+    // is the usual way; the button is a fallback.
+    NSBox* angleBox = [[NSBox alloc] init];
+    angleBox.title = NSLocalizedString(@"How to set the angle", nil);
+    angleBox.titleFont = [NSFont boldSystemFontOfSize:NSFont.systemFontSize];
+    angleBox.translatesAutoresizingMaskIntoConstraints = NO;
+    NSTextField* angleHelp = [NSTextField wrappingLabelWithString:
+        NSLocalizedString(@"In Finder, right-click a .ply and choose Open With → SplatThumb to open the angle window. Adjust the angle, then click “Use this view” to remake the icon from that angle.\nYou can also drop a .ply on this window or on SplatThumb in the Dock.", nil)];
+    angleHelp.translatesAutoresizingMaskIntoConstraints = NO;
+    NSTextField* angleButtonNote = [NSTextField labelWithString:NSLocalizedString(@"Or use this button:", nil)];
+    angleButtonNote.translatesAutoresizingMaskIntoConstraints = NO;
+    NSButton* angle = [self button:NSLocalizedString(@"Choose a PLY…", nil) action:@selector(openPly:)];
+    NSView* box = angleBox.contentView;
+    for (NSView* v in @[ angleHelp, angleButtonNote, angle ]) {
+        [box addSubview:v];
+    }
+    [NSLayoutConstraint activateConstraints:@[
+        [angleHelp.topAnchor constraintEqualToAnchor:box.topAnchor constant:8],
+        [angleHelp.leadingAnchor constraintEqualToAnchor:box.leadingAnchor constant:10],
+        [angleHelp.trailingAnchor constraintEqualToAnchor:box.trailingAnchor constant:-10],
+        [angleButtonNote.topAnchor constraintEqualToAnchor:angleHelp.bottomAnchor constant:10],
+        [angleButtonNote.leadingAnchor constraintEqualToAnchor:box.leadingAnchor constant:10],
+        [angle.centerYAnchor constraintEqualToAnchor:angleButtonNote.centerYAnchor],
+        [angle.leadingAnchor constraintEqualToAnchor:angleButtonNote.trailingAnchor constant:8],
+        [angle.bottomAnchor constraintEqualToAnchor:box.bottomAnchor constant:-10],
+    ]];
 
     self.watchCheckbox =
-        [NSButton checkboxWithTitle:@"登録したフォルダを見張る（新しい・変わった .ply に自動で付ける）"
+        [NSButton checkboxWithTitle:NSLocalizedString(@"Watch these folders (new or changed .ply files get icons automatically)", nil)
                              target:self
                              action:@selector(toggleWatch:)];
     self.watchCheckbox.translatesAutoresizingMaskIntoConstraints = NO;
-    self.whileOpenRadio = [self radio:@"アプリを開いている間だけ"];
-    self.residentRadio = [self radio:@"常駐（ログイン時に起動し、ウィンドウを閉じてもメニューバーで続ける）"];
+    self.whileOpenRadio = [self radio:NSLocalizedString(@"Only while the app is open", nil)];
+    self.residentRadio = [self radio:NSLocalizedString(@"Always (start at login; keep running in the menu bar after the window is closed)", nil)];
     (self.resident ? self.residentRadio : self.whileOpenRadio).state = NSControlStateValueOn;
 
     NSScrollView* logScroll = [NSTextView scrollableTextView];
@@ -173,10 +235,22 @@ static NSString* const kResidentKey = @"Resident";
     self.logView.editable = NO;
     self.logView.font = [NSFont monospacedSystemFontOfSize:11 weight:NSFontWeightRegular];
 
+    // Same line as the Windows settings window.
+    const CGFloat small = NSFont.smallSystemFontSize;
+    NSTextField* about = [NSTextField
+        labelWithString:[NSString stringWithFormat:@"SplatThumb %@  ·  © 2026 VoxelKei  ·  MIT License",
+                                                   AppVersion()]];
+    about.font = [NSFont systemFontOfSize:small];
+    about.textColor = NSColor.secondaryLabelColor;
+    about.translatesAutoresizingMaskIntoConstraints = NO;
+    NSTextField* repo = LinkLabel(LinkedText(@"GitHub: ", @"github.com/VoxelKei/SplatThumb", kRepoURL, @"", small));
+    NSTextField* app = LinkLabel(LinkedText(@"", @"Spatialograph Maker", kAppURL,
+                                            NSLocalizedString(@" - a 3DGS editing app by the same author", nil), small));
+
     for (NSView* v in @[
-             heading, tableScroll, add, self.removeFolderButton, self.removeAllButton,
-             self.watchCheckbox, self.whileOpenRadio, self.residentRadio, angle, angleHint,
-             logScroll
+             heading, tableScroll, add, self.removeFolderButton, self.remakeAllButton, self.removeAllButton,
+             self.watchCheckbox, self.whileOpenRadio, self.residentRadio, angleBox,
+             logScroll, about, repo, app
          ]) {
         [content addSubview:v];
     }
@@ -193,23 +267,30 @@ static NSString* const kResidentKey = @"Resident";
         [add.leadingAnchor constraintEqualToAnchor:left constant:16],
         [self.removeFolderButton.centerYAnchor constraintEqualToAnchor:add.centerYAnchor],
         [self.removeFolderButton.leadingAnchor constraintEqualToAnchor:add.trailingAnchor constant:8],
-        [self.removeAllButton.centerYAnchor constraintEqualToAnchor:add.centerYAnchor],
-        [self.removeAllButton.trailingAnchor constraintEqualToAnchor:right constant:-16],
-        [self.watchCheckbox.topAnchor constraintEqualToAnchor:add.bottomAnchor constant:14],
+        [self.remakeAllButton.topAnchor constraintEqualToAnchor:add.bottomAnchor constant:6],
+        [self.remakeAllButton.leadingAnchor constraintEqualToAnchor:left constant:16],
+        [self.removeAllButton.centerYAnchor constraintEqualToAnchor:self.remakeAllButton.centerYAnchor],
+        [self.removeAllButton.leadingAnchor constraintEqualToAnchor:self.remakeAllButton.trailingAnchor constant:8],
+        [self.watchCheckbox.topAnchor constraintEqualToAnchor:self.remakeAllButton.bottomAnchor constant:14],
         [self.watchCheckbox.leadingAnchor constraintEqualToAnchor:left constant:16],
         [self.whileOpenRadio.topAnchor constraintEqualToAnchor:self.watchCheckbox.bottomAnchor constant:6],
         [self.whileOpenRadio.leadingAnchor constraintEqualToAnchor:left constant:36],
         [self.residentRadio.topAnchor constraintEqualToAnchor:self.whileOpenRadio.bottomAnchor constant:4],
         [self.residentRadio.leadingAnchor constraintEqualToAnchor:left constant:36],
-        [angle.topAnchor constraintEqualToAnchor:self.residentRadio.bottomAnchor constant:14],
-        [angle.leadingAnchor constraintEqualToAnchor:left constant:16],
-        [angleHint.topAnchor constraintEqualToAnchor:angle.bottomAnchor constant:4],
-        [angleHint.leadingAnchor constraintEqualToAnchor:left constant:20],
-        [angleHint.trailingAnchor constraintLessThanOrEqualToAnchor:right constant:-16],
-        [logScroll.topAnchor constraintEqualToAnchor:angleHint.bottomAnchor constant:12],
+        [angleBox.topAnchor constraintEqualToAnchor:self.residentRadio.bottomAnchor constant:16],
+        [angleBox.leadingAnchor constraintEqualToAnchor:left constant:13],
+        [angleBox.trailingAnchor constraintEqualToAnchor:right constant:-13],
+        [logScroll.topAnchor constraintEqualToAnchor:angleBox.bottomAnchor constant:12],
         [logScroll.leadingAnchor constraintEqualToAnchor:left constant:16],
         [logScroll.trailingAnchor constraintEqualToAnchor:right constant:-16],
-        [logScroll.bottomAnchor constraintEqualToAnchor:content.bottomAnchor constant:-16],
+        [about.topAnchor constraintEqualToAnchor:logScroll.bottomAnchor constant:10],
+        [about.leadingAnchor constraintEqualToAnchor:left constant:16],
+        [repo.topAnchor constraintEqualToAnchor:about.bottomAnchor constant:2],
+        [repo.leadingAnchor constraintEqualToAnchor:left constant:16],
+        [app.centerYAnchor constraintEqualToAnchor:repo.centerYAnchor],
+        [app.leadingAnchor constraintEqualToAnchor:repo.trailingAnchor constant:16],
+        [app.trailingAnchor constraintLessThanOrEqualToAnchor:right constant:-16],
+        [repo.bottomAnchor constraintEqualToAnchor:content.bottomAnchor constant:-12],
     ]];
     [self.window center];
 }
@@ -243,6 +324,7 @@ static NSString* const kResidentKey = @"Resident";
     [self.table reloadData];
     self.removeFolderButton.enabled = self.table.selectedRowIndexes.count > 0;
     self.removeAllButton.enabled = any;
+    self.remakeAllButton.enabled = any;
     self.watchCheckbox.enabled = any;
     self.watchCheckbox.state = self.watching ? NSControlStateValueOn : NSControlStateValueOff;
     [self updateStatusItem];
@@ -250,14 +332,107 @@ static NSString* const kResidentKey = @"Resident";
 
 // --- life cycle --------------------------------------------------------------
 
+// --- menus and About ----------------------------------------------------------
+
+- (void)buildMainMenu {
+    // One app menu with the minimum.
+    NSMenu* appMenu = [[NSMenu alloc] initWithTitle:@"SplatThumb"];
+    [appMenu addItemWithTitle:NSLocalizedString(@"About SplatThumb", nil) action:@selector(showAbout:) keyEquivalent:@""]
+        .target = self;
+    [appMenu addItem:NSMenuItem.separatorItem];
+    [appMenu addItemWithTitle:NSLocalizedString(@"Open a PLY to Set Its Angle…", nil) action:@selector(openPly:) keyEquivalent:@"o"]
+        .target = self;
+    [appMenu addItemWithTitle:NSLocalizedString(@"Close Window", nil) action:@selector(performClose:) keyEquivalent:@"w"];
+    [appMenu addItem:NSMenuItem.separatorItem];
+    [appMenu addItemWithTitle:NSLocalizedString(@"Quit SplatThumb", nil) action:@selector(terminate:) keyEquivalent:@"q"];
+    NSMenuItem* item = [[NSMenuItem alloc] initWithTitle:appMenu.title action:nil keyEquivalent:@""];
+    item.submenu = appMenu;
+    NSMenu* bar = [[NSMenu alloc] init];
+    [bar addItem:item];
+    NSApp.mainMenu = bar;
+}
+
+- (void)showAbout:(id)sender {
+    (void)sender;
+    const CGFloat size = NSFont.smallSystemFontSize;
+    NSMutableAttributedString* credits = [[NSMutableAttributedString alloc] init];
+    NSDictionary* plain = @{
+        NSFontAttributeName : [NSFont systemFontOfSize:size],
+        NSForegroundColorAttributeName : NSColor.labelColor
+    };
+    [credits appendAttributedString:[[NSAttributedString alloc]
+                                        initWithString:NSLocalizedString(@"Shows 3D Gaussian Splatting PLY files as Finder icons.\n\n", nil)
+                                            attributes:plain]];
+    [credits appendAttributedString:LinkedText(NSLocalizedString(@"Author: VoxelKei (", nil), @"X: @VoxelKei", kAuthorURL, @")\n", size)];
+    [credits appendAttributedString:LinkedText(@"GitHub: ", @"github.com/VoxelKei/SplatThumb", kRepoURL, @"\n", size)];
+    [credits appendAttributedString:LinkedText(@"", @"Spatialograph Maker", kAppURL,
+                                               NSLocalizedString(@" - a 3DGS editing app by the same author", nil), size)];
+    NSMutableParagraphStyle* centered = [[NSMutableParagraphStyle alloc] init];
+    centered.alignment = NSTextAlignmentCenter;
+    [credits addAttribute:NSParagraphStyleAttributeName
+                    value:centered
+                    range:NSMakeRange(0, credits.length)];
+    [NSApp activateIgnoringOtherApps:YES];
+    // Pass the icon explicitly: the panel does not always find it on its own.
+    NSImage* icon = [NSBundle.mainBundle imageForResource:@"AppIcon"];
+    if (icon == nil) {
+        icon = [NSWorkspace.sharedWorkspace iconForFile:NSBundle.mainBundle.bundlePath];
+    }
+    [NSApp orderFrontStandardAboutPanelWithOptions:@{
+        NSAboutPanelOptionApplicationIcon : icon,
+        NSAboutPanelOptionApplicationName : @"SplatThumb",
+        NSAboutPanelOptionApplicationVersion : AppVersion(),
+        NSAboutPanelOptionVersion : @"",
+        NSAboutPanelOptionCredits : credits,
+    }];
+}
+
+// ⌘C and ⌘A in text views without an Edit menu. (A menu holding Copy would be treated as
+// the Edit menu, and macOS would add Writing Tools, AutoFill, Dictation and Emoji to it.)
+- (void)handleEditKeys {
+    [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskKeyDown
+                                          handler:^NSEvent*(NSEvent* event) {
+        const NSEventModifierFlags mods =
+            event.modifierFlags & NSEventModifierFlagDeviceIndependentFlagsMask;
+        if (mods != NSEventModifierFlagCommand) {
+            return event;
+        }
+        NSResponder* responder = event.window.firstResponder;
+        if (![responder isKindOfClass:NSTextView.class]) {
+            return event;
+        }
+        NSString* key = event.charactersIgnoringModifiers.lowercaseString;
+        if ([key isEqualToString:@"c"]) {
+            [(NSTextView*)responder copy:nil];
+            return nil;
+        }
+        if ([key isEqualToString:@"a"]) {
+            [(NSTextView*)responder selectAll:nil];
+            return nil;
+        }
+        return event;
+    }];
+}
+
+- (void)applicationWillFinishLaunching:(NSNotification*)notification {
+    (void)notification;
+    // Keep macOS from adding Dictation and Emoji & Symbols to the menu.
+    [self.defaults registerDefaults:@{
+        @"NSDisabledDictationMenuItem" : @YES,
+        @"NSDisabledCharacterPaletteMenuItem" : @YES,
+    }];
+}
+
 - (void)applicationDidFinishLaunching:(NSNotification*)notification {
     (void)notification;
+    [self buildMainMenu];
+    [self handleEditKeys];
     self.work = dispatch_queue_create("com.voxelkei.splatthumb.icons", DISPATCH_QUEUE_SERIAL);
     self.folders = [NSMutableArray array];
     self.watchers = [NSMutableArray array];
     [self buildWindow];
-    [self log:@"3DGS の .ply に、SplatThumb の絵を Finder のアイコンとして付けます。"];
-    [self log:@"点群データは変わりません（アイコンはファイルのおまけ情報に入ります）。"];
+    [self log:NSLocalizedString(@"Puts SplatThumb pictures on 3DGS .ply files as their Finder icons.", nil)];
+    [self log:NSLocalizedString(@"The splat data is not changed (the icon is kept in the file's extended attributes).", nil)];
 
     [self restoreFolders];
     // The login item may have been removed in System Settings; follow what macOS says.
@@ -265,13 +440,13 @@ static NSString* const kResidentKey = @"Resident";
         [self.defaults setBool:NO forKey:kResidentKey];
         self.whileOpenRadio.state = NSControlStateValueOn;
         self.residentRadio.state = NSControlStateValueOff;
-        [self log:@"ログイン項目から外されていたので「アプリを開いている間だけ」に戻しました"];
+        [self log:NSLocalizedString(@"SplatThumb was removed from Login Items, so it is back to “Only while the app is open”.", nil)];
     }
     const BOOL quiet = self.resident && [self launchedAsLoginItem];
     if (self.folders.count > 0 && [self.defaults boolForKey:kWatchingKey]) {
         // Catch up on what changed while the app was not running, then keep watching.
         [self runOnFolders:self.folders
-                      verb:@"前回の続き：アイコンを確認"
+                      verb:NSLocalizedString(@"Checking icons", nil)
                  operation:^NSString*(NSString* f) {
                      return [STIconSetter setIconForFile:f];
                  }];
@@ -355,7 +530,7 @@ static NSString* const kResidentKey = @"Resident";
         if (data != nil) {
             [bookmarks addObject:data];
         } else {
-            [self log:[NSString stringWithFormat:@"フォルダを覚えられませんでした：%@ (%@)", url.path,
+            [self log:[NSString stringWithFormat:NSLocalizedString(@"Could not remember the folder: %@ (%@)", nil), url.path,
                                                  error.localizedDescription]];
         }
     }
@@ -386,7 +561,7 @@ static NSString* const kResidentKey = @"Resident";
                                    bookmarkDataIsStale:&stale
                                                  error:&error];
         if (url == nil) {
-            [self log:[NSString stringWithFormat:@"登録していたフォルダが見つかりません：%@",
+            [self log:[NSString stringWithFormat:NSLocalizedString(@"A registered folder could not be found: %@", nil),
                                                  error.localizedDescription]];
             changed = YES;
             continue;
@@ -424,11 +599,19 @@ static NSString* const kResidentKey = @"Resident";
 - (void)runOnFolders:(NSArray<NSURL*>*)folders
                 verb:(NSString*)verb
            operation:(NSString* (^)(NSString*))operation {
+    [self runOnFolders:folders verb:verb operation:operation done:nil];
+}
+
+// The same, then runs done on the main queue.
+- (void)runOnFolders:(NSArray<NSURL*>*)folders
+                verb:(NSString*)verb
+           operation:(NSString* (^)(NSString*))operation
+                done:(void (^_Nullable)(void))done {
     NSMutableArray<NSString*>* paths = [NSMutableArray array];
     for (NSURL* url in folders) {
         [paths addObject:url.path];
     }
-    [self log:[NSString stringWithFormat:@"— %@：%lu 個のフォルダ", verb, (unsigned long)paths.count]];
+    [self log:[NSString stringWithFormat:NSLocalizedString(@"— %@ (%lu folder(s))", nil), verb, (unsigned long)paths.count]];
     dispatch_async(self.work, ^{
         NSDate* start = [NSDate date];
         // Folders may overlap (one registered before its parent), so handle each file once.
@@ -440,8 +623,11 @@ static NSString* const kResidentKey = @"Resident";
         for (NSString* f in files) {
             [self log:operation(f)];
         }
-        [self log:[NSString stringWithFormat:@"— %lu 個の .ply、%.1f 秒", (unsigned long)count,
+        [self log:[NSString stringWithFormat:NSLocalizedString(@"— %lu .ply file(s), %.1f s", nil), (unsigned long)count,
                                              -start.timeIntervalSinceNow]];
+        if (done != nil) {
+            dispatch_async(dispatch_get_main_queue(), done);
+        }
     });
 }
 
@@ -451,8 +637,8 @@ static NSString* const kResidentKey = @"Resident";
     panel.canChooseDirectories = YES;
     panel.canChooseFiles = NO;
     panel.allowsMultipleSelection = YES;
-    panel.prompt = @"追加してアイコンを付ける";
-    panel.message = @"このフォルダ（とその中のフォルダ）の 3DGS .ply にアイコンを付けます";
+    panel.prompt = NSLocalizedString(@"Add and Set Icons", nil);
+    panel.message = NSLocalizedString(@"Icons are set on the 3DGS .ply files in this folder and the folders inside it.", nil);
     if ([panel runModal] != NSModalResponseOK) {
         return;
     }
@@ -461,8 +647,8 @@ static NSString* const kResidentKey = @"Resident";
         NSURL* covering = [self folderCovering:url];
         if (covering != nil) {
             [self log:[covering.path isEqualToString:url.path]
-                          ? [NSString stringWithFormat:@"すでに登録されています：%@", url.path]
-                          : [NSString stringWithFormat:@"%@ の中なので、もう含まれています：%@",
+                          ? [NSString stringWithFormat:NSLocalizedString(@"Already registered: %@", nil), url.path]
+                          : [NSString stringWithFormat:NSLocalizedString(@"Already included, as it is inside %@: %@", nil),
                                                        covering.path, url.path]];
             continue;
         }
@@ -475,7 +661,7 @@ static NSString* const kResidentKey = @"Resident";
     }
     [self saveFolders];
     [self runOnFolders:added
-                  verb:@"フォルダを追加してアイコンを付ける"
+                  verb:NSLocalizedString(@"Adding folders and setting icons", nil)
              operation:^NSString*(NSString* f) {
                  return [STIconSetter setIconForFile:f];
              }];
@@ -494,7 +680,7 @@ static NSString* const kResidentKey = @"Resident";
     NSArray<NSURL*>* removed = [self.folders objectsAtIndexes:rows];
     [self.folders removeObjectsAtIndexes:rows];
     for (NSURL* url in removed) {
-        [self log:[NSString stringWithFormat:@"一覧から外しました（付いているアイコンはそのまま）：%@",
+        [self log:[NSString stringWithFormat:NSLocalizedString(@"Removed from the list (its icons stay): %@", nil),
                                              url.path]];
         [url stopAccessingSecurityScopedResource];
     }
@@ -510,6 +696,32 @@ static NSString* const kResidentKey = @"Resident";
     [self updateControls];
 }
 
+- (void)remakeAllIcons:(id)sender {
+    (void)sender;
+    if (self.folders.count == 0) {
+        return;
+    }
+    // Draws every icon again (after a change of settings or of SplatThumb itself), whether
+    // or not the file changed, from the saved angle where there is one. Files that are not
+    // 3DGS are still left alone. The watch is paused meanwhile: the new icons are changes in
+    // the folders, and it would otherwise look at every file again.
+    const BOOL wasWatching = self.watching;
+    [self stopWatching];
+    self.remakeAllButton.enabled = NO;
+    self.removeAllButton.enabled = NO;
+    [self runOnFolders:self.folders
+                  verb:NSLocalizedString(@"Remaking all icons", nil)
+             operation:^NSString*(NSString* f) {
+                 return [STIconSetter setIconForFile:f force:YES];
+             }
+                  done:^{
+                      if (wasWatching && self.folders.count > 0) {
+                          [self startWatching];
+                      }
+                      [self updateControls];
+                  }];
+}
+
 - (void)removeAllIcons:(id)sender {
     (void)sender;
     if (self.folders.count == 0) {
@@ -520,10 +732,10 @@ static NSString* const kResidentKey = @"Resident";
     if (self.watching) {
         [self stopWatching];
         [self.defaults setBool:NO forKey:kWatchingKey];
-        [self log:@"— 見張りを止めました（アイコンを外すため）"];
+        [self log:NSLocalizedString(@"— Stopped watching (to remove icons)", nil)];
     }
     [self runOnFolders:self.folders
-                  verb:@"アイコンをすべて外す"
+                  verb:NSLocalizedString(@"Removing all icons", nil)
              operation:^NSString*(NSString* f) {
                  return [STIconSetter removeIconForFile:f];
              }];
@@ -550,8 +762,8 @@ static NSString* const kResidentKey = @"Resident";
     panel.allowsMultipleSelection = NO;
     UTType* ply = [UTType typeWithFilenameExtension:@"ply"];
     panel.allowedContentTypes = ply != nil ? @[ ply ] : @[];
-    panel.prompt = @"開く";
-    panel.message = @"アングルを決める .ply を選んでください";
+    panel.prompt = NSLocalizedString(@"Open", nil);
+    panel.message = NSLocalizedString(@"Choose a .ply to set its angle.", nil);
     if ([panel runModal] == NSModalResponseOK) {
         [self openViewers:panel.URLs];
     }
@@ -591,9 +803,10 @@ static NSString* const kResidentKey = @"Resident";
         [watcher start];
         [self.watchers addObject:watcher];
     }
-    [self log:[NSString stringWithFormat:@"— 見張りを始めました：%lu 個のフォルダ（%@）",
+    [self log:[NSString stringWithFormat:NSLocalizedString(@"— Watching %lu folder(s) (%@)", nil),
                                          (unsigned long)self.watchers.count,
-                                         self.resident ? @"常駐" : @"アプリを開いている間だけ"]];
+                                         self.resident ? NSLocalizedString(@"always", nil)
+                                                       : NSLocalizedString(@"only while the app is open", nil)]];
     [self updateStatusItem];
 }
 
@@ -613,7 +826,7 @@ static NSString* const kResidentKey = @"Resident";
         [self startWatching];
     } else {
         [self stopWatching];
-        [self log:@"— 見張りを止めました"];
+        [self log:NSLocalizedString(@"— Stopped watching", nil)];
     }
     [self updateControls];
 }
@@ -630,8 +843,9 @@ static NSString* const kResidentKey = @"Resident";
     const BOOL ok = resident ? [service registerAndReturnError:&error]
                              : [service unregisterAndReturnError:&error];
     if (!ok) {
-        [self log:[NSString stringWithFormat:@"ログイン項目を%@できませんでした：%@",
-                                             resident ? @"登録" : @"解除",
+        [self log:[NSString stringWithFormat:resident
+                                                 ? NSLocalizedString(@"Could not add SplatThumb to Login Items: %@", nil)
+                                                 : NSLocalizedString(@"Could not remove SplatThumb from Login Items: %@", nil),
                                              error.localizedDescription]];
         if (resident) {
             self.residentRadio.state = NSControlStateValueOff;
@@ -642,10 +856,10 @@ static NSString* const kResidentKey = @"Resident";
     [self.defaults setBool:resident forKey:kResidentKey];
     self.residentRadio.state = resident ? NSControlStateValueOn : NSControlStateValueOff;
     self.whileOpenRadio.state = resident ? NSControlStateValueOff : NSControlStateValueOn;
-    [self log:resident ? @"— 常駐にしました：ログイン時に起動し、ウィンドウを閉じてもメニューバーで見張りを続けます"
-                       : @"— 「アプリを開いている間だけ」にしました（ログイン項目から外しました）"];
+    [self log:resident ? NSLocalizedString(@"— Always: starts at login and keeps watching from the menu bar after the window is closed", nil)
+                       : NSLocalizedString(@"— Only while the app is open (removed from Login Items)", nil)];
     if (resident && service.status == SMAppServiceStatusRequiresApproval) {
-        [self log:@"  システム設定 → 一般 → ログイン項目 で SplatThumb を許可してください"];
+        [self log:NSLocalizedString(@"  Allow SplatThumb in System Settings → General → Login Items.", nil)];
     }
     [self updateStatusItem];
 }
@@ -661,19 +875,27 @@ static NSString* const kResidentKey = @"Resident";
     if (self.statusItem == nil) {
         self.statusItem =
             [NSStatusBar.systemStatusBar statusItemWithLength:NSSquareStatusItemLength];
-        self.statusItem.button.image = [NSImage imageWithSystemSymbolName:@"cube.transparent"
-                                                 accessibilityDescription:@"SplatThumb"];
+        // The app icon in one colour; as a template image macOS tints it for light and
+        // dark menu bars.
+        NSImage* icon = [NSImage imageNamed:@"StatusIcon"];
+        icon.template = YES;
+        icon.size = NSMakeSize(18, 18);
+        icon.accessibilityDescription = @"SplatThumb";
+        self.statusItem.button.image = icon;
     }
     NSMenu* menu = [[NSMenu alloc] init];
     NSString* state = self.watching
-                          ? [NSString stringWithFormat:@"見張り中：%lu 個のフォルダ",
+                          ? [NSString stringWithFormat:NSLocalizedString(@"Watching %lu folder(s)", nil),
                                                        (unsigned long)self.watchers.count]
-                          : @"見張っていません";
+                          : NSLocalizedString(@"Not watching", nil);
     [menu addItemWithTitle:state action:nil keyEquivalent:@""].enabled = NO;
     [menu addItem:NSMenuItem.separatorItem];
-    [menu addItemWithTitle:@"SplatThumb を開く" action:@selector(showWindow:) keyEquivalent:@""]
+    [menu addItemWithTitle:NSLocalizedString(@"Open SplatThumb", nil) action:@selector(showWindow:) keyEquivalent:@""]
         .target = self;
-    [menu addItemWithTitle:@"終了" action:@selector(terminate:) keyEquivalent:@"q"];
+    [menu addItemWithTitle:NSLocalizedString(@"About SplatThumb", nil) action:@selector(showAbout:) keyEquivalent:@""]
+        .target = self;
+    [menu addItem:NSMenuItem.separatorItem];
+    [menu addItemWithTitle:NSLocalizedString(@"Quit", nil) action:@selector(terminate:) keyEquivalent:@"q"];
     self.statusItem.menu = menu;
 }
 

@@ -456,7 +456,7 @@ static NSMutableArray<STViewerWindow*>* gOpenViewers;
                     backing:NSBackingStoreBuffered
                       defer:NO];
     self.window.title =
-        [NSString stringWithFormat:@"SplatThumb - サムネイルの視点 — %@", self.url.lastPathComponent];
+        [NSString stringWithFormat:NSLocalizedString(@"SplatThumb - Thumbnail view - %@", nil), self.url.lastPathComponent];
     self.window.releasedWhenClosed = NO;
     self.window.delegate = self;
     self.window.contentMinSize = NSMakeSize(420, 420);
@@ -464,13 +464,13 @@ static NSMutableArray<STViewerWindow*>* gOpenViewers;
 
     self.picture = [[STPictureView alloc] init];
     self.picture.translatesAutoresizingMaskIntoConstraints = NO;
-    self.status = [NSTextField labelWithString:@"読み込み中..."];
+    self.status = [NSTextField labelWithString:NSLocalizedString(@"Loading...", nil)];
     self.status.translatesAutoresizingMaskIntoConstraints = NO;
     self.status.lineBreakMode = NSLineBreakByTruncatingTail;
-    NSButton* reset = [self button:@"リセット" action:@selector(reset:)];
-    NSButton* save = [self button:@"この視点をサムネイルにする" action:@selector(save:)];
+    NSButton* reset = [self button:NSLocalizedString(@"Reset", nil) action:@selector(reset:)];
+    NSButton* save = [self button:NSLocalizedString(@"Use this view", nil) action:@selector(save:)];
     save.keyEquivalent = @"\r";
-    NSButton* close = [NSButton buttonWithTitle:@"閉じる" target:self action:@selector(close:)];
+    NSButton* close = [NSButton buttonWithTitle:NSLocalizedString(@"Close", nil) target:self action:@selector(close:)];
     close.translatesAutoresizingMaskIntoConstraints = NO;
     close.keyEquivalent = @"\e";
     self.buttons = @[ reset, save ];
@@ -526,11 +526,11 @@ static NSMutableArray<STViewerWindow*>* gOpenViewers;
         auto shared = std::make_shared<std::optional<Loaded>>(std::move(loaded));
         dispatch_async(dispatch_get_main_queue(), ^{
             if (!splat) {
-                self.status.stringValue = @"このファイルは 3D Gaussian Splatting の PLY ではないため、SplatThumb は描きません。";
+                self.status.stringValue = NSLocalizedString(@"This file is not a 3D Gaussian Splatting PLY, so SplatThumb does not draw it.", nil);
                 return;
             }
             if (!*shared) {
-                self.status.stringValue = @"ファイルを読み込めないか、描くものがありません。";
+                self.status.stringValue = NSLocalizedString(@"The file could not be read, or it has nothing to draw.", nil);
                 return;
             }
             self->_fingerprint = fp;
@@ -548,8 +548,8 @@ static NSMutableArray<STViewerWindow*>* gOpenViewers;
                 b.enabled = fp.has_value();
             }
             self.status.stringValue =
-                saved ? @"保存した視点です。ドラッグで回転、右ドラッグか Shift+ドラッグで移動、スクロールかピンチで拡大と縮小。"
-                      : @"ドラッグで回転、右ドラッグか Shift+ドラッグで移動、スクロールかピンチで拡大と縮小。";
+                saved ? NSLocalizedString(@"This is the saved view. Drag to turn, right-drag or Shift-drag to move, scroll or pinch to zoom.", nil)
+                      : NSLocalizedString(@"Drag to turn, right-drag or Shift-drag to move, scroll or pinch to zoom.", nil);
         });
     });
 }
@@ -559,7 +559,7 @@ static NSMutableArray<STViewerWindow*>* gOpenViewers;
     for (NSButton* b in self.buttons) {
         b.enabled = NO;
     }
-    self.status.stringValue = @"アイコンを作り直しています...";
+    self.status.stringValue = NSLocalizedString(@"Remaking the icon...", nil);
     NSString* path = self.url.path;
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
         NSString* result = [STIconSetter setIconForFile:path];
@@ -568,7 +568,7 @@ static NSMutableArray<STViewerWindow*>* gOpenViewers;
             const BOOL ok = [result hasPrefix:@"icon"] || [result hasPrefix:@"same"];
             self.status.stringValue =
                 ok ? message
-                   : [NSString stringWithFormat:@"%@ ただしアイコンは付けられませんでした：%@", message,
+                   : [NSString stringWithFormat:NSLocalizedString(@"%@ But the icon could not be set: %@", nil), message,
                                                 result];
             for (NSButton* b in self.buttons) {
                 b.enabled = YES;
@@ -586,11 +586,11 @@ static NSMutableArray<STViewerWindow*>* gOpenViewers;
     saved.quality = _quality;
     if (!_fingerprint ||
         !save_view(STIconSetter.viewsRoot.fileSystemRepresentation, *_fingerprint, saved)) {
-        self.status.stringValue = @"視点を保存できませんでした。";
+        self.status.stringValue = NSLocalizedString(@"The view could not be saved.", nil);
         return;
     }
-    self.log([NSString stringWithFormat:@"視点を保存しました：%@", self.url.lastPathComponent]);
-    [self remakeIcon:@"視点を保存しました。アイコンを作り直しました。"
+    self.log([NSString stringWithFormat:NSLocalizedString(@"View saved: %@", nil), self.url.lastPathComponent]);
+    [self remakeIcon:NSLocalizedString(@"View saved. The icon has been remade.", nil)
                 done:^{
                     [self.window close];
                 }];
@@ -603,8 +603,8 @@ static NSMutableArray<STViewerWindow*>* gOpenViewers;
     }
     _quality.reset();
     [self.picture setView:self.picture->_autoView settle:false];
-    self.log([NSString stringWithFormat:@"自動の視点に戻しました：%@", self.url.lastPathComponent]);
-    [self remakeIcon:@"自動の視点に戻しました。アイコンを作り直しました。" done:nil];
+    self.log([NSString stringWithFormat:NSLocalizedString(@"Back to the automatic view: %@", nil), self.url.lastPathComponent]);
+    [self remakeIcon:NSLocalizedString(@"Back to the automatic view. The icon has been remade.", nil) done:nil];
 }
 
 - (void)close:(id)sender {
