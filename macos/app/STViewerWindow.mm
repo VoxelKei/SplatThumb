@@ -32,6 +32,9 @@ namespace {
 constexpr float kPi = std::numbers::pi_v<float>;
 constexpr std::size_t kPreviewSplats = 30'000;
 constexpr int kPreviewSize = 320;
+// The still picture is drawn at most this large (in pixels) and stretched to the view,
+// without supersampling: quick to redraw, and sharp enough to choose a view.
+constexpr int kStillSize = 512;
 constexpr auto kPreviewTime = std::chrono::milliseconds(500);
 constexpr auto kFullTime = std::chrono::seconds(10);
 constexpr auto kLoadTime = std::chrono::seconds(60);
@@ -171,7 +174,7 @@ std::optional<Loaded> load_file(const char* path, Quality quality) {
 
 - (void)renderIfNeeded:(int)side {
     const bool quick = _dragging || _settling;
-    const int want = quick ? std::min(side, kPreviewSize) : std::min(side, limits::kMaxThumbnailSize);
+    const int want = quick ? std::min(side, kPreviewSize) : std::min(side, kStillSize);
     if (!_dirty && _imageSize == want && _showsPreview == quick) {
         return;
     }
@@ -185,6 +188,7 @@ std::optional<Loaded> load_file(const char* path, Quality quality) {
     RenderOptions options;
     options.size = want;
     options.background = Background::Gray;
+    options.supersample = false;
     RenderResult r = render_splats(quick ? _preview : _splats, cam.camera, options,
                                    Deadline::after(quick ? std::chrono::milliseconds(kPreviewTime)
                                                          : std::chrono::milliseconds(kFullTime)));

@@ -180,4 +180,18 @@ TEST(RenderThumbnail, ReportsWhyNotDrawn) {
               Status::UnsupportedFormat);
 }
 
+TEST(Render, WithoutSupersamplingTheImageIsTheSameSizeAndPlace) {
+    RenderOptions o;
+    o.size = 64;
+    o.supersample = false;
+    const RenderResult r = render({splat(0, 0, 0, 1, 0, 0, 0.5f)}, o);
+    ASSERT_EQ(r.status, Status::Ok);
+    ASSERT_EQ(r.image.size, 64);
+    EXPECT_EQ(r.image.rgba.size(), 64u * 64u * 4u);
+    // The splat is in the middle and red; a corner is the gray background.
+    EXPECT_GT(pixel(r.image, 32, 32)[0], 200);
+    EXPECT_LT(pixel(r.image, 32, 32)[1], 40);
+    EXPECT_EQ(pixel(r.image, 0, 0)[0], pixel(r.image, 0, 0)[1]);
+}
+
 } // namespace

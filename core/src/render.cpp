@@ -127,7 +127,7 @@ RenderResult render_splats(std::span<const Splat> splats, const Camera& camera,
                            const RenderOptions& options, const Deadline& deadline) noexcept {
     RenderResult result;
     const int size = std::clamp(options.size, limits::kMinThumbnailSize, limits::kMaxThumbnailSize);
-    const int scale = size <= limits::kMaxSupersampledSize ? 2 : 1;
+    const int scale = options.supersample && size <= limits::kMaxSupersampledSize ? 2 : 1;
     const int side = size * scale;
     const float focal = static_cast<float>(side) * 0.5f / std::tan(camera.fov_y * 0.5f);
     if (!std::isfinite(focal) || !(focal > 0.0f)) {

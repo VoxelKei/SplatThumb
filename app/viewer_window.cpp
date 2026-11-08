@@ -46,6 +46,9 @@ constexpr float kPi = std::numbers::pi_v<float>;
 // While dragging, a thinned-out copy is drawn small so the window keeps up with the mouse.
 constexpr std::size_t kPreviewSplats = 30'000;
 constexpr int kPreviewSize = 320;
+// The still picture is drawn at most this large and stretched to the window, without
+// supersampling: quick to redraw, and sharp enough to choose a view.
+constexpr int kStillSize = 512;
 constexpr auto kPreviewTime = std::chrono::milliseconds(500);
 constexpr auto kFullTime = std::chrono::seconds(10);
 constexpr auto kLoadTime = std::chrono::seconds(60);
@@ -607,7 +610,7 @@ void Viewer::set_view(const View& v, bool settle) noexcept {
 
 void Viewer::render_if_needed(int side) noexcept {
     const bool quick = dragging_ || settling_;
-    const int want = quick ? std::min(side, kPreviewSize) : std::min(side, limits::kMaxThumbnailSize);
+    const int want = quick ? std::min(side, kPreviewSize) : std::min(side, kStillSize);
     if (!dirty_ && image_size_ == want && shows_preview_ == quick) {
         return;
     }
@@ -621,6 +624,7 @@ void Viewer::render_if_needed(int side) noexcept {
     RenderOptions options;
     options.size = want;
     options.background = Background::Gray;
+    options.supersample = false;
     RenderResult r = render_splats(quick ? preview_ : splats_, cam.camera, options,
                                    Deadline::after(quick ? std::chrono::milliseconds(kPreviewTime)
                                                          : std::chrono::milliseconds(kFullTime)));

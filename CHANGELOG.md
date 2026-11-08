@@ -11,6 +11,8 @@ All notable changes to SplatThumb. Versions follow [Semantic Versioning](https:/
   second to pick them; if that is not enough, it draws the even sample as before. Applies to
   Windows thumbnails, Mac Finder icons, and the CLI (`--importance off` turns it off). The
   window for setting the view still draws the even sample, so it stays quick to turn.
+- The window for setting the view (Windows and Mac) draws its still picture at most 512 pixels
+  across, without supersampling, and stretches it to the window, so it redraws faster.
 - Mac: "Splats used for icons" (up to 50,000, 200,000 or 400,000) in the main window, and the
   same choice for one file in the angle window ("Same as the app setting" or a count of its
   own, saved with the angle), as on Windows. Icons whose count changed are redrawn when they

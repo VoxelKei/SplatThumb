@@ -29,6 +29,9 @@ enum class Background {
 struct RenderOptions {
     int size = 256; // clamped to limits::kMinThumbnailSize..kMaxThumbnailSize
     Background background = Background::Gray;
+    // Draw at twice the size and shrink (up to limits::kMaxSupersampledSize) for smoother
+    // edges. The viewers turn it off: it makes drawing about twice as slow.
+    bool supersample = true;
 };
 
 struct RenderResult {
