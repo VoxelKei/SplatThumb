@@ -11,7 +11,13 @@
 [ダウンロード](../../releases) | [インストール(Windows)](#windows-版のインストールとアンインストール) | [インストール(Mac)](#mac-版のインストールと削除) |
 [視点を決める](#視点を決める) | [安全性](#安全性) | [ビルド](#ソースからのビルド) | [English](README.md)
 
+**Windows**
+
 <img src="docs/media/demo.webp" width="960" alt="エクスプローラーにスプラットのサムネイルが並び、SplatThumb のウインドウで回して視点を決める様子">
+
+**Mac**
+
+<img src="docs/media/demo-mac.webp" width="800" alt="Finder からスプラットを SplatThumb で開き、回して視点を決めると、Finder のアイコンもその視点に変わる様子">
 
 SplatThumb は、3D Gaussian Splatting の `.ply` ファイルを、Windows ではエクスプローラーのサムネイルとして、Mac では Finder のアイコンとして表示します。
 ファイルのヘッダーを見てスプラットのシーンだけを描き、メッシュや点群の PLY には手を出しません。
