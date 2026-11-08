@@ -10,7 +10,13 @@ See your Gaussian splats in Explorer and Finder before you open them.
 [Download](../../releases) | [Install (Windows)](#install-and-uninstall-windows) | [Install (Mac)](#install-and-remove-mac) |
 [Choosing the view](#choosing-the-view) | [Safety](#safety) | [Build](#building-from-source) | [日本語](README.ja.md)
 
+**Windows**
+
 <img src="docs/media/demo.webp" width="960" alt="Splat thumbnails appearing in Explorer, then choosing a file's view by turning it in the SplatThumb window">
+
+**Mac**
+
+<img src="docs/media/demo-mac.webp" width="800" alt="Opening a splat from Finder in SplatThumb, turning it to choose the view, and the Finder icon changing to match">
 
 SplatThumb shows 3D Gaussian Splatting `.ply` files as thumbnails in Windows Explorer and as
 Finder icons on the Mac. It recognises splat scenes from the file header and leaves meshes and
