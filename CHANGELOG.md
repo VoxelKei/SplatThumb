@@ -3,7 +3,7 @@
 All notable changes to SplatThumb. Versions follow [Semantic Versioning](https://semver.org/);
 0.x versions are previews.
 
-## Unreleased
+## 0.5.2 - 2026-11-08
 
 - Big scenes no longer look sparse. When a file has more splats than the thumbnail draws,
   SplatThumb now keeps the ones that add the most to the picture (the largest and most opaque
