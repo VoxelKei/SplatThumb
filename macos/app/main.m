@@ -200,7 +200,7 @@ static NSTextField* LinkLabel(NSAttributedString* text) {
     angleBox.titleFont = [NSFont boldSystemFontOfSize:NSFont.systemFontSize];
     angleBox.translatesAutoresizingMaskIntoConstraints = NO;
     NSTextField* angleHelp = [NSTextField wrappingLabelWithString:
-        NSLocalizedString(@"In Finder, right-click a .ply and choose Open With → SplatThumb to open the angle window. Adjust the angle, then click “Use this view” to remake the icon from that angle.\nYou can also drop a .ply on this window or on SplatThumb in the Dock.", nil)];
+        NSLocalizedString(@"In Finder, right-click a .ply and choose Open With → SplatThumb to open the angle window. Adjust the angle, then click “Use this view” to remake the icon from that angle.\nYou can also drop a .ply on this window or on SplatThumb in the Dock.\nThis also works for a .ply outside the registered folders, but such a file is not watched and is left out of Remake All and Remove All. To take its icon off, select it in Finder, press ⌘I, click the small icon at the top left and press Delete.", nil)];
     angleHelp.translatesAutoresizingMaskIntoConstraints = NO;
     NSTextField* angleButtonNote = [NSTextField labelWithString:NSLocalizedString(@"Or use this button:", nil)];
     angleButtonNote.translatesAutoresizingMaskIntoConstraints = NO;
